@@ -33,6 +33,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadProfile = async () => {
       if (!token) {
         setIsLoading(false);
@@ -41,16 +43,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const profileData = await api.getProfile() as unknown as User;
-        setUser(profileData);
+        if (!cancelled) {
+          setUser(profileData);
+        }
       } catch (error) {
-        console.error('Failed to load profile:', error);
-        logout();
+        if (!cancelled) {
+          console.error('Failed to load profile:', error);
+          logout();
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
   const login = (newToken: string, userData: User) => {

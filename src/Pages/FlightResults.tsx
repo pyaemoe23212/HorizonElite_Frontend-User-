@@ -1,249 +1,448 @@
 import React, { useState } from 'react';
 import { Plane } from 'lucide-react';
-import { Link, useLocation } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
+import type { FlightResultItem, SelectedFlightResponse, SelectFlightRequest } from '../Services/api';
+import { api } from '../Services/api';
+import { FlightCard } from '../components/FlightCard';
+import { Stepper } from '../components/Stepper';
+import { DateStrip } from '../components/DateStrip';
+import { ModifySearch } from '../components/ModifySearch';
 
 type FlightPhase = 'outbound' | 'inbound';
+type TripType = 'ONE_WAY' | 'ROUND_TRIP';
+type SelectedFlight = SelectedFlightResponse['selectedFlight'];
 
-interface SearchState {
+interface SearchData {
+  tripType?: string;
   from?: string;
   to?: string;
   departDate?: string;
   returnDate?: string;
   passengers?: string;
+  cabinClass?: string;
 }
 
-const flights = [
-  { id: 1, time: '14:40', arrival: '15:50', code: 'HE 1209', duration: '1h 10m', economy: 282, business: 660, tag: 'Lowest Price', refundable: true },
-  { id: 2, time: '20:55', arrival: '22:05', code: 'HE 1253', duration: '1h 10m', economy: 282, business: 660, tag: '7 Seats Left', refundable: false },
-];
+interface SearchState {
+  searchData?: SearchData;
+  flightSearchId?: string;
+  flightResults?: FlightResultItem[];
+}
 
-const returnFlights = [
-  { id: 3, time: '14:40', arrival: '15:50', code: 'HE 1209', duration: '1h 10m', economy: 300, business: 760, tag: 'Lowest Price', refundable: true },
-  { id: 4, time: '20:55', arrival: '22:05', code: 'HE 1253', duration: '1h 10m', economy: 282, business: 550, tag: '7 Seats Left', refundable: false },
-];
+interface FareType {
+  id: string;
+  name: string;
+  description: string;
+}
 
-const fareTypes = [
-  { name: 'Economy Value', price: 282, active: false, perks: ['Cabin baggage 7kg', 'Check-in baggage 20kg', 'Complimentary snacks / meals & beverages', 'Child discount 10%', 'Rebooking with a fee and fare difference', 'Refund available at a fee'] },
-  { name: 'Economy Basic', price: 425, active: false, perks: ['Cabin baggage 7kg', 'Check-in baggage 25kg', 'Complimentary snacks / meals & beverages', 'Child discount 15%', 'Complimentary rebooking with fare difference', 'Free standard seat selection'] },
-  { name: 'Economy Flex', price: 550, active: true, perks: ['Cabin baggage 7kg', 'Check-in baggage 30kg', 'Complimentary snacks / meals & beverages', 'Child discount 25%', 'Unlimited rebooking with fare difference', 'Free standard seat selection', 'Priority check-in, boarding & baggage'] },
-];
-
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <label className="block">
-    <span className="mb-2 block text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</span>
-    {children}
-  </label>
-);
-
-const inputClass = 'h-11 w-full rounded border border-slate-300 bg-white px-3 text-sm font-bold text-[#073b70] outline-none focus:border-blue-600';
-
-const Stepper = () => (
-  <div className="mx-auto grid max-w-5xl grid-cols-6 items-start gap-2 px-4 py-7">
-    {['Flight', 'Passenger', 'Service', 'Payment', 'Additional Services', 'Personalized'].map((step, index) => (
-      <div key={step} className="relative flex flex-col items-center gap-2 text-center">
-        {index > 0 && <span className="absolute left-[-50%] top-4 h-px w-full bg-slate-300" />}
-        <span className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border text-sm font-black ${index === 0 ? 'border-amber-400 bg-[#073b70] text-white' : 'border-slate-300 bg-slate-100 text-slate-400'}`}>
-          {index + 1}
-        </span>
-        <span className={`text-[10px] font-black uppercase ${index === 0 ? 'text-[#073b70]' : 'text-slate-400'}`}>{step}</span>
-      </div>
-    ))}
-  </div>
-);
-
-const DateStrip = ({ selectedReturn }: { selectedReturn: boolean }) => {
-  const prices = selectedReturn
-    ? ['Mon 12 THB 185.83', 'Tue 13 THB 264.72', 'Wed 14 THB 225.77', 'Thu 15 THB 300.00', 'Fri 16 THB 338.80', 'Sat 17 THB 238.80']
-    : ['Mon 25 THB 185.83', 'Tue 26 THB 264.72', 'Wed 27 THB 225.77', 'Thu 28 THB 282.00', 'Fri 29 THB 238.80', 'Sat 30 THB 238.80'];
-  return (
-    <div className="mx-auto flex max-w-5xl items-center gap-3 overflow-x-auto px-4 pb-8">
-      <button className="h-14 shrink-0 rounded-xl bg-blue-600 px-5 text-sm font-black text-white">&lt; - 2 days</button>
-      {prices.map((price, index) => (
-        <button key={price} className={`h-20 min-w-28 rounded-xl border px-3 text-center text-sm font-black ${index === 3 ? 'border-[#073b70] bg-[#073b70] text-white ring-4 ring-blue-200' : 'border-slate-300 bg-white text-slate-600'}`}>
-          <span className="block text-xs font-bold opacity-70">{price.split(' ').slice(0, 2).join(' ')}</span>
-          {price.split(' ').slice(2).join(' ')}
-          {index === 0 && <span className="mt-1 block rounded border border-blue-600 text-[9px] uppercase text-blue-600">Lowest Price</span>}
-        </button>
-      ))}
-      <button className="h-14 shrink-0 rounded-xl bg-blue-600 px-5 text-sm font-black text-white">+ 7 days &gt;</button>
-    </div>
-  );
+const cabinClassMap: Record<string, string> = {
+  ECONOMY: 'ECONOMY',
+  PREMIUM_ECONOMY: 'PREMIUM_ECONOMY',
+  PREMIUMECONOMY: 'PREMIUM_ECONOMY',
+  BUSINESS: 'BUSINESS',
+  FIRST: 'FIRST_CLASS',
+  FIRST_CLASS: 'FIRST_CLASS',
+  FIRSTCLASS: 'FIRST_CLASS',
 };
 
-const ModifySearch = () => (
-  <section className="mx-auto mb-8 max-w-5xl rounded-lg border border-slate-300 bg-white p-6 shadow-sm">
-    <div className="mb-5 flex items-start justify-between">
-      <div>
-        <h2 className="text-xl font-black text-[#073b70]">Modify Search</h2>
-        <p className="mt-1 text-xs font-bold text-slate-500">New York (JFK) &nbsp; | &nbsp; London (LHR) &nbsp; | &nbsp; 12 Oct 2024 - 24 Oct 2024</p>
-      </div>
-      <button className="text-xl text-slate-400">×</button>
-    </div>
-    <div className="mb-4 flex gap-2">
-      <button className="rounded bg-slate-100 px-5 py-2 text-xs font-black text-slate-500">One way</button>
-      <button className="rounded bg-blue-100 px-5 py-2 text-xs font-black text-blue-700">Round trip</button>
-    </div>
-    <div className="grid gap-4 lg:grid-cols-[1.2fr_1.2fr_1fr_1fr_140px]">
-      <Field label="From"><input className={inputClass} defaultValue="New York, John F. Kennedy Int..." /></Field>
-      <Field label="To"><input className={inputClass} defaultValue="London, Heathrow Airport (LHR)" /></Field>
-      <Field label="Depart"><input className={inputClass} defaultValue="12 Oct 2024" /></Field>
-      <Field label="Return"><input className={inputClass} defaultValue="24 Oct 2024" /></Field>
-      <button className="mt-6 h-11 rounded-lg bg-[#073b70] text-sm font-black text-white">Search</button>
-    </div>
-    <div className="mt-4 max-w-md">
-      <Field label="Passengers and Class"><select className={inputClass} defaultValue="2 Adults, 1 Child, Business Class"><option>2 Adults, 1 Child, Business Class</option><option>1 Passenger, Economy</option></select></Field>
-    </div>
-  </section>
-);
+const formatTime = (value: string) =>
+  new Date(value).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
-const FareSelection = () => (
-  <section className="mb-8 grid gap-4 lg:grid-cols-3">
-    {fareTypes.map((fare) => (
-      <article key={fare.name} className={`rounded-lg border bg-white p-5 ${fare.active ? 'border-[#073b70] ring-4 ring-blue-100' : 'border-slate-300'}`}>
-        <div className="mb-4 flex items-start justify-between">
-          <div>
-            <h3 className="text-lg font-black text-[#073b70]">{fare.name}</h3>
-            {fare.active && <p className="text-[10px] font-black uppercase text-blue-600">Recommended</p>}
-          </div>
-          <span className={`h-5 w-5 rounded-full border ${fare.active ? 'border-[#073b70] bg-[#073b70]' : 'border-slate-300'}`} />
-        </div>
-        <p className="mb-5 text-2xl font-black text-[#073b70]">THB {fare.price.toFixed(2)}</p>
-        <ul className="space-y-4 text-sm font-semibold text-slate-600">
-          {fare.perks.map((perk) => <li key={perk}>□ {perk}</li>)}
-        </ul>
-      </article>
-    ))}
-  </section>
-);
+const formatFareName = (fareType: string) =>
+  fareType.charAt(0).toUpperCase() + fareType.slice(1);
 
-const FlightCard = ({ flight, selected, onSelect }: { flight: typeof flights[number]; selected?: boolean; onSelect: () => void }) => (
-  <article className={`rounded-lg border bg-white p-5 shadow-sm ${selected ? 'border-blue-700 ring-1 ring-blue-700' : 'border-slate-300'}`}>
-    <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr_1fr] lg:items-center">
-      <div>
-        <div className="mb-5 flex items-center gap-3">
-          <span className="flex h-8 w-8 items-center justify-center bg-[#073b70] text-white"><Plane size={18} /></span>
-          <div>
-            <p className="font-black text-[#073b70]">Horizon Elite</p>
-            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Flight {flight.code}</p>
-          </div>
-          <span className={`ml-auto rounded-full px-3 py-1 text-[10px] font-black uppercase ${flight.tag === 'Lowest Price' ? 'border border-blue-500 text-blue-600' : 'bg-red-500 text-white'}`}>{flight.tag}</span>
-        </div>
-        <div className="grid grid-cols-[1fr_1.2fr_1fr] items-center gap-3">
-          <div><p className="text-3xl font-black text-[#073b70]">{flight.time}</p><p className="text-xs font-bold text-slate-500">AOR<br />Alor Setar</p></div>
-          <div className="text-center">
-            <p className="text-xs font-bold text-slate-500">{flight.duration}</p>
-            <div className="my-2 h-px bg-slate-300" />
-            <p className="text-xs font-black uppercase text-blue-600">Direct</p>
-          </div>
-          <div className="text-right"><p className="text-3xl font-black text-[#073b70]">{flight.arrival}</p><p className="text-xs font-bold text-slate-500">KUL (T1)<br />Kuala Lumpur</p></div>
-        </div>
-        <div className="mt-6 flex gap-6 text-[11px] font-black uppercase text-slate-500">
-          <span>20kg Included</span>
-          <span className={flight.refundable ? 'text-slate-500' : 'text-red-500'}>{flight.refundable ? 'Refundable' : 'Non-refundable'}</span>
-        </div>
-      </div>
-      {(['Economy', 'Business'] as const).map((cabin) => (
-        <button key={cabin} type="button" onClick={onSelect} className={`rounded-lg border p-5 text-left transition hover:border-blue-600 ${selected && cabin === 'Business' ? 'border-[#073b70]' : 'border-slate-200'}`}>
-          <div className="mb-3 flex items-center justify-between">
-            <p className={`text-xs font-black uppercase ${cabin === 'Economy' ? 'text-blue-600' : 'text-amber-500'}`}>{cabin}</p>
-            <span className="h-4 w-4 rounded-full border border-slate-300" />
-          </div>
-          <p className="text-xl font-black text-[#073b70]">THB {(cabin === 'Economy' ? flight.economy : flight.business).toFixed(2)}</p>
-          <p className="mt-2 text-[10px] font-black uppercase text-slate-500">Baggage Included</p>
-        </button>
-      ))}
-    </div>
-    <div className="mt-4 text-right text-xs font-black uppercase text-[#073b70]">View Details⌄</div>
-  </article>
-);
+const normalizeCabinClass = (value?: string) => {
+  const normalized = value?.trim().toUpperCase().replace(/[\s-]+/g, '_');
+  return cabinClassMap[normalized || ''] || 'ECONOMY';
+};
+
+const getFareTypesForFlight = (flight: FlightResultItem): FareType[] => {
+  const cabinClass = flight.cabin_class || 'Economy';
+
+  return [
+    {
+      id: 'economy',
+      name: `${cabinClass} Light`,
+      description: 'Basic fare, limited changes',
+    },
+    {
+      id: 'standard',
+      name: `${cabinClass} Standard`,
+      description: 'Standard fare, 1 free change',
+    },
+    {
+      id: 'flex',
+      name: `${cabinClass} Flex`,
+      description: 'Maximum flexibility, full refund',
+    },
+  ];
+};
 
 function FlightResults(): React.JSX.Element {
   const { state } = useLocation();
-  const search = (state ?? {}) as SearchState;
-  const [phase] = useState<FlightPhase>('outbound');
-  const [showModify, setShowModify] = useState(false);
-  const [showFares, setShowFares] = useState(false);
-  const [selectedFlightId, setSelectedFlightId] = useState<number | null>(null);
+  const navigate = useNavigate();
+  const searchState = (state ?? {}) as SearchState;
 
-  const total = phase === 'outbound' ? 660 : 1210;
-  const currentFlights = phase === 'outbound' ? flights : returnFlights;
+  const flightSearchId = searchState.flightSearchId || '';
+  const flightResults = searchState.flightResults || [];
+  const searchData = searchState.searchData || {};
+
+  const [phase, setPhase] = useState<FlightPhase>('outbound');
+  const [selectedOutboundFlight, setSelectedOutboundFlight] = useState<FlightResultItem | null>(null);
+  const [selectedOutboundFareType, setSelectedOutboundFareType] = useState('');
+  const [savedOutboundFlight, setSavedOutboundFlight] = useState<SelectedFlight | null>(null);
+  const [selectedInboundFlight, setSelectedInboundFlight] = useState<FlightResultItem | null>(null);
+  const [selectedInboundFareType, setSelectedInboundFareType] = useState('');
+  const [isSavingSelection, setIsSavingSelection] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showModify, setShowModify] = useState(false);
+
+  const isRoundTrip = searchData.tripType === 'Return';
+  const tripType: TripType = isRoundTrip ? 'ROUND_TRIP' : 'ONE_WAY';
+  const currentFlight = phase === 'outbound' ? selectedOutboundFlight : selectedInboundFlight;
+  const currentFareType = phase === 'outbound' ? selectedOutboundFareType : selectedInboundFareType;
+  const totalPrice =
+    (selectedOutboundFlight ? Number(selectedOutboundFlight.total_price) : 0) +
+    (selectedInboundFlight ? Number(selectedInboundFlight.total_price) : 0);
+
+  const selectFlight = (flight: FlightResultItem) => {
+    setErrorMessage('');
+
+    if (phase === 'outbound') {
+      setSelectedOutboundFlight(flight);
+      setSelectedOutboundFareType('');
+      setSavedOutboundFlight(null);
+      return;
+    }
+
+    setSelectedInboundFlight(flight);
+    setSelectedInboundFareType('');
+  };
+
+  const selectFareType = (fareTypeId: string) => {
+    if (phase === 'outbound') {
+      setSelectedOutboundFareType(fareTypeId);
+      return;
+    }
+
+    setSelectedInboundFareType(fareTypeId);
+  };
+
+  const buildSelectFlightRequest = (flight: FlightResultItem): SelectFlightRequest => ({
+    flight_search_id: flightSearchId,
+    flight_result_id: flight.flight_result_id,
+    flight_offer_id: flight.flight_offer_id,
+    selected_trip_type: phase === 'outbound' ? 'OUTBOUND' : 'RETURN',
+    airline_name: flight.airline_name,
+    flight_number: flight.flight_number || flight.airline_code,
+    origin_airport_code: flight.departure_airport,
+    destination_airport_code: flight.arrival_airport,
+    departure_datetime: flight.departure_datetime,
+    arrival_datetime: flight.arrival_datetime,
+    cabin_class: normalizeCabinClass(flight.cabin_class || searchData.cabinClass),
+    selected_fare_price: Number(flight.total_price),
+    currency_code: flight.currency_code,
+    baggage_allowance: flight.baggage_allowance || '20kg',
+    refundable_status: flight.refundable_status ?? false,
+  });
+
+  const goToPassengerInformation = (savedFlight: SelectedFlight, returnFlight: SelectedFlight | null) => {
+    navigate('/passenger-information', {
+      state: {
+        selectedFlight: savedFlight,
+        selectedFlightId: savedFlight.selected_flight_id,
+        returnFlight,
+        selectedReturnFlightId: returnFlight?.selected_flight_id ?? null,
+        flightSearchId,
+        tripType,
+        searchData,
+        outboundFlight: selectedOutboundFlight,
+        inboundFlight: returnFlight ? selectedInboundFlight : null,
+      },
+    });
+  };
+
+  const continueToNextStep = async () => {
+    if (!currentFlight || !currentFareType) {
+      setErrorMessage('Please select both a flight and fare type before continuing.');
+      return;
+    }
+
+    try {
+      setIsSavingSelection(true);
+      setErrorMessage('');
+
+      const response = await api.selectFlight(buildSelectFlightRequest(currentFlight));
+      const savedFlight = response.selectedFlight;
+
+      if (isRoundTrip && phase === 'outbound') {
+        setSavedOutboundFlight(savedFlight);
+        setSelectedInboundFlight(null);
+        setSelectedInboundFareType('');
+        setPhase('inbound');
+        return;
+      }
+
+      const outboundFlight = isRoundTrip ? savedOutboundFlight : savedFlight;
+
+      if (!outboundFlight) {
+        setErrorMessage('Selected flight data missing. Please choose the flight again.');
+        return;
+      }
+
+      goToPassengerInformation(outboundFlight, isRoundTrip ? savedFlight : null);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to select flight. Please try again.');
+    } finally {
+      setIsSavingSelection(false);
+    }
+  };
+
+  if (!flightSearchId || flightResults.length === 0) {
+    return (
+      <main className="min-h-screen bg-slate-100 text-slate-800">
+        <header className="bg-[#073b70] text-white">
+          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+            <Link to="/" className="text-2xl font-black tracking-wide">
+              HORIZON<span className="text-amber-400">ELITE</span>
+            </Link>
+          </div>
+        </header>
+
+        <div className="mx-auto max-w-7xl px-5 py-24">
+          <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-8 text-center">
+            <p className="mb-4 text-lg font-black text-amber-800">No Flight Data Found</p>
+            <p className="mb-6 text-sm text-amber-700">
+              It looks like you navigated directly to this page. Please search for flights from the home page.
+            </p>
+            <Link
+              to="/"
+              className="inline-block rounded-lg bg-[#073b70] px-6 py-3 font-black text-white transition hover:bg-[#0a2d51]"
+            >
+              Back to Search
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-800">
       <header className="bg-[#073b70] text-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Link to="/" className="text-2xl font-black tracking-wide">HORIZON<span className="text-amber-400">ELITE</span></Link>
+          <Link to="/" className="text-2xl font-black tracking-wide">
+            HORIZON<span className="text-amber-400">ELITE</span>
+          </Link>
           <div className="hidden items-center gap-8 text-sm font-bold md:flex">
-            <span>AOR ↔ KUL</span>
-            <span>Thu, 28 May - Thu, 15 Jun</span>
-            <span>{search.passengers ?? '1 Passenger'}</span>
-            <button onClick={() => setShowModify((value) => !value)} className="text-amber-300">Modify</button>
+            <span>
+              {searchData.from} to {searchData.to}
+            </span>
+            <span>{searchData.departDate}</span>
+            <span>{searchData.passengers ?? '1 Passenger'}</span>
           </div>
         </div>
       </header>
 
-      <Stepper />
+      <Stepper currentStep={1} />
       <DateStrip selectedReturn={phase === 'inbound'} />
 
       <div className="mx-auto max-w-7xl px-5 pb-24">
-        {showModify && <ModifySearch />}
+        {showModify && (
+          <ModifySearch
+            onClose={() => setShowModify(false)}
+            from={searchData.from}
+            to={searchData.to}
+            departDate={searchData.departDate}
+            returnDate={searchData.returnDate}
+          />
+        )}
 
-        {phase === 'inbound' && (
+        {phase === 'inbound' && selectedOutboundFlight && (
           <section className="mx-auto mb-8 max-w-5xl border-t-4 border-[#073b70] bg-white p-6">
-            <p className="mb-6 text-xs font-black uppercase tracking-widest text-slate-500">Your selected outbound flight <span className="float-right text-blue-600">Selection Confirmed</span></p>
+            <p className="mb-6 text-xs font-black uppercase tracking-widest text-slate-500">
+              Your selected outbound flight <span className="float-right text-blue-600">Confirmed</span>
+            </p>
             <div className="grid gap-5 md:grid-cols-4 md:items-center">
-              <p className="text-3xl font-black text-[#073b70]">14:40 <span className="block text-xs font-bold text-slate-500">JFK</span></p>
-              <p className="flex flex-col items-center gap-1 text-center text-sm font-bold text-slate-500"><Plane size={18} />1h 10m</p>
-              <p className="text-3xl font-black text-[#073b70]">15:50 <span className="block text-xs font-bold text-slate-500">LHR</span></p>
-              <p className="text-sm font-bold text-slate-600">Mon, 12 Oct 2024<br />Business Class<br />Flight HE 1209 · Direct</p>
+              <p className="text-3xl font-black text-[#073b70]">
+                {formatTime(selectedOutboundFlight.departure_datetime)}
+                <span className="block text-xs font-bold text-slate-500">{selectedOutboundFlight.departure_airport}</span>
+              </p>
+              <p className="flex flex-col items-center gap-1 text-center text-sm font-bold text-slate-500">
+                <Plane size={18} />
+                {selectedOutboundFlight.duration || '~'}
+              </p>
+              <p className="text-3xl font-black text-[#073b70]">
+                {formatTime(selectedOutboundFlight.arrival_datetime)}
+                <span className="block text-xs font-bold text-slate-500">{selectedOutboundFlight.arrival_airport}</span>
+              </p>
+              <p className="text-sm font-bold text-slate-600">
+                {normalizeCabinClass(selectedOutboundFlight.cabin_class || searchData.cabinClass)}
+                <br />
+                {selectedOutboundFlight.currency_code} {Number(selectedOutboundFlight.total_price).toFixed(2)}
+              </p>
             </div>
           </section>
         )}
 
+        {errorMessage && (
+          <div className="mx-auto mb-6 max-w-5xl rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-700">
+            {errorMessage}
+          </div>
+        )}
+
+        {isSavingSelection && (
+          <div className="mx-auto mb-6 max-w-5xl rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-700">
+            Saving your flight selection...
+          </div>
+        )}
+
         <div className="grid gap-8 lg:grid-cols-[1fr_350px]">
-          <section>
-            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-slate-600">
-              Prices shown are estimated and may change at checkout. Select a flight to view details. Includes taxes for one adult on Horizon Elite flights only.
+          <section className="flex flex-col gap-6">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-slate-600">
+              Select your {phase === 'outbound' ? 'departure' : 'return'} flight. Prices include taxes and fees.
             </div>
-            <div className="mb-5 flex items-center justify-between">
-              <h1 className="flex items-center gap-2 text-2xl font-black text-[#073b70]"><Plane size={24} /> Select your {phase === 'outbound' ? 'departure' : 'return'}</h1>
-              <button className="rounded-xl bg-[#073b70] px-5 py-3 text-sm font-black text-white">Sort by</button>
+            <div className="mb-2 flex items-center justify-between">
+              <h1 className="flex items-center gap-2 text-2xl font-black text-[#073b70]">
+                <Plane size={24} /> Select your {phase === 'outbound' ? 'departure' : 'return'} flight
+              </h1>
             </div>
-            <div className="space-y-5">
-              {currentFlights.map((flight) => (
-                <React.Fragment key={flight.id}>
-                  <FlightCard
-                    flight={flight}
-                    selected={selectedFlightId === flight.id}
-                    onSelect={() => {
-                      setSelectedFlightId(flight.id);
-                      setShowFares(true);
-                    }}
-                  />
-                  {showFares && selectedFlightId === flight.id && <FareSelection />}
-                </React.Fragment>
-              ))}
+
+            <div className="space-y-4">
+              {flightResults.map((flight) => {
+                const selected = currentFlight?.flight_result_id === flight.flight_result_id;
+
+                return (
+                  <div key={flight.flight_result_id} className="flex flex-col gap-3">
+                    <FlightCard
+                      flight={flight}
+                      selected={selected}
+                      onSelect={() => selectFlight(flight)}
+                    />
+
+                    {selected && (
+                      <section className="rounded-lg border-2 border-blue-200 bg-blue-50 p-6">
+                        <h3 className="mb-4 text-lg font-bold text-[#073b70]">Select Fare Type</h3>
+                        <div className="grid gap-3 md:grid-cols-3">
+                          {getFareTypesForFlight(flight).map((fareType) => (
+                            <button
+                              key={fareType.id}
+                              type="button"
+                              onClick={() => selectFareType(fareType.id)}
+                              className={`rounded-lg border-2 p-4 text-left transition ${
+                                currentFareType === fareType.id
+                                  ? 'border-blue-600 bg-white shadow-lg ring-2 ring-blue-300'
+                                  : 'border-blue-200 bg-white hover:border-blue-400'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <p className="font-bold text-[#073b70]">{fareType.name}</p>
+                                  <p className="text-xs text-slate-600">{fareType.description}</p>
+                                </div>
+                                <div
+                                  className={`mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${
+                                    currentFareType === fareType.id
+                                      ? 'border-blue-600 bg-blue-600'
+                                      : 'border-slate-300'
+                                  }`}
+                                >
+                                  {currentFareType === fareType.id && (
+                                    <svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </section>
 
           <aside className="h-fit rounded-xl border border-slate-300 bg-white p-6 shadow-sm">
-            <div className="mb-5 rounded bg-blue-50 p-3 text-xs font-black text-slate-600">Please select your flight to view available details</div>
+            <div className="mb-5 rounded bg-blue-50 p-3 text-xs font-black text-slate-600">
+              {!currentFlight && (phase === 'outbound' ? 'Select your departure flight' : 'Select your return flight')}
+              {currentFlight && !currentFareType && 'Flight selected. Choose fare type'}
+              {currentFlight && currentFareType && (phase === 'outbound' ? 'Departure ready' : 'Return ready')}
+            </div>
+
             <p className="text-xs font-black uppercase tracking-wide text-slate-400">Total Price</p>
-            <p className="mb-8 border-b border-slate-200 pb-6 text-4xl font-black text-[#073b70]">THB {total.toFixed(2)}</p>
+            <p className="mb-8 border-b border-slate-200 pb-6 text-4xl font-black text-[#073b70]">
+              {flightResults[0]?.currency_code || 'USD'} {totalPrice.toFixed(2)}
+            </p>
+
             <p className="mb-5 text-sm font-black uppercase tracking-wide text-[#073b70]">Trip Summary</p>
-            {['Outbound AOR → KUL', 'Return KUL → AOR'].map((route) => (
-              <div key={route} className="mb-4 bg-slate-50 p-4">
-                <p className="text-[10px] font-black uppercase text-slate-400">{route.split(' ')[0]}</p>
-                <p className="mt-2 text-sm font-black text-[#073b70]">{route.replace(route.split(' ')[0], '')}</p>
-              </div>
-            ))}
-            <Link to="/passenger-information" className="mt-5 flex h-16 w-full items-center justify-center rounded-xl bg-[#073b70] text-base font-black uppercase tracking-wide text-white">Confirm Selection</Link>
+
+            <FlightSummaryItem
+              title="Outbound"
+              flight={selectedOutboundFlight}
+              fareType={selectedOutboundFareType}
+            />
+
+            {isRoundTrip && (
+              <FlightSummaryItem
+                title="Return"
+                flight={selectedInboundFlight}
+                fareType={selectedInboundFareType}
+              />
+            )}
+
+            <button
+              disabled={isSavingSelection || !currentFlight || !currentFareType}
+              onClick={continueToNextStep}
+              className="mt-5 flex h-16 w-full items-center justify-center rounded-xl bg-[#073b70] text-base font-black uppercase tracking-wide text-white transition hover:bg-[#0a2d51] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSavingSelection ? 'Processing...' : phase === 'outbound' && isRoundTrip ? 'Continue to Return Flight' : 'Continue to Passenger Info'}
+            </button>
           </aside>
         </div>
 
-        <footer className="pt-24 text-center text-xs font-black uppercase tracking-widest text-slate-400">© 2026 Horizon Elite. Elevating global standards.</footer>
+        <footer className="pt-24 text-center text-xs font-black uppercase tracking-widest text-slate-400">
+          (C) 2026 Horizon Elite. Elevating global standards.
+        </footer>
       </div>
     </main>
+  );
+}
+
+function FlightSummaryItem({
+  title,
+  flight,
+  fareType,
+}: {
+  title: string;
+  flight: FlightResultItem | null;
+  fareType: string;
+}) {
+  return (
+    <div className="mb-4 bg-slate-50 p-4">
+      <p className="text-[10px] font-black uppercase text-slate-400">{title}</p>
+      {flight ? (
+        <div>
+          <p className="mt-2 text-sm font-black text-[#073b70]">
+            {flight.departure_airport} to {flight.arrival_airport}
+            <span className="block text-xs font-normal text-slate-500">
+              {new Date(flight.departure_datetime).toLocaleDateString()}
+            </span>
+          </p>
+          {fareType && (
+            <p className="mt-2 text-xs text-blue-600">
+              Fare: {formatFareName(fareType)}
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="mt-2 text-sm text-slate-500">Not selected</p>
+      )}
+    </div>
   );
 }
 

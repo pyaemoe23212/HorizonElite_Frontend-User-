@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { useTranslation } from '../contexts/TranslationContext';  // ← ADD THIS
+import { useTranslation } from '../contexts/TranslationContext';
+import type { SearchFlightRequest, FlightSegment } from '../Services/api';
+import { api } from '../Services/api';
 
 interface SearchData {
   tripType: string;
@@ -55,24 +57,32 @@ const SwapIcon = () => (
   </svg>
 );
 
-const formatDate = (date: string) =>
-  new Intl.DateTimeFormat('en', {
+const formatDate = (date: string) => {
+  if (!date) return '';
+  return new Intl.DateTimeFormat('en', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   }).format(new Date(`${date}T00:00:00`));
+};
 
-const formatDay = (date: string) =>
-  new Intl.DateTimeFormat('en', {
+const formatDay = (date: string) => {
+  if (!date) return '';
+  return new Intl.DateTimeFormat('en', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   }).format(new Date(`${date}T00:00:00`));
+};
 
 function Home(): React.JSX.Element {
   const navigate = useNavigate();
   const { currentLanguage, translate } = useTranslation();
-  
+
+  // ✅ ADD: Loading and error states for API call
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
+
   // State for translated text
   const [labels, setLabels] = useState({
     searchFlights: 'Search Flights',
@@ -93,13 +103,13 @@ function Home(): React.JSX.Element {
     tripType: 'Return',
     passengers: '1 Passenger',
     cabinClass: 'Economy',
-    from: 'New York (JFK)',
-    to: 'London (LHR)',
-    departDate: '2025-06-15',
-    returnDate: '2025-06-22',
+    from: '',
+    to: '',
+    departDate: '',
+    returnDate: '',
   });
 
-  // Translate all labels when language changes (silently in background)
+  // Translate all labels when language changes
   useEffect(() => {
     const translateLabels = async () => {
       try {
@@ -155,6 +165,7 @@ function Home(): React.JSX.Element {
 
   const handleChange = (name: keyof SearchData, value: string) => {
     setSearchData((prev) => ({ ...prev, [name]: value }));
+    setSearchError(''); // Clear error when user changes input
   };
 
   const handleSwapDestinations = () => {
@@ -165,9 +176,133 @@ function Home(): React.JSX.Element {
     }));
   };
 
-  const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
+  /**
+   * Extract airport code from "City (CODE)" format
+   * Example: "New York (JFK)" → "JFK"
+   */
+  const extractAirportCode = (location: string): string => {
+    const match = location.match(/\(([A-Z]{3})\)/);
+    return match ? match[1] : 'JFK';
+  };
+
+  /**
+   * Convert trip type to API format
+   * "Return" → "ROUND_TRIP", "One-way" → "ONE_WAY"
+   */
+  const getTripTypeForApi = (tripType: string): 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_CITY' => {
+    const tripTypeMap: Record<string, 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_CITY'> = {
+      'Return': 'ROUND_TRIP',
+      'One-way': 'ONE_WAY',
+      'Multi-city': 'MULTI_CITY',
+    };
+    return tripTypeMap[tripType] || 'ONE_WAY';
+  };
+
+  /**
+   * ✅ NEW: Handle flight search with real API
+   * Validates required fields and constructs proper request payload
+   */
+  const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    navigate('/flight-results', { state: searchData });
+    setSearchError('');
+
+    // ✅ Validate all required fields are filled
+    if (!searchData.from || !searchData.to || !searchData.departDate) {
+      setSearchError('Please fill in all required fields (From, To, Departure Date)');
+      return;
+    }
+
+    if (searchData.tripType === 'Return' && !searchData.returnDate) {
+      setSearchError('Please select a return date');
+      return;
+    }
+
+    // ✅ Check if user is authenticated
+    const token = localStorage.getItem('jwt_token');
+    if (!token) {
+      setSearchError('Please log in before searching for flights');
+      return;
+    }
+
+    setIsSearching(true);
+
+    try {
+      // ✅ Extract airport codes from user input
+      const originCode = extractAirportCode(searchData.from);
+      const destinationCode = extractAirportCode(searchData.to);
+
+      // Validate extraction
+      if (!originCode || originCode === 'JFK' || !destinationCode || destinationCode === 'JFK') {
+        if ((searchData.from && !searchData.from.includes('(')) || (searchData.to && !searchData.to.includes('('))) {
+          setSearchError('Please use airport codes in format: City (CODE), e.g., "Bangkok (BKK)"');
+          setIsSearching(false);
+          return;
+        }
+      }
+
+      // ✅ Build flight segments
+      const segments: FlightSegment[] = [
+        {
+          origin_airport_code: originCode,
+          destination_airport_code: destinationCode,
+          departure_date: searchData.departDate,
+        },
+      ];
+
+      // Add return segment for round-trip
+      if (searchData.tripType === 'Return') {
+        segments.push({
+          origin_airport_code: destinationCode,
+          destination_airport_code: originCode,
+          departure_date: searchData.returnDate,
+        });
+      }
+
+      // ✅ Build search request matching exact backend spec
+      const searchRequest: SearchFlightRequest = {
+        trip_type: getTripTypeForApi(searchData.tripType),
+        adult_passenger_count: 1,
+        child_passenger_count: 0,
+        infant_passenger_count: 0,
+        cabin_class: searchData.cabinClass.toLowerCase(),
+        currency_code: 'USD',
+        segments,
+      };
+
+      console.log('🔍 Sending flight search request:', searchRequest);
+
+      // ✅ Call the real API
+      const response = await api.searchFlights(searchRequest);
+
+      console.log('✅ Flight search response:', response);
+
+      // ✅ Navigate with API response data
+      navigate('/flight-results', {
+        state: {
+          searchData,
+          flightSearchId: response.flight_search_id,
+          flightResults: response.results,
+        },
+      });
+    } catch (error) {
+      // Display friendly error message
+      let errorText = 'Failed to search flights. Please try again.';
+      
+      if (error instanceof Error) {
+        errorText = error.message;
+        // Check for common API errors
+        if (error.message.includes('401')) {
+          errorText = 'Please log in to search for flights';
+        } else if (error.message.includes('500')) {
+          errorText = 'Server error. Please check your input and try again.';
+        }
+      }
+      
+      setSearchError(errorText);
+      console.error('Flight search error:', error);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   return (
@@ -191,6 +326,27 @@ function Home(): React.JSX.Element {
         </div>
 
         <form onSubmit={handleSearch} className="mt-24 rounded-2xl bg-white p-6 shadow-[0_18px_45px_rgba(15,50,85,.18)] ring-1 ring-slate-200/80 lg:p-7">
+          {/* ✅ Authentication required message */}
+          {!localStorage.getItem('jwt_token') && (
+            <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-700">
+              ℹ️ You must <a href="/signin" className="underline hover:text-amber-900">log in</a> before searching for flights.
+            </div>
+          )}
+
+          {/* ✅ Error message display */}
+          {searchError && (
+            <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-700">
+              ⚠️ {searchError}
+            </div>
+          )}
+
+          {/* ✅ Loading indicator */}
+          {isSearching && (
+            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-700">
+              🔍 Searching flights...
+            </div>
+          )}
+
           <div className="mb-6 flex flex-wrap gap-8 text-sm font-semibold text-slate-500">
             {[
               { key: 'Return', label: labels.roundTrip },
@@ -200,11 +356,12 @@ function Home(): React.JSX.Element {
                 key={key}
                 type="button"
                 onClick={() => handleChange('tripType', key)}
+                disabled={isSearching}
                 className={`flex min-h-10 items-center gap-2 border-b-2 px-1 transition ${
                   searchData.tripType === key
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent hover:text-slate-800'
-                }`}
+                } ${isSearching ? 'opacity-50' : ''}`}
               >
                 {key === 'Return' && <PlaneIcon />}
                 {label}
@@ -214,16 +371,19 @@ function Home(): React.JSX.Element {
 
           <div className="grid items-end gap-4 lg:grid-cols-[1.1fr_44px_1.1fr_1.1fr_1.1fr_1.1fr_70px]">
             <label className="block">
-              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">{labels.from}</span>
+              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                {labels.from}
+              </span>
               <span className="flex min-h-[64px] items-center gap-3 rounded-md bg-slate-100 px-4">
                 <PinIcon />
                 <span>
                   <input
                     value={searchData.from}
                     onChange={(event) => handleChange('from', event.target.value)}
-                    className="w-full bg-transparent text-base font-extrabold text-slate-900 outline-none"
+                    disabled={isSearching}
+                    className="w-full bg-transparent text-base font-extrabold text-slate-900 outline-none disabled:opacity-50"
                   />
-                  <span className="block text-xs font-medium text-slate-500">New York, USA</span>
+                  <span className="block text-xs font-medium text-slate-500">City or Airport</span>
                 </span>
               </span>
             </label>
@@ -231,29 +391,35 @@ function Home(): React.JSX.Element {
             <button
               type="button"
               onClick={handleSwapDestinations}
-              className="mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 transition hover:text-blue-600"
+              disabled={isSearching}
+              className="mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 transition hover:text-blue-600 disabled:opacity-50"
               aria-label="Swap departure and arrival"
             >
               <SwapIcon />
             </button>
 
             <label className="block">
-              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">{labels.to}</span>
+              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                {labels.to}
+              </span>
               <span className="flex min-h-[64px] items-center gap-3 rounded-md bg-slate-100 px-4">
                 <PinIcon />
                 <span>
                   <input
                     value={searchData.to}
                     onChange={(event) => handleChange('to', event.target.value)}
-                    className="w-full bg-transparent text-base font-extrabold text-slate-900 outline-none"
+                    disabled={isSearching}
+                    className="w-full bg-transparent text-base font-extrabold text-slate-900 outline-none disabled:opacity-50"
                   />
-                  <span className="block text-xs font-medium text-slate-500">London, UK</span>
+                  <span className="block text-xs font-medium text-slate-500">City or Airport</span>
                 </span>
               </span>
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">{labels.departDate}</span>
+              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                {labels.departDate}
+              </span>
               <span className="flex min-h-[64px] items-center gap-3 rounded-md bg-slate-100 px-4">
                 <CalendarIcon />
                 <span>
@@ -262,14 +428,17 @@ function Home(): React.JSX.Element {
                     type="date"
                     value={searchData.departDate}
                     onChange={(event) => handleChange('departDate', event.target.value)}
-                    className="block h-5 w-full bg-transparent text-xs font-medium text-slate-500 outline-none"
+                    disabled={isSearching}
+                    className="block h-5 w-full bg-transparent text-xs font-medium text-slate-500 outline-none disabled:opacity-50"
                   />
                 </span>
               </span>
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">{labels.returnDate}</span>
+              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                {labels.returnDate}
+              </span>
               <span className="flex min-h-[64px] items-center gap-3 rounded-md bg-slate-100 px-4">
                 <CalendarIcon />
                 <span>
@@ -278,7 +447,7 @@ function Home(): React.JSX.Element {
                     type="date"
                     value={searchData.returnDate}
                     onChange={(event) => handleChange('returnDate', event.target.value)}
-                    disabled={searchData.tripType === 'One-way'}
+                    disabled={searchData.tripType === 'One-way' || isSearching}
                     className="block h-5 w-full bg-transparent text-xs font-medium text-slate-500 outline-none disabled:opacity-40"
                   />
                 </span>
@@ -286,14 +455,17 @@ function Home(): React.JSX.Element {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">{labels.passengers}</span>
+              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                {labels.passengers}
+              </span>
               <span className="flex min-h-[64px] items-center gap-3 rounded-md bg-slate-100 px-4">
                 <UserIcon />
                 <span>
                   <select
                     value={searchData.passengers}
                     onChange={(event) => handleChange('passengers', event.target.value)}
-                    className="block w-full bg-transparent text-base font-extrabold text-slate-900 outline-none"
+                    disabled={isSearching}
+                    className="block w-full bg-transparent text-base font-extrabold text-slate-900 outline-none disabled:opacity-50"
                   >
                     <option>1 Passenger</option>
                     <option>2 Passengers</option>
@@ -303,7 +475,8 @@ function Home(): React.JSX.Element {
                   <select
                     value={searchData.cabinClass}
                     onChange={(event) => handleChange('cabinClass', event.target.value)}
-                    className="block w-full bg-transparent text-xs font-medium text-slate-500 outline-none"
+                    disabled={isSearching}
+                    className="block w-full bg-transparent text-xs font-medium text-slate-500 outline-none disabled:opacity-50"
                   >
                     <option>{labels.economy}</option>
                     <option>Premium Economy</option>
@@ -316,10 +489,18 @@ function Home(): React.JSX.Element {
 
             <button
               type="submit"
-              className="flex h-[64px] items-center justify-center rounded-md bg-blue-600 text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700"
+              disabled={
+                isSearching ||
+                !searchData.from ||
+                !searchData.to ||
+                !searchData.departDate ||
+                (searchData.tripType === 'Return' && !searchData.returnDate) ||
+                !localStorage.getItem('jwt_token')
+              }
+              className="flex h-[64px] items-center justify-center rounded-md bg-blue-600 text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
               aria-label={`Search flights departing ${formatDay(searchData.departDate)}`}
             >
-              <SearchIcon />
+              {isSearching ? '⏳' : <SearchIcon />}
             </button>
           </div>
         </form>
