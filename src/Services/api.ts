@@ -269,8 +269,11 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response.data,
   (error: AxiosError) => {
+    const responseData = error.response?.data as any;
     const message =
-      (error.response?.data as any)?.message ||
+      responseData?.message ||
+      responseData?.error ||
+      (Array.isArray(responseData?.details) ? responseData.details.join(', ') : undefined) ||
       error.message ||
       'An error occurred';
     return Promise.reject(new Error(message));
@@ -528,6 +531,74 @@ export const api = {
    */
   selectFlight: (flightData: SelectFlightRequest): Promise<SelectedFlightResponse> =>
     axiosInstance.post('/selected-flights', flightData),
+};
+
+// ─── Passenger Types ─────────────────────────────────────────────────────────
+
+export interface CreatePassengerRequest {
+  selected_flight_id: string;             // From POST /api/selected-flights response
+  pi_title: string;                       // e.g., "Mr", "Ms", "Mrs"
+  pi_first_name: string;
+  pi_middle_name?: string;
+  pi_last_name: string;
+  pi_gender: 'M' | 'F' | 'X';
+  pi_date_of_birth: string;               // Format: "YYYY-MM-DD"
+  pi_nationality: string;
+  pi_passenger_type_code: 'ADT' | 'CHD' | 'INF'; // Adult, Child, Infant
+  pi_passport_number?: string;
+  pi_passport_issuing_country?: string;
+  pi_passport_expiry_date?: string;       // Format: "YYYY-MM-DD"
+  pi_contact_email: string;
+  pi_contact_phone: string;
+}
+
+export interface Passenger {
+  passenger_id: string;
+  selected_flight_id: string;
+  pi_title: string;
+  pi_first_name: string;
+  pi_middle_name?: string;
+  pi_last_name: string;
+  pi_gender: string;
+  pi_date_of_birth: string;
+  pi_nationality: string;
+  pi_passenger_type_code: string;
+  pi_passport_number?: string;
+  pi_passport_issuing_country?: string;
+  pi_passport_expiry_date?: string;
+  pi_contact_email: string;
+  pi_contact_phone: string;
+  pi_passenger_status: string;
+  date_created?: string;
+  date_modified?: string;
+}
+
+export interface CreatePassengerResponse {
+  message: string;
+  passenger: Passenger;
+}
+
+// ─── API Export ──────────────────────────────────────────────────────────────
+
+// Extended API object with passenger endpoint
+export const passengerApi = {
+  /**
+   * Create a new passenger record
+   */
+  createPassenger: (data: CreatePassengerRequest): Promise<CreatePassengerResponse> =>
+    axiosInstance.post('/passengers', data),
+
+  /**
+   * Get passengers for a selected flight
+   */
+  getPassengers: (selectedFlightId: string): Promise<Passenger[]> =>
+    axiosInstance.get(`/passengers/${selectedFlightId}`),
+
+  /**
+   * Delete a passenger
+   */
+  deletePassenger: (passengerId: string): Promise<{ message: string }> =>
+    axiosInstance.delete(`/passengers/${passengerId}`),
 };
 
 export default api;

@@ -1,17 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
 import { useNavigate } from 'react-router';
 import { useTranslation } from '../contexts/TranslationContext';
 import type { SearchFlightRequest, FlightSegment } from '../Services/api';
 import { api } from '../Services/api';
 
+interface Airport {
+  name: string;
+  city: string;
+  country: string;
+  IATA: string;
+  ICAO: string;
+  lat: string;
+  lon: string;
+  timezone: string;
+}
+
 interface SearchData {
   tripType: string;
-  passengers: string;
+  adultCount: number;
+  childCount: number;
+  infantCount: number;
   cabinClass: string;
   from: string;
   to: string;
-  departDate: string;
-  returnDate: string;
+  departDate: Date | null;
+  returnDate: Date | null;
 }
 
 const PlaneIcon = ({ className = 'h-4 w-4' }: { className?: string }) => (
@@ -21,28 +36,28 @@ const PlaneIcon = ({ className = 'h-4 w-4' }: { className?: string }) => (
 );
 
 const PinIcon = () => (
-  <svg className="h-6 w-6 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg className="h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M20 10c0 4.8-8 11-8 11S4 14.8 4 10a8 8 0 1 1 16 0z" />
     <circle cx="12" cy="10" r="2.5" />
   </svg>
 );
 
 const CalendarIcon = () => (
-  <svg className="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg className="h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <rect width="18" height="18" x="3" y="4" rx="2" />
     <path d="M16 2v4M8 2v4M3 10h18" />
   </svg>
 );
 
 const UserIcon = () => (
-  <svg className="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg className="h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M20 21a8 8 0 0 0-16 0" />
     <circle cx="12" cy="7" r="4" />
   </svg>
 );
 
 const SearchIcon = () => (
-  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <circle cx="11" cy="11" r="7" />
     <path d="m21 21-4.3-4.3" />
   </svg>
@@ -57,167 +72,176 @@ const SwapIcon = () => (
   </svg>
 );
 
-const formatDate = (date: string) => {
-  if (!date) return '';
-  return new Intl.DateTimeFormat('en', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(new Date(`${date}T00:00:00`));
-};
-
-const formatDay = (date: string) => {
-  if (!date) return '';
-  return new Intl.DateTimeFormat('en', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(`${date}T00:00:00`));
-};
-
 function Home(): React.JSX.Element {
   const navigate = useNavigate();
   const { currentLanguage, translate } = useTranslation();
 
-  // ✅ ADD: Loading and error states for API call
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const [airports, setAirports] = useState<Airport[]>([]);
+  const [isLoadingAirports, setIsLoadingAirports] = useState(true);
+  const [showPassengerModal, setShowPassengerModal] = useState(false);
 
-  // State for translated text
   const [labels, setLabels] = useState({
     searchFlights: 'Search Flights',
     roundTrip: 'Round Trip',
     oneWay: 'One Way',
-    from: 'From',
-    to: 'To',
-    passengers: 'Passengers',
+    from: 'FROM',
+    to: 'TO',
+    passengers: 'PASSENGERS',
     cabinClass: 'Cabin Class',
-    departDate: 'Depart',
-    returnDate: 'Return',
+    departDate: 'DEPART',
+    returnDate: 'RETURN',
     economy: 'Economy',
     business: 'Business',
     firstClass: 'First Class',
   });
 
-  const [searchData, setSearchData] = useState<SearchData>({
+  const [searchData, setSearchData] = useState({
     tripType: 'Return',
-    passengers: '1 Passenger',
+    adultCount: 1,
+    childCount: 0,
+    infantCount: 0,
     cabinClass: 'Economy',
     from: '',
     to: '',
-    departDate: '',
-    returnDate: '',
+    departDate: null as Date | null,
+    returnDate: null as Date | null,
   });
 
-  // Translate all labels when language changes
+  const [fromSuggestions, setFromSuggestions] = useState<Airport[]>([]);
+  const [toSuggestions, setToSuggestions] = useState<Airport[]>([]);
+  const [showFromDropdown, setShowFromDropdown] = useState(false);
+  const [showToDropdown, setShowToDropdown] = useState(false);
+  const [activeFromIndex, setActiveFromIndex] = useState(-1);
+  const [activeToIndex, setActiveToIndex] = useState(-1);
+  const [childrenAges, setChildrenAges] = useState<number[]>([]);
+
+  const fromRef = useRef<HTMLInputElement>(null);
+  const toRef = useRef<HTMLInputElement>(null);
+
+  // Fetch Airports
+  useEffect(() => {
+    fetch('https://raw.githubusercontent.com/konsalex/airport-autocomplete-js/master/src/data/airports.json')
+      .then(res => res.json())
+      .then((data: Airport[]) => {
+        const valid = data.filter(a => a.IATA && a.IATA.length === 3 && a.IATA !== '\\N');
+        setAirports(valid);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoadingAirports(false));
+  }, []);
+
+  // Translate labels
   useEffect(() => {
     const translateLabels = async () => {
       try {
-        const [
-          searchFlights,
-          roundTrip,
-          oneWay,
-          from,
-          to,
-          passengers,
-          cabinClass,
-          departDate,
-          returnDate,
-          economy,
-          business,
-          firstClass,
-        ] = await Promise.all([
-          translate('Search Flights'),
-          translate('Round Trip'),
-          translate('One Way'),
-          translate('From'),
-          translate('To'),
-          translate('Passengers'),
-          translate('Cabin Class'),
-          translate('Depart'),
-          translate('Return'),
-          translate('Economy'),
-          translate('Business'),
-          translate('First Class'),
+        const [sf, rt, ow, fr, t, p, cc, dd, rd, eco, bus, fc] = await Promise.all([
+          translate('Search Flights'), translate('Round Trip'), translate('One Way'),
+          translate('From'), translate('To'), translate('Passengers'), translate('Cabin Class'),
+          translate('Depart'), translate('Return'), translate('Economy'), translate('Business'), translate('First Class')
         ]);
-
-        setLabels({
-          searchFlights,
-          roundTrip,
-          oneWay,
-          from,
-          to,
-          passengers,
-          cabinClass,
-          departDate,
-          returnDate,
-          economy,
-          business,
-          firstClass,
-        });
+        setLabels({ searchFlights: sf, roundTrip: rt, oneWay: ow, from: fr, to: t, passengers: p, cabinClass: cc, departDate: dd, returnDate: rd, economy: eco, business: bus, firstClass: fc });
       } catch (error) {
-        console.error('Error translating labels:', error);
+        console.error('Translation error:', error);
       }
     };
-
     translateLabels();
   }, [currentLanguage, translate]);
 
-  const handleChange = (name: keyof SearchData, value: string) => {
-    setSearchData((prev) => ({ ...prev, [name]: value }));
-    setSearchError(''); // Clear error when user changes input
+  const handleChange = (name: string, value: any) => {
+    setSearchData(prev => ({ ...prev, [name]: value }));
+    setSearchError('');
   };
 
   const handleSwapDestinations = () => {
-    setSearchData((prev) => ({
-      ...prev,
-      from: prev.to,
-      to: prev.from,
-    }));
+    setSearchData(prev => ({ ...prev, from: prev.to, to: prev.from }));
+    setFromSuggestions([]);
+    setToSuggestions([]);
   };
 
-  /**
-   * Extract airport code from "City (CODE)" format
-   * Example: "New York (JFK)" → "JFK"
-   */
+  const getSuggestions = (query: string): Airport[] => {
+    if (query.length < 2) return [];
+    const q = query.toLowerCase();
+    return airports.filter(a => 
+      a.city.toLowerCase().includes(q) || a.name.toLowerCase().includes(q) ||
+      a.IATA.toLowerCase().includes(q) || a.country.toLowerCase().includes(q)
+    ).slice(0, 10);
+  };
+
+  const formatAirportDisplay = (a: Airport) => `${a.city} (${a.IATA})`;
+
+  const focusNext = (ref: any) => setTimeout(() => ref.current?.focus(), 80);
+
+  // From Handlers
+  const handleFromInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    handleChange('from', value);
+    setFromSuggestions(getSuggestions(value));
+    setShowFromDropdown(true);
+    setActiveFromIndex(-1);
+  };
+
+  const selectFromAirport = (airport: Airport) => {
+    handleChange('from', formatAirportDisplay(airport));
+    setFromSuggestions([]);
+    setShowFromDropdown(false);
+    focusNext(toRef);
+  };
+
+  const handleFromKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showFromDropdown || fromSuggestions.length === 0) return;
+    if (e.key === 'ArrowDown') setActiveFromIndex(i => Math.min(i + 1, fromSuggestions.length - 1));
+    if (e.key === 'ArrowUp') setActiveFromIndex(i => Math.max(i - 1, 0));
+    if (e.key === 'Enter' && activeFromIndex >= 0) selectFromAirport(fromSuggestions[activeFromIndex]);
+    if (e.key === 'Escape') setShowFromDropdown(false);
+  };
+
+  // To Handlers
+  const handleToInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    handleChange('to', value);
+    setToSuggestions(getSuggestions(value));
+    setShowToDropdown(true);
+    setActiveToIndex(-1);
+  };
+
+  const selectToAirport = (airport: Airport) => {
+    handleChange('to', formatAirportDisplay(airport));
+    setToSuggestions([]);
+    setShowToDropdown(false);
+  };
+
+  const handleToKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showToDropdown || toSuggestions.length === 0) return;
+    if (e.key === 'ArrowDown') setActiveToIndex(i => Math.min(i + 1, toSuggestions.length - 1));
+    if (e.key === 'ArrowUp') setActiveToIndex(i => Math.max(i - 1, 0));
+    if (e.key === 'Enter' && activeToIndex >= 0) selectToAirport(toSuggestions[activeToIndex]);
+    if (e.key === 'Escape') setShowToDropdown(false);
+  };
+
   const extractAirportCode = (location: string): string => {
     const match = location.match(/\(([A-Z]{3})\)/);
-    return match ? match[1] : 'JFK';
+    return match ? match[1] : '';
   };
 
-  /**
-   * Convert trip type to API format
-   * "Return" → "ROUND_TRIP", "One-way" → "ONE_WAY"
-   */
-  const getTripTypeForApi = (tripType: string): 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_CITY' => {
-    const tripTypeMap: Record<string, 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_CITY'> = {
-      'Return': 'ROUND_TRIP',
-      'One-way': 'ONE_WAY',
-      'Multi-city': 'MULTI_CITY',
-    };
-    return tripTypeMap[tripType] || 'ONE_WAY';
+  const getTripTypeForApi = (tripType: string): 'ONE_WAY' | 'ROUND_TRIP' => {
+    return tripType === 'Return' ? 'ROUND_TRIP' : 'ONE_WAY';
   };
 
-  /**
-   * ✅ NEW: Handle flight search with real API
-   * Validates required fields and constructs proper request payload
-   */
   const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSearchError('');
 
-    // ✅ Validate all required fields are filled
     if (!searchData.from || !searchData.to || !searchData.departDate) {
       setSearchError('Please fill in all required fields (From, To, Departure Date)');
       return;
     }
-
     if (searchData.tripType === 'Return' && !searchData.returnDate) {
       setSearchError('Please select a return date');
       return;
     }
 
-    // ✅ Check if user is authenticated
     const token = localStorage.getItem('jwt_token');
     if (!token) {
       setSearchError('Please log in before searching for flights');
@@ -227,284 +251,328 @@ function Home(): React.JSX.Element {
     setIsSearching(true);
 
     try {
-      // ✅ Extract airport codes from user input
       const originCode = extractAirportCode(searchData.from);
       const destinationCode = extractAirportCode(searchData.to);
 
-      // Validate extraction
-      if (!originCode || originCode === 'JFK' || !destinationCode || destinationCode === 'JFK') {
-        if ((searchData.from && !searchData.from.includes('(')) || (searchData.to && !searchData.to.includes('('))) {
-          setSearchError('Please use airport codes in format: City (CODE), e.g., "Bangkok (BKK)"');
-          setIsSearching(false);
-          return;
-        }
+      if (!originCode || !destinationCode) {
+        setSearchError('Please select valid airports from the dropdown');
+        setIsSearching(false);
+        return;
       }
 
-      // ✅ Build flight segments
-      const segments: FlightSegment[] = [
-        {
-          origin_airport_code: originCode,
-          destination_airport_code: destinationCode,
-          departure_date: searchData.departDate,
-        },
-      ];
+      const segments: FlightSegment[] = [{
+        origin_airport_code: originCode,
+        destination_airport_code: destinationCode,
+        departure_date: searchData.departDate!.toISOString().split('T')[0],
+      }];
 
-      // Add return segment for round-trip
-      if (searchData.tripType === 'Return') {
+      if (searchData.tripType === 'Return' && searchData.returnDate) {
         segments.push({
           origin_airport_code: destinationCode,
           destination_airport_code: originCode,
-          departure_date: searchData.returnDate,
+          departure_date: searchData.returnDate.toISOString().split('T')[0],
         });
       }
 
-      // ✅ Build search request matching exact backend spec
       const searchRequest: SearchFlightRequest = {
         trip_type: getTripTypeForApi(searchData.tripType),
-        adult_passenger_count: 1,
-        child_passenger_count: 0,
-        infant_passenger_count: 0,
+        adult_passenger_count: searchData.adultCount,
+        child_passenger_count: searchData.childCount,
+        infant_passenger_count: searchData.infantCount,
         cabin_class: searchData.cabinClass.toLowerCase(),
         currency_code: 'USD',
         segments,
       };
 
-      console.log('🔍 Sending flight search request:', searchRequest);
-
-      // ✅ Call the real API
       const response = await api.searchFlights(searchRequest);
 
-      console.log('✅ Flight search response:', response);
+      // Convert Date objects to ISO strings for navigation state
+      const searchDataForNavigation = {
+        ...searchData,
+        departDate: searchData.departDate?.toISOString().split('T')[0] || null,
+        returnDate: searchData.returnDate?.toISOString().split('T')[0] || null,
+        childrenAges,
+      };
 
-      // ✅ Navigate with API response data
       navigate('/flight-results', {
         state: {
-          searchData,
+          searchData: searchDataForNavigation,
           flightSearchId: response.flight_search_id,
           flightResults: response.results,
         },
       });
     } catch (error) {
-      // Display friendly error message
-      let errorText = 'Failed to search flights. Please try again.';
-      
-      if (error instanceof Error) {
-        errorText = error.message;
-        // Check for common API errors
-        if (error.message.includes('401')) {
-          errorText = 'Please log in to search for flights';
-        } else if (error.message.includes('500')) {
-          errorText = 'Server error. Please check your input and try again.';
-        }
-      }
-      
-      setSearchError(errorText);
-      console.error('Flight search error:', error);
+      setSearchError('Failed to search flights. Please try again.');
     } finally {
       setIsSearching(false);
     }
   };
 
+  const totalPassengers = searchData.adultCount + searchData.childCount + searchData.infantCount;
+
   return (
     <section className="relative min-h-[calc(100vh-5rem)] overflow-hidden bg-sky-100">
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage:
-            'url("https://images.unsplash.com/photo-1569154941061-e231b4725ef1?q=80&w=2200&auto=format&fit=crop")',
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-r from-white/65 via-sky-200/25 to-sky-500/15" />
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,.18)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,.16)_1px,transparent_1px)] bg-[size:72px_72px]" />
+      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1569154941061-e231b4725ef1?q=80&w=2200&auto=format&fit=crop")' }} />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/40" />
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-5rem)] max-w-7xl flex-col justify-center px-6 py-16 lg:px-8">
-        <div className="max-w-[520px] pt-8">
-          <h1 className="text-4xl font-extrabold text-[#063b70]">{labels.searchFlights}</h1>
-          <p className="mt-7 max-w-md text-lg font-medium leading-7 text-[#245a8d]">
-            Search flights, compare fares, and book your next adventure with ease.
-          </p>
+      <div className="relative mx-auto max-w-6xl px-6 pt-16 pb-12">
+        <div className="max-w-lg">
+          <h1 className="text-5xl font-bold text-white tracking-tight">Search Flights</h1>
+          <p className="mt-4 text-lg text-white/90">Search flights, compare fares, and book your next adventure with ease.</p>
         </div>
 
-        <form onSubmit={handleSearch} className="mt-24 rounded-2xl bg-white p-6 shadow-[0_18px_45px_rgba(15,50,85,.18)] ring-1 ring-slate-200/80 lg:p-7">
-          {/* ✅ Authentication required message */}
-          {!localStorage.getItem('jwt_token') && (
-            <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-700">
-              ℹ️ You must <a href="/signin" className="underline hover:text-amber-900">log in</a> before searching for flights.
-            </div>
-          )}
-
-          {/* ✅ Error message display */}
+        <form onSubmit={handleSearch} className="mt-10 bg-white rounded-3xl p-8 shadow-2xl">
           {searchError && (
-            <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-700">
-              ⚠️ {searchError}
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-sm">
+              {searchError}
             </div>
           )}
 
-          {/* ✅ Loading indicator */}
-          {isSearching && (
-            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-700">
-              🔍 Searching flights...
-            </div>
-          )}
-
-          <div className="mb-6 flex flex-wrap gap-8 text-sm font-semibold text-slate-500">
-            {[
-              { key: 'Return', label: labels.roundTrip },
-              { key: 'One-way', label: labels.oneWay },
-            ].map(({ key, label }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => handleChange('tripType', key)}
-                disabled={isSearching}
-                className={`flex min-h-10 items-center gap-2 border-b-2 px-1 transition ${
-                  searchData.tripType === key
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent hover:text-slate-800'
-                } ${isSearching ? 'opacity-50' : ''}`}
-              >
-                {key === 'Return' && <PlaneIcon />}
-                {label}
-              </button>
-            ))}
+          <div className="flex gap-8 mb-8 border-b pb-6 text-sm font-medium">
+            <button type="button" onClick={() => handleChange('tripType', 'Return')} className={`flex items-center gap-2 pb-1 transition ${searchData.tripType === 'Return' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}>
+              <PlaneIcon /> {labels.roundTrip}
+            </button>
+            <button type="button" onClick={() => handleChange('tripType', 'One-way')} className={`pb-1 transition ${searchData.tripType === 'One-way' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}>
+              {labels.oneWay}
+            </button>
           </div>
 
-          <div className="grid items-end gap-4 lg:grid-cols-[1.1fr_44px_1.1fr_1.1fr_1.1fr_1.1fr_70px]">
-            <label className="block">
-              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                {labels.from}
-              </span>
-              <span className="flex min-h-[64px] items-center gap-3 rounded-md bg-slate-100 px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+            {/* FROM */}
+            <div className="lg:col-span-5 relative">
+              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">{labels.from}</label>
+              <div className="flex h-16 items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 focus-within:border-blue-500 transition-all">
                 <PinIcon />
-                <span>
-                  <input
-                    value={searchData.from}
-                    onChange={(event) => handleChange('from', event.target.value)}
-                    disabled={isSearching}
-                    className="w-full bg-transparent text-base font-extrabold text-slate-900 outline-none disabled:opacity-50"
-                  />
-                  <span className="block text-xs font-medium text-slate-500">City or Airport</span>
-                </span>
-              </span>
-            </label>
+                <input
+                  ref={fromRef}
+                  value={searchData.from}
+                  onChange={handleFromInput}
+                  onFocus={() => setShowFromDropdown(true)}
+                  onKeyDown={handleFromKeyDown}
+                  disabled={isSearching || isLoadingAirports}
+                  className="flex-1 bg-transparent text-lg font-medium text-slate-800 outline-none placeholder:text-slate-400"
+                  placeholder="City or Airport"
+                />
+              </div>
+              {showFromDropdown && fromSuggestions.length > 0 && (
+                <div className="absolute z-50 mt-2 w-full rounded-2xl bg-white py-2 shadow-xl border border-slate-100 max-h-80 overflow-auto">
+                  {fromSuggestions.map((airport, index) => (
+                    <div key={airport.IATA} onClick={() => selectFromAirport(airport)} className={`px-5 py-3.5 hover:bg-slate-50 cursor-pointer ${index === activeFromIndex ? 'bg-slate-100' : ''}`}>
+                      <div className="font-semibold text-slate-900">{airport.city} ({airport.IATA})</div>
+                      <div className="text-sm text-slate-500">{airport.name} • {airport.country}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-            <button
-              type="button"
-              onClick={handleSwapDestinations}
-              disabled={isSearching}
-              className="mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 transition hover:text-blue-600 disabled:opacity-50"
-              aria-label="Swap departure and arrival"
-            >
-              <SwapIcon />
+            {/* SWAP */}
+            <button type="button" onClick={handleSwapDestinations} disabled={isSearching} className="lg:col-span-1 flex justify-center mt-8">
+              <div className="rounded-full bg-white p-3 border border-slate-200 hover:border-blue-200 transition shadow-sm">
+                <SwapIcon />
+              </div>
             </button>
 
-            <label className="block">
-              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                {labels.to}
-              </span>
-              <span className="flex min-h-[64px] items-center gap-3 rounded-md bg-slate-100 px-4">
+            {/* TO */}
+            <div className="lg:col-span-5 relative">
+              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">{labels.to}</label>
+              <div className="flex h-16 items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 focus-within:border-blue-500 transition-all">
                 <PinIcon />
-                <span>
-                  <input
-                    value={searchData.to}
-                    onChange={(event) => handleChange('to', event.target.value)}
-                    disabled={isSearching}
-                    className="w-full bg-transparent text-base font-extrabold text-slate-900 outline-none disabled:opacity-50"
-                  />
-                  <span className="block text-xs font-medium text-slate-500">City or Airport</span>
-                </span>
-              </span>
-            </label>
+                <input
+                  ref={toRef}
+                  value={searchData.to}
+                  onChange={handleToInput}
+                  onFocus={() => setShowToDropdown(true)}
+                  onKeyDown={handleToKeyDown}
+                  disabled={isSearching || isLoadingAirports}
+                  className="flex-1 bg-transparent text-lg font-medium text-slate-800 outline-none placeholder:text-slate-400"
+                  placeholder="City or Airport"
+                />
+              </div>
+              {showToDropdown && toSuggestions.length > 0 && (
+                <div className="absolute z-50 mt-2 w-full rounded-2xl bg-white py-2 shadow-xl border border-slate-100 max-h-80 overflow-auto">
+                  {toSuggestions.map((airport, index) => (
+                    <div key={airport.IATA} onClick={() => selectToAirport(airport)} className={`px-5 py-3.5 hover:bg-slate-50 cursor-pointer ${index === activeToIndex ? 'bg-slate-100' : ''}`}>
+                      <div className="font-semibold text-slate-900">{airport.city} ({airport.IATA})</div>
+                      <div className="text-sm text-slate-500">{airport.name} • {airport.country}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-            <label className="block">
-              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                {labels.departDate}
-              </span>
-              <span className="flex min-h-[64px] items-center gap-3 rounded-md bg-slate-100 px-4">
+            {/* DEPART DATE */}
+            <div className="lg:col-span-3">
+              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">{labels.departDate}</label>
+              <div className="flex h-16 items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 focus-within:border-blue-500 transition-all">
                 <CalendarIcon />
-                <span>
-                  <span className="block text-base font-extrabold text-slate-900">{formatDate(searchData.departDate)}</span>
-                  <input
-                    type="date"
-                    value={searchData.departDate}
-                    onChange={(event) => handleChange('departDate', event.target.value)}
-                    disabled={isSearching}
-                    className="block h-5 w-full bg-transparent text-xs font-medium text-slate-500 outline-none disabled:opacity-50"
-                  />
-                </span>
-              </span>
-            </label>
+                <DatePicker
+                  selected={searchData.departDate}
+                  onChange={(date: Date | null) => handleChange('departDate', date)}
+                  className="bg-transparent text-lg font-medium text-slate-800 outline-none w-full cursor-pointer"
+                  placeholderText="Select departure date"
+                  dateFormat="dd MMM yyyy"
+                  minDate={new Date()}
+                />
+              </div>
+            </div>
 
-            <label className="block">
-              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                {labels.returnDate}
-              </span>
-              <span className="flex min-h-[64px] items-center gap-3 rounded-md bg-slate-100 px-4">
+            {/* RETURN DATE */}
+            <div className="lg:col-span-3">
+              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">{labels.returnDate}</label>
+              <div className="flex h-16 items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 focus-within:border-blue-500 transition-all">
                 <CalendarIcon />
-                <span>
-                  <span className="block text-base font-extrabold text-slate-900">{formatDate(searchData.returnDate)}</span>
-                  <input
-                    type="date"
-                    value={searchData.returnDate}
-                    onChange={(event) => handleChange('returnDate', event.target.value)}
-                    disabled={searchData.tripType === 'One-way' || isSearching}
-                    className="block h-5 w-full bg-transparent text-xs font-medium text-slate-500 outline-none disabled:opacity-40"
-                  />
-                </span>
-              </span>
-            </label>
+                <DatePicker
+                  selected={searchData.returnDate}
+                  onChange={(date: Date | null) => handleChange('returnDate', date)}
+                  className="bg-transparent text-lg font-medium text-slate-800 outline-none w-full cursor-pointer"
+                  placeholderText="Select return date"
+                  dateFormat="dd MMM yyyy"
+                  minDate={searchData.departDate || new Date()}
+                  disabled={searchData.tripType === 'One-way'}
+                />
+              </div>
+            </div>
 
-            <label className="block">
-              <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
-                {labels.passengers}
-              </span>
-              <span className="flex min-h-[64px] items-center gap-3 rounded-md bg-slate-100 px-4">
+            {/* PASSENGERS */}
+            <div className="lg:col-span-4">
+              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">PASSENGERS</label>
+              <div onClick={() => setShowPassengerModal(true)} className="flex h-16 items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 cursor-pointer hover:border-blue-500 transition-all">
                 <UserIcon />
-                <span>
-                  <select
-                    value={searchData.passengers}
-                    onChange={(event) => handleChange('passengers', event.target.value)}
-                    disabled={isSearching}
-                    className="block w-full bg-transparent text-base font-extrabold text-slate-900 outline-none disabled:opacity-50"
-                  >
-                    <option>1 Passenger</option>
-                    <option>2 Passengers</option>
-                    <option>3 Passengers</option>
-                    <option>4 Passengers</option>
-                  </select>
-                  <select
-                    value={searchData.cabinClass}
-                    onChange={(event) => handleChange('cabinClass', event.target.value)}
-                    disabled={isSearching}
-                    className="block w-full bg-transparent text-xs font-medium text-slate-500 outline-none disabled:opacity-50"
-                  >
-                    <option>{labels.economy}</option>
-                    <option>Premium Economy</option>
-                    <option>{labels.business}</option>
-                    <option>{labels.firstClass}</option>
-                  </select>
-                </span>
-              </span>
-            </label>
+                <div>
+                  <div className="text-lg font-medium text-slate-800">{totalPassengers} Passenger{totalPassengers !== 1 ? 's' : ''}</div>
+                  <div className="text-xs text-slate-500">{searchData.cabinClass}</div>
+                </div>
+              </div>
+            </div>
 
+            {/* SEARCH BUTTON */}
             <button
               type="submit"
-              disabled={
-                isSearching ||
-                !searchData.from ||
-                !searchData.to ||
-                !searchData.departDate ||
-                (searchData.tripType === 'Return' && !searchData.returnDate) ||
-                !localStorage.getItem('jwt_token')
-              }
-              className="flex h-[64px] items-center justify-center rounded-md bg-blue-600 text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
-              aria-label={`Search flights departing ${formatDay(searchData.departDate)}`}
+              disabled={isSearching || !searchData.from || !searchData.to || !searchData.departDate || (searchData.tripType === 'Return' && !searchData.returnDate) || !localStorage.getItem('jwt_token')}
+              className="lg:col-span-2 h-16 rounded-2xl bg-blue-600 text-white font-semibold flex items-center justify-center hover:bg-blue-700 transition disabled:opacity-60 shadow-lg mt-8 lg:mt-0"
             >
-              {isSearching ? '⏳' : <SearchIcon />}
+              {isSearching ? 'Searching...' : <SearchIcon />}
             </button>
           </div>
         </form>
       </div>
+
+      {/* Passenger Modal */}
+      {showPassengerModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md p-8">
+            <h3 className="text-xl font-semibold mb-6">Passengers</h3>
+
+            {/* Adults */}
+            <div className="flex justify-between items-center py-4 border-b">
+              <div>
+                <div className="font-medium">Adults</div>
+                <div className="text-sm text-slate-500">18+</div>
+              </div>
+              <div className="flex items-center gap-4">
+                <button onClick={() => handleChange('adultCount', Math.max(1, searchData.adultCount - 1))} className="w-9 h-9 rounded-full border flex items-center justify-center text-xl">-</button>
+                <span className="w-8 text-center text-xl font-medium">{searchData.adultCount}</span>
+                <button onClick={() => handleChange('adultCount', searchData.adultCount + 1)} className="w-9 h-9 rounded-full border flex items-center justify-center text-xl">+</button>
+              </div>
+            </div>
+
+            {/* Children */}
+            <div className="py-4 border-b">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <div className="font-medium">Children</div>
+                  <div className="text-sm text-slate-500">0–17</div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (searchData.childCount > 0) {
+                        handleChange('childCount', searchData.childCount - 1);
+                        setChildrenAges(prev => prev.slice(0, -1));
+                      }
+                    }}
+                    className="w-9 h-9 rounded-full border flex items-center justify-center text-xl"
+                  >
+                    -
+                  </button>
+                  <span className="w-8 text-center text-xl font-medium">{searchData.childCount}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChange('childCount', searchData.childCount + 1);
+                      setChildrenAges(prev => [...prev, 12]);
+                    }}
+                    className="w-9 h-9 rounded-full border flex items-center justify-center text-xl"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Children Ages */}
+              {searchData.childCount > 0 && (
+                <div className="ml-2 space-y-3 mt-4 pt-4 border-t">
+                  <p className="text-xs font-semibold text-slate-600">Child Age</p>
+                  {Array.from({ length: searchData.childCount }).map((_, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <label className="text-xs text-slate-600">Child {index + 1}:</label>
+                      <select
+                        value={childrenAges[index] || 12}
+                        onChange={(e) => {
+                          const newAges = [...childrenAges];
+                          newAges[index] = parseInt(e.target.value);
+                          setChildrenAges(newAges);
+                        }}
+                        className="px-3 py-1 rounded border border-slate-300 bg-white text-sm"
+                      >
+                        {Array.from({ length: 18 }, (_, i) => i).map(age => (
+                          <option key={age} value={age}>{age} years</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Cabin Class */}
+            <div className="flex justify-between items-center py-4 border-b">
+              <div>
+                <div className="font-medium">Infants</div>
+                <div className="text-sm text-slate-500">Under 2</div>
+              </div>
+              <div className="flex items-center gap-4">
+                <button onClick={() => handleChange('infantCount', Math.max(0, searchData.infantCount - 1))} className="w-9 h-9 rounded-full border flex items-center justify-center text-xl">-</button>
+                <span className="w-8 text-center text-xl font-medium">{searchData.infantCount}</span>
+                <button onClick={() => handleChange('infantCount', searchData.infantCount + 1)} className="w-9 h-9 rounded-full border flex items-center justify-center text-xl">+</button>
+              </div>
+            </div>
+
+            {/* Cabin Class */}
+            <div className="mt-6">
+              <label className="block text-sm font-medium mb-3">Cabin Class</label>
+              <div className="grid grid-cols-2 gap-3">
+                {['Economy', 'Premium Economy', 'Business', 'First'].map(cls => (
+                  <button
+                    key={cls}
+                    onClick={() => handleChange('cabinClass', cls)}
+                    className={`py-3 rounded-2xl border text-sm font-medium transition ${searchData.cabinClass === cls ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 hover:border-slate-300'}`}
+                  >
+                    {cls}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setShowPassengerModal(false)} className="flex-1 py-4 border rounded-2xl font-medium">Cancel</button>
+              <button onClick={() => setShowPassengerModal(false)} className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-medium">Done</button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

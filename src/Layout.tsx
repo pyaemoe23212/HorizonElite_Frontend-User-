@@ -8,7 +8,7 @@ function Layout(): React.JSX.Element {
     <>
       <Navbar />
       {/* Outlet is where your nested pages (Home, FlightResults, etc.) will render */}
-      <main className="min-h-screen">
+      <main>
         <Outlet />
       </main>
       <Footer />
