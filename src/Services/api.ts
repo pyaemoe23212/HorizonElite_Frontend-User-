@@ -533,6 +533,123 @@ export const api = {
     axiosInstance.post('/selected-flights', flightData),
 };
 
+// ─── Booking Types ───────────────────────────────────────────────────────────
+
+export interface CreateBookingRequest {
+  user_email_address: string;
+  selected_flight_id: string;
+  passenger_ids: string[];
+  total_payment_amount: number;
+  currency_code: string;
+  trip_type: 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_CITY';
+  cabin_class: string;
+  fare_brand_id?: string;
+}
+
+export interface BookingPassenger {
+  passenger_id: string;
+  pi_first_name: string;
+  pi_last_name: string;
+  pi_passenger_type_code: string;
+}
+
+export interface CreateBookingResponse {
+  message: string;
+  booking: {
+    pnr_reference: string;
+    user_email_address: string;
+    selected_flight_id: string;
+    booking_status: string;
+    ticketing_status: string;
+    total_payment_amount: string;
+    currency_code: string;
+    booking_date_timestamp: string;
+    booking_created_at: string;
+    booking_updated_at: string;
+    passengers: BookingPassenger[];
+  };
+}
+
+// ─── Payment Types ───────────────────────────────────────────────────────────
+
+export interface CreatePaymentRequest {
+  pnr_reference: string;
+  user_email_address: string;
+  payment_method: 'CREDIT_CARD' | 'DEBIT_CARD' | 'BANK_TRANSFER' | 'THAI_QR' | 'MOBILE_BANKING' | 'EWALLET';
+  payment_region: string;
+  currency_code: string;
+  total_payment_amount: number;
+  payment_token?: string;
+}
+
+export interface CreatePaymentResponse {
+  message: string;
+  payment: {
+    payment_id: string;
+    pnr_reference: string;
+    user_email_address: string;
+    payment_method: string;
+    payment_region: string;
+    currency_code: string;
+    total_payment_amount: string;
+    payment_token?: string;
+    three_ds_status: string | null;
+    payment_status_code: string;
+    payment_timestamp: string;
+  };
+}
+
+export interface ChargePaymentRequest {
+  payment_id: string;
+  pnr_reference: string;
+  payment_token: string;
+  amount: number;
+  currency: string;
+  description?: string;
+  return_uri?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface SimulatePaymentSuccessRequest {
+  payment_id: string;
+}
+
+export interface ChargePaymentResponse {
+  payment_id: string;
+  pnr_reference: string;
+  payment_status_code: string;
+  gateway_transaction_reference: string;
+  three_ds_status: string;
+  amount: string;
+  currency: string;
+  payment_timestamp: string;
+  message: string;
+}
+
+export interface CreateDuffelOrderRequest {
+  booking_id: string;
+  payment_id: string;
+}
+
+export interface CreateDuffelOrderResponse {
+  message: string;
+  order: {
+    local_order: {
+      duffel_order_id: string;
+      booking_id: string;
+      payment_id: string;
+      order_status: string;
+    };
+    duffel_order: {
+      data?: {
+        id?: string;
+        booking_reference?: string;
+      };
+      [key: string]: any;
+    };
+  };
+}
+
 // ─── Passenger Types ─────────────────────────────────────────────────────────
 
 export interface CreatePassengerRequest {
@@ -599,6 +716,81 @@ export const passengerApi = {
    */
   deletePassenger: (passengerId: string): Promise<{ message: string }> =>
     axiosInstance.delete(`/passengers/${passengerId}`),
+};
+
+// Extended API object with booking endpoint
+export const bookingApi = {
+  /**
+   * Create a booking with selected flight and passengers
+   * Generates a PNR (Passenger Name Record) reference
+   * 
+   * Call this after all passengers have been added.
+   * This creates the booking and sets status to PENDING_PAYMENT.
+   * 
+   * Example usage in AddOns.tsx:
+   * const response = await bookingApi.createBooking({
+   *   user_email_address: "john@example.com",
+   *   selected_flight_id: "flight-id-uuid",
+   *   passenger_ids: ["passenger-1-id", "passenger-2-id"],
+   *   total_payment_amount: 1205.50,
+   *   currency_code: "USD",
+   *   trip_type: "ROUND_TRIP",
+   *   cabin_class: "ECONOMY"
+   * });
+   * 
+   * const pnrReference = response.booking.pnr_reference;
+   * Navigate to payment with the PNR
+   */
+  createBooking: (data: CreateBookingRequest): Promise<CreateBookingResponse> =>
+    axiosInstance.post('/bookings', data),
+};
+
+// Extended API object with payment endpoints
+export const paymentApi = {
+  /**
+   * Test connection to Omise payment gateway
+   */
+  testConnection: (): Promise<any> =>
+    axiosInstance.get('/payments/test'),
+
+  /**
+   * Create a payment record for a booking
+   * This initiates the payment process but doesn't charge yet
+   * 
+   * Returns payment_id which is needed for charging
+   */
+  createPayment: (data: CreatePaymentRequest): Promise<CreatePaymentResponse> =>
+    axiosInstance.post('/payments/create', data),
+
+  /**
+   * Charge payment through Omise gateway
+   * This actually processes the payment transaction
+   */
+  chargePayment: (data: ChargePaymentRequest): Promise<ChargePaymentResponse> =>
+    axiosInstance.post('/payments/charge', {
+      payment_id: data.payment_id,
+      pnr_reference: data.pnr_reference,
+      token: data.payment_token,
+      amount: data.amount,
+      currency: data.currency,
+      description: data.description,
+      return_uri: data.return_uri,
+      metadata: data.metadata,
+    }),
+
+  /**
+   * Development helper: force payment status to PAID
+   */
+  simulatePaymentSuccess: (data: SimulatePaymentSuccessRequest): Promise<any> =>
+    axiosInstance.post('/payments/simulate-success', data),
+};
+
+export const duffelOrderApi = {
+  /**
+   * Create Duffel order after payment is completed (PAID)
+   */
+  createOrder: (data: CreateDuffelOrderRequest): Promise<CreateDuffelOrderResponse> =>
+    axiosInstance.post('/duffel/orders/create', data),
 };
 
 export default api;

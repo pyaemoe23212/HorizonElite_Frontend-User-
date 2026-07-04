@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plane } from 'lucide-react';
+import { Plane, ArrowRight } from 'lucide-react';
 import type { FlightResultItem } from '../Services/api';
 
 interface FlightCardProps {
@@ -9,93 +9,97 @@ interface FlightCardProps {
 }
 
 export const FlightCard: React.FC<FlightCardProps> = ({ flight, selected, onSelect }) => {
-  // Calculate duration from departure and arrival times if not provided
   const calculateDuration = (): string => {
     if (flight.duration) return flight.duration;
-    
-    const departure = new Date(flight.departure_datetime);
-    const arrival = new Date(flight.arrival_datetime);
-    const diffMinutes = Math.round((arrival.getTime() - departure.getTime()) / (1000 * 60));
-    const hours = Math.floor(diffMinutes / 60);
-    const minutes = diffMinutes % 60;
-    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+    const dep = new Date(flight.departure_datetime);
+    const arr = new Date(flight.arrival_datetime);
+    const diffMs = arr.getTime() - dep.getTime();
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
   };
 
-  // Convert total_price from string to number
-  const priceValue = parseFloat(flight.total_price);
-
-  // Determine stops text
-  const stopsText = flight.total_stop_count === 0 ? 'Direct' : `${flight.total_stop_count} Stop${flight.total_stop_count !== 1 ? 's' : ''}`;
+  const priceValue = parseFloat(flight.total_price || '0');
+  const isDirect = flight.total_stop_count === 0;
 
   return (
-    <article className={`rounded-lg border bg-white p-5 shadow-sm ${selected ? 'border-blue-700 ring-2 ring-blue-700' : 'border-slate-300'}`}>
-      <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr_1fr] lg:items-center">
-        {/* Flight details section */}
+    <div 
+      onClick={onSelect}
+      className={`group relative border bg-white rounded-2xl p-6 shadow-sm hover:shadow transition-all cursor-pointer ${selected ? 'border-blue-600 ring-2 ring-blue-100' : 'border-slate-200 hover:border-slate-300'}`}
+    >
+      {/* Airline Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white">
+          <Plane size={24} />
+        </div>
         <div>
-          <div className="mb-5 flex items-center gap-3">
-            <span className="flex h-8 w-8 items-center justify-center bg-[#073b70] text-white">
-              <Plane size={18} />
-            </span>
-            <div>
-              <p className="font-black text-[#073b70]">{flight.airline_name}</p>
-              <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
-                {flight.airline_code} {flight.flight_number || ''}
-              </p>
-            </div>
-            <span className="ml-auto rounded-full border border-blue-500 px-3 py-1 text-[10px] font-black uppercase text-blue-600">
-              {flight.baggage_allowance || 'Standard'}
-            </span>
-          </div>
+          <p className="font-semibold text-slate-900">{flight.airline_name}</p>
+          <p className="text-sm text-slate-500 font-mono">{flight.airline_code}</p>
+        </div>
+        <div className="ml-auto px-4 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">
+          STANDARD
+        </div>
+      </div>
 
-          {/* Timeline: departure → duration → arrival */}
-          <div className="grid grid-cols-[1fr_1.2fr_1fr] items-center gap-3">
-            <div>
-              <p className="text-3xl font-black text-[#073b70]">
-                {new Date(flight.departure_datetime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-              </p>
-              <p className="text-xs font-bold text-slate-500">{flight.departure_airport}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs font-bold text-slate-500">{calculateDuration()}</p>
-              <div className="my-2 h-px bg-slate-300" />
-              <p className="text-xs font-black uppercase text-blue-600">{stopsText}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-3xl font-black text-[#073b70]">
-                {new Date(flight.arrival_datetime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-              </p>
-              <p className="text-xs font-bold text-slate-500">{flight.arrival_airport}</p>
-            </div>
-          </div>
-
-          {/* Baggage and refund info */}
-          <div className="mt-6 flex gap-6 text-[11px] font-black uppercase text-slate-500">
-            <span>{flight.baggage_allowance || '20kg'} Included</span>
-            <span className={flight.refundable_status ? 'text-slate-500' : 'text-red-500'}>
-              {flight.refundable_status ? 'Refundable' : 'Non-refundable'}
-            </span>
-          </div>
+      {/* Times & Duration */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-4xl font-bold text-slate-900">
+            {new Date(flight.departure_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
+          <p className="text-sm text-slate-600 mt-1">{flight.departure_airport}</p>
         </div>
 
-        {/* Price and selection button */}
-        <button
-          type="button"
-          onClick={onSelect}
-          className={`rounded-lg border p-5 text-left transition hover:border-blue-600 ${
-            selected ? 'border-[#073b70] bg-blue-50' : 'border-slate-200'
-          }`}
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-black uppercase text-blue-600">{flight.cabin_class}</p>
-            <span className={`h-4 w-4 rounded-full border-2 ${selected ? 'border-[#073b70] bg-[#073b70]' : 'border-slate-300'}`} />
+        <div className="text-center">
+          <div className="text-sm text-slate-500">{calculateDuration()}</div>
+          <div className="flex justify-center my-2">
+            <ArrowRight className="text-slate-400" size={20} />
           </div>
-          <p className="text-2xl font-black text-[#073b70]">
+          <p className="text-xs font-bold text-blue-600 tracking-widest">{isDirect ? 'DIRECT' : `${flight.total_stop_count} STOP`}</p>
+        </div>
+
+        <div className="text-right">
+          <p className="text-4xl font-bold text-slate-900">
+            {new Date(flight.arrival_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
+          <p className="text-sm text-slate-600 mt-1">{flight.arrival_airport}</p>
+        </div>
+      </div>
+
+      {/* Price Options */}
+      <div className="mt-8 grid grid-cols-2 gap-4">
+        {/* Economy */}
+        <div 
+          onClick={(e) => { e.stopPropagation(); onSelect(); }}
+          className={`border rounded-2xl p-5 cursor-pointer transition-all ${selected ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:border-blue-200'}`}
+        >
+          <p className="text-xs font-bold text-blue-600 mb-1">ECONOMY</p>
+          <p className="text-2xl font-bold text-slate-900">
             {flight.currency_code} {priceValue.toFixed(2)}
           </p>
-          <p className="mt-2 text-[10px] font-black uppercase text-slate-500">Baggage Included</p>
-        </button>
+          <p className="text-xs text-emerald-600 mt-2">BAGGAGE INCLUDED</p>
+        </div>
+
+        {/* Business - Dimmed */}
+        <div className="border border-slate-200 rounded-2xl p-5 opacity-60 pointer-events-none">
+          <p className="text-xs font-bold text-amber-600 mb-1">BUSINESS</p>
+          <p className="text-2xl font-bold text-slate-400">
+            {flight.currency_code} {(priceValue * 2.4).toFixed(2)}
+          </p>
+          <p className="text-xs text-slate-400 mt-2">PREMIUM EXPERIENCE</p>
+        </div>
       </div>
-    </article>
+
+      {/* Bottom Info */}
+      <div className="mt-6 flex items-center justify-between text-xs">
+        <div className="flex items-center gap-6">
+          <span className="font-medium">20KG INCLUDED</span>
+          <span className={`font-medium ${flight.refundable_status ? 'text-emerald-600' : 'text-red-500'}`}>
+            {flight.refundable_status ? 'REFUNDABLE' : 'NON-REFUNDABLE'}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 };
 

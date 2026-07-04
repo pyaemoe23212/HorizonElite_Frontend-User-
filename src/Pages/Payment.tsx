@@ -1,8 +1,62 @@
 import React, { useState } from 'react';
 import { BadgeCheck, Plane } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useLocation } from 'react-router';
+import { duffelOrderApi, paymentApi, type CreatePaymentRequest } from '../Services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 type PaymentMethod = 'card' | 'qr' | 'banking' | 'wallet';
+
+interface PaymentRouteState {
+  pnrReference?: string;
+  booking?: any;
+  booking_id?: string;
+  totalPaymentAmount?: string | number;
+  currency_code?: string;
+  outboundFlight?: any;
+  inboundFlight?: any;
+  selectedFlight?: any;
+  returnFlight?: any;
+}
+
+const parseAmount = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getFlightAmount = (flight: any): number => {
+  if (!flight) return 0;
+  return (
+    parseAmount(flight.selected_fare_price) ||
+    parseAmount(flight.total_price) ||
+    parseAmount(flight.total_amount) ||
+    0
+  );
+};
+
+const calculateTotalAmount = (state?: PaymentRouteState): number => {
+  const passedAmount = parseAmount(state?.totalPaymentAmount);
+  const outbound = state?.outboundFlight || state?.selectedFlight;
+  const inbound = state?.inboundFlight || state?.returnFlight;
+
+  // Prefer the passed amount only when it is a positive number.
+  if (passedAmount > 0) return passedAmount;
+
+  const outboundAmount = getFlightAmount(outbound);
+  const inboundAmount = getFlightAmount(inbound);
+
+  return outboundAmount + inboundAmount;
+};
+
+const getPaymentTokenForMethod = (method: PaymentMethod): string => {
+  const testTokens: Record<PaymentMethod, string> = {
+    card: 'tokn_test_visa',
+    qr: 'tokn_test_promptpay',
+    banking: 'tokn_test_mobile_banking',
+    wallet: 'tokn_test_ewallet',
+  };
+
+  return testTokens[method];
+};
 
 const steps = ['Flight', 'Passenger', 'Service', 'Payment', 'Additional Services', 'Personalized'];
 
@@ -33,42 +87,89 @@ const Stepper = () => (
   </div>
 );
 
-const TripSummary = ({ method, isProcessing, onPay }: { method: PaymentMethod; isProcessing: boolean; onPay: () => void }) => (
-  <aside className="h-fit border border-slate-300 bg-white p-8 shadow-md">
-    <h2 className="text-3xl font-black text-[#073b70]">Trip Summary</h2>
-    <div className="my-7 h-px bg-slate-200" />
-    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-      <div>
-        <p className="text-xl font-black text-[#073b70]">BKK</p>
-        <p className="text-[10px] font-black uppercase text-slate-500">Bangkok</p>
+const TripSummary = ({ 
+  method, 
+  isProcessing, 
+  onPay,
+  routeState,
+  errorMessage,
+}: { 
+  method: PaymentMethod; 
+  isProcessing: boolean; 
+  onPay: () => void;
+  routeState?: PaymentRouteState;
+  errorMessage?: string;
+}) => {
+  const pnrReference = routeState?.pnrReference || 'HE7429BL';
+  const outboundFlight = routeState?.outboundFlight || routeState?.selectedFlight;
+  const inboundFlight = routeState?.inboundFlight || routeState?.returnFlight;
+  
+  const totalAmount = calculateTotalAmount(routeState);
+  
+  const currencyCode = routeState?.currency_code || outboundFlight?.currency_code || 'THB';
+
+  console.log('💵 TripSummary - Calculated total amount:', totalAmount, 'from:', {
+    passed: routeState?.totalPaymentAmount,
+    outboundSelected: outboundFlight?.selected_fare_price,
+    inboundSelected: inboundFlight?.selected_fare_price,
+    outboundTotal: outboundFlight?.total_price,
+    inboundTotal: inboundFlight?.total_price,
+    outboundAmount: getFlightAmount(outboundFlight),
+    inboundAmount: getFlightAmount(inboundFlight),
+  });
+
+  return (
+    <aside className="h-fit border border-slate-300 bg-white p-8 shadow-md">
+      <h2 className="text-3xl font-black text-[#073b70]">Trip Summary</h2>
+      <div className="my-7 h-px bg-slate-200" />
+      {/* PNR Reference Display */}
+      <div className="mb-6 rounded bg-blue-50 p-4 border border-blue-200">
+        <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-1">Booking Reference (PNR)</p>
+        <p className="text-2xl font-black text-[#073b70]">{pnrReference}</p>
       </div>
-      <div className="text-center text-amber-500">
-        <Plane className="mx-auto" size={24} />
-        <div className="mt-2 h-px w-24 bg-slate-300" />
-        <p className="mt-2 text-[10px] font-black uppercase text-slate-500">Non-stop</p>
+      {/* Flight Route */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+        <div>
+          <p className="text-xl font-black text-[#073b70]">{outboundFlight?.departure_airport || 'BKK'}</p>
+          <p className="text-[10px] font-black uppercase text-slate-500">Departure</p>
+        </div>
+        <div className="text-center text-amber-500">
+          <Plane className="mx-auto" size={24} />
+          <div className="mt-2 h-px w-24 bg-slate-300" />
+          <p className="mt-2 text-[10px] font-black uppercase text-slate-500">
+            {outboundFlight?.total_stop_count === 0 ? 'Non-stop' : `${outboundFlight?.total_stop_count} Stop(s)`}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xl font-black text-[#073b70]">{outboundFlight?.arrival_airport || 'SIN'}</p>
+          <p className="text-[10px] font-black uppercase text-slate-500">Arrival</p>
+        </div>
       </div>
-      <div className="text-right">
-        <p className="text-xl font-black text-[#073b70]">SIN</p>
-        <p className="text-[10px] font-black uppercase text-slate-500">Singapore</p>
+      {/* Price Breakdown */}
+      <div className="mt-10 space-y-4 text-base font-semibold text-slate-600">
+        <div className="flex justify-between"><span>Total Amount</span><span className="font-black text-[#073b70]">{currencyCode} {totalAmount}</span></div>
+        <div className="flex justify-between pt-3 text-xl"><span>Amount Due</span><span className="text-[#073b70]">{currencyCode} {totalAmount}</span></div>
       </div>
-    </div>
-    <div className="mt-10 space-y-4 text-base font-semibold text-slate-600">
-      <div className="flex justify-between"><span>Flight (1 Adult)</span><span className="font-black text-[#073b70]">THB 16,400</span></div>
-      <div className="flex justify-between"><span>Taxes & Fees</span><span className="font-black text-[#073b70]">THB 3,525</span></div>
-      <div className="flex justify-between pt-3 text-xl"><span>Total Amount</span><span className="text-[#073b70]">THB 19,925</span></div>
-    </div>
-    <button
-      type="button"
-      onClick={onPay}
-      disabled={isProcessing}
-      className="mt-9 flex h-16 w-full items-center justify-center rounded bg-[#073b70] text-base font-black text-white shadow-lg shadow-blue-950/20 transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-500"
-    >
-      {isProcessing ? 'Processing Payment...' : method === 'qr' ? 'Complete QR Payment' : 'Pay THB 19,925'}
-    </button>
-    {isProcessing && <p className="mt-4 text-center text-xs font-black uppercase tracking-widest text-cyan-700">Mock payment approved</p>}
-    <div className="mt-7 text-center text-xs font-black uppercase tracking-widest text-slate-400">SSL 256-bit encrypted</div>
-  </aside>
-);
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="mt-6 rounded border border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-700">
+          {errorMessage}
+        </div>
+      )}
+      {/* Pay Button */}
+      <button
+        type="button"
+        onClick={onPay}
+        disabled={isProcessing}
+        className="mt-9 flex h-16 w-full items-center justify-center rounded bg-[#073b70] text-base font-black text-white shadow-lg shadow-blue-950/20 transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-500"
+      >
+        {isProcessing ? 'Creating Payment...' : method === 'qr' ? 'Complete QR Payment' : `Pay ${currencyCode} ${totalAmount}`}
+      </button>
+      {isProcessing && <p className="mt-4 text-center text-xs font-black uppercase tracking-widest text-cyan-700">Processing...</p>}
+      <div className="mt-7 text-center text-xs font-black uppercase tracking-widest text-slate-400">SSL 256-bit encrypted</div>
+    </aside>
+  );
+};
 
 const CardPanel = () => (
   <section>
@@ -174,16 +275,149 @@ const panels: Record<PaymentMethod, React.ReactNode> = {
 };
 
 function Payment(): React.JSX.Element {
+  const { state } = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  const routeState = (state ?? {}) as PaymentRouteState;
+  
   const [method, setMethod] = useState<PaymentMethod>('card');
   const [isProcessing, setIsProcessing] = useState(false);
-  const navigate = useNavigate();
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleMockPayment = () => {
-    if (isProcessing) return;
-    setIsProcessing(true);
-    window.setTimeout(() => {
-      navigate('/booking-confirmed');
-    }, 1200);
+  const handleCreatePayment = async () => {
+    try {
+      if (isProcessing) return;
+      
+      setIsProcessing(true);
+      setErrorMessage('');
+
+      // Get user email from AuthContext (authenticated user)
+      const userEmail = user?.email_address || 'user@example.com';
+      
+      console.log('📧 Using authenticated email:', userEmail);
+      console.log('📊 Route state received:', routeState);
+      console.log('💰 Total Payment Amount from state:', routeState.totalPaymentAmount, typeof routeState.totalPaymentAmount);
+      
+      // Validate required data from AddOns/Booking
+      if (!routeState.pnrReference) {
+        throw new Error('Missing PNR reference. Please go back and complete your booking.');
+      }
+
+      const outboundFlight = routeState.outboundFlight || routeState.selectedFlight;
+      const inboundFlight = routeState.inboundFlight || routeState.returnFlight;
+      const totalAmount = calculateTotalAmount(routeState);
+
+      console.log('💰 Total Amount Calculation:');
+      console.log('   - From totalPaymentAmount:', routeState.totalPaymentAmount);
+      console.log('   - From outbound selected_fare_price:', outboundFlight?.selected_fare_price);
+      console.log('   - From inbound selected_fare_price:', inboundFlight?.selected_fare_price);
+      console.log('   - From outbound total_price:', outboundFlight?.total_price);
+      console.log('   - From inbound total_price:', inboundFlight?.total_price);
+      console.log('   - Final total:', totalAmount);
+
+      // Map payment method to API enum
+      const paymentMethodMap: Record<PaymentMethod, CreatePaymentRequest['payment_method']> = {
+        card: 'CREDIT_CARD',
+        qr: 'THAI_QR',
+        banking: 'MOBILE_BANKING',
+        wallet: 'EWALLET',
+      };
+
+      const createPaymentRequest: CreatePaymentRequest = {
+        pnr_reference: routeState.pnrReference,
+        user_email_address: userEmail,
+        payment_method: paymentMethodMap[method],
+        payment_region: 'ASIA',
+        currency_code: routeState.currency_code || outboundFlight?.currency_code || 'THB',
+        total_payment_amount: totalAmount || 0,
+      };
+
+      console.log('💳 Creating Payment with request:', createPaymentRequest);
+
+      // Call payment API to create payment record
+      const response = await paymentApi.createPayment(createPaymentRequest);
+
+      console.log('✅ Payment created successfully!');
+      console.log('🔑 Payment ID:', response.payment.payment_id);
+      console.log('📊 Payment Status:', response.payment.payment_status_code);
+
+      // Charge payment to move status from PENDING -> PAID
+      let finalizedPayment: any = response.payment;
+      const paymentToken = response.payment.payment_token || getPaymentTokenForMethod(method);
+
+      try {
+        console.log('💳 Charging payment...');
+
+        const chargeResponse = await paymentApi.chargePayment({
+          payment_id: response.payment.payment_id,
+          pnr_reference: routeState.pnrReference,
+          payment_token: paymentToken,
+          amount: totalAmount,
+          currency: routeState.currency_code || outboundFlight?.currency_code || 'THB',
+          description: `Flight booking ${routeState.pnrReference}`,
+          metadata: {
+            pnr_reference: routeState.pnrReference,
+            user_email_address: userEmail,
+          },
+        });
+
+        finalizedPayment = {
+          ...response.payment,
+          ...chargeResponse,
+        };
+
+        console.log('✅ Payment charged successfully!');
+        console.log('📊 Final Payment Status:', finalizedPayment.payment_status_code);
+      } catch (chargeError) {
+        console.error('❌ Payment charge failed:', chargeError);
+        setErrorMessage(chargeError instanceof Error ? chargeError.message : 'Payment processing failed');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Create Duffel order once payment is PAID
+      let duffelOrderResult: any = null;
+
+      if (finalizedPayment.payment_status_code === 'PAID') {
+        const bookingId = routeState.booking?.booking_id || routeState.booking_id;
+        const paymentId = finalizedPayment.payment_id || response.payment.payment_id;
+
+        if (!bookingId) {
+          throw new Error('Missing booking_id for Duffel order creation.');
+        }
+
+        console.log('🧾 Creating Duffel order with:', { booking_id: bookingId, payment_id: paymentId });
+
+        duffelOrderResult = await duffelOrderApi.createOrder({
+          booking_id: bookingId,
+          payment_id: paymentId,
+        });
+
+        console.log('✅ Duffel order created successfully!');
+        console.log('🆔 Duffel order ID:', duffelOrderResult.order?.duffel_order?.data?.id);
+      }
+
+      // Navigate to confirm payment or next step with payment_id
+      window.setTimeout(() => {
+        navigate('/booking-confirmed', {
+          state: {
+            ...routeState,
+            totalPaymentAmount: totalAmount,
+            payment: finalizedPayment,
+            payment_id: finalizedPayment.payment_id || response.payment.payment_id,
+            paymentStatus: finalizedPayment.payment_status_code || 'PENDING',
+            duffelOrder: duffelOrderResult?.order,
+            duffelOrderId: duffelOrderResult?.order?.duffel_order?.data?.id,
+          },
+        });
+      }, 1200);
+    } catch (error) {
+      console.error('❌ Failed to create payment:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to create payment. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -213,7 +447,13 @@ function Payment(): React.JSX.Element {
           {panels[method]}
         </section>
 
-        <TripSummary method={method} isProcessing={isProcessing} onPay={handleMockPayment} />
+        <TripSummary 
+          method={method} 
+          isProcessing={isProcessing} 
+          onPay={handleCreatePayment}
+          routeState={routeState}
+          errorMessage={errorMessage}
+        />
       </div>
 
       <footer className="pb-10 text-center text-xs font-semibold text-slate-400">© 2024 Horizon Elite Airways. All data transmitted is encrypted using the highest industry standards.</footer>

@@ -286,12 +286,24 @@ function Home(): React.JSX.Element {
 
       const response = await api.searchFlights(searchRequest);
 
+      // Log the entire response to see its structure
+      console.log('🔍 Flight Search Response:', response);
+      console.log('📊 Total Results:', response.results?.length);
+      console.log('🎫 First Flight Result:', response.results?.[0]);
+
+      // Log each flight result for inspection
+      response.results?.forEach((flight, index) => {
+        console.log(`✈️ Flight ${index + 1}:`, flight);
+      });
+
       // Convert Date objects to ISO strings for navigation state
+      const totalPassengers = searchData.adultCount + searchData.childCount + searchData.infantCount;
       const searchDataForNavigation = {
         ...searchData,
         departDate: searchData.departDate?.toISOString().split('T')[0] || null,
         returnDate: searchData.returnDate?.toISOString().split('T')[0] || null,
         childrenAges,
+        passengers: `${totalPassengers} Passenger${totalPassengers !== 1 ? 's' : ''}`,
       };
 
       navigate('/flight-results', {

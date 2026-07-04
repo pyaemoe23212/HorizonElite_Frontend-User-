@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { BadgeCheck, Plane } from 'lucide-react';
-import { Link, useLocation } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
+import { bookingApi, type CreateBookingRequest } from '../Services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 type AddOnKey = 'seat' | 'meal' | 'baggage' | 'assistance' | 'lounge' | 'insurance';
 
@@ -90,7 +92,32 @@ const Stepper = () => (
   </div>
 );
 
-const BookingSummary = ({ compact = false }: { compact?: boolean }) => (
+interface AddOnsRouteState {
+  selectedFlight?: any;
+  selectedFlightId?: string;
+  returnFlight?: any | null;
+  flightSearchId?: string;
+  tripType?: 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_CITY';
+  searchData?: any;
+  passengers?: any[];
+  passengerIds?: string[];
+  outboundFlight?: any;
+  inboundFlight?: any | null;
+}
+
+const BookingSummary = ({ 
+  compact = false,
+  routeState,
+  isCreatingBooking = false,
+  errorMessage = '',
+  onContinueToPayment,
+}: { 
+  compact?: boolean;
+  routeState?: AddOnsRouteState;
+  isCreatingBooking?: boolean;
+  errorMessage?: string;
+  onContinueToPayment?: () => void;
+}) => (
   <aside className="h-fit rounded border border-slate-300 bg-white shadow-sm">
     <div className={`${compact ? 'bg-[#073b70] text-white' : 'bg-white'} border-b border-slate-300 px-7 py-6`}>
       <h2 className={`text-2xl font-black ${compact ? 'text-white' : 'text-[#073b70]'}`}>Booking Summary</h2>
@@ -128,9 +155,18 @@ const BookingSummary = ({ compact = false }: { compact?: boolean }) => (
           <span className="text-3xl font-black text-[#073b70]">THB 32,590</span>
         </div>
       </div>
-      <Link to="/payment" className="flex h-14 items-center justify-center rounded bg-[#073b70] text-sm font-black text-white">
-        Continue to Payment
-      </Link>
+      {errorMessage && (
+        <div className="rounded border border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-700">
+          {errorMessage}
+        </div>
+      )}
+      <button
+        onClick={onContinueToPayment}
+        disabled={isCreatingBooking}
+        className="flex h-14 w-full items-center justify-center rounded bg-[#073b70] text-sm font-black text-white transition hover:bg-[#0a2d51] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isCreatingBooking ? 'Creating Booking...' : 'Continue to Payment'}
+      </button>
       <Link to="/passenger-information" className="flex h-12 items-center justify-center rounded border border-slate-300 text-sm font-black text-slate-600">
         Back
       </Link>
@@ -253,8 +289,17 @@ const contentMap: Record<AddOnKey, React.ReactNode> = {
 };
 
 function AddOns(): React.JSX.Element {
+  const { state } = useLocation();
+  const navigate = useNavigate();
   const { hash } = useLocation();
+  const { user } = useAuth();
+  
+  const routeState = (state ?? {}) as AddOnsRouteState;
+  
   const [openSection, setOpenSection] = useState<AddOnKey | null>(null);
+  const [isCreatingBooking, setIsCreatingBooking] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  
   const personalized = openSection === 'assistance';
 
   useEffect(() => {
@@ -263,6 +308,92 @@ function AddOns(): React.JSX.Element {
       setOpenSection(requestedSection);
     }
   }, [hash]);
+
+  const handleContinueToPayment = async () => {
+    try {
+      setIsCreatingBooking(true);
+      setErrorMessage('');
+
+      const toNumberOrZero = (value: unknown): number => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+      };
+
+      const getFlightPrice = (flight: any): number => {
+        if (!flight) return 0;
+        return (
+          toNumberOrZero(flight.selected_fare_price) ||
+          toNumberOrZero(flight.total_price) ||
+          toNumberOrZero(flight.total_amount) ||
+          0
+        );
+      };
+
+      // Validate required data
+      if (!routeState.selectedFlightId || !routeState.passengerIds || routeState.passengerIds.length === 0) {
+        setErrorMessage('Missing flight or passenger information. Please try again.');
+        setIsCreatingBooking(false);
+        return;
+      }
+
+      // Get total price from all selected flights using all known backend field names.
+      const outboundFlight = routeState.selectedFlight || routeState.outboundFlight;
+      const inboundFlight = routeState.returnFlight || routeState.inboundFlight;
+      const outboundPrice = getFlightPrice(outboundFlight);
+      const inboundPrice = getFlightPrice(inboundFlight);
+      
+      const totalPrice = outboundPrice + inboundPrice;
+
+      console.log('💰 [AddOns] Price Calculation:');
+      console.log('   - Outbound (selectedFlight):', outboundPrice);
+      console.log('   - Inbound (returnFlight):', inboundPrice);
+      console.log('   - Total:', totalPrice);
+
+      // Get user email from authenticated user context
+      const userEmail = user?.email_address || 'user@example.com';
+
+      console.log('👤 Using authenticated email for booking:', userEmail);
+
+      // Build booking request
+      const bookingRequest: CreateBookingRequest = {
+        user_email_address: userEmail,
+        selected_flight_id: routeState.selectedFlightId,
+        passenger_ids: routeState.passengerIds,
+        total_payment_amount: totalPrice,
+        currency_code: routeState.selectedFlight?.currency_code || routeState.outboundFlight?.currency_code || 'USD',
+        trip_type: routeState.tripType || 'ONE_WAY',
+        cabin_class: routeState.selectedFlight?.cabin_class || routeState.outboundFlight?.cabin_class || 'ECONOMY',
+      };
+
+      console.log('📋 Creating Booking with request:', bookingRequest);
+
+      // Call booking API
+      const response = await bookingApi.createBooking(bookingRequest);
+
+      console.log('✅ Booking created successfully!');
+      console.log('🎫 PNR Reference:', response.booking.pnr_reference);
+      console.log('📊 Booking Status:', response.booking.booking_status);
+
+      // Navigate to payment with booking data
+      navigate('/payment', {
+        state: {
+          ...routeState,
+          booking: response.booking,
+          pnrReference: response.booking.pnr_reference,
+          bookingStatus: response.booking.booking_status,
+          totalPaymentAmount: totalPrice,  // Use calculated total, not backend response
+          currency_code: routeState.selectedFlight?.currency_code || routeState.outboundFlight?.currency_code || 'USD',
+          outboundFlight: routeState.selectedFlight || routeState.outboundFlight,
+          inboundFlight: routeState.returnFlight || routeState.inboundFlight,
+        },
+      });
+    } catch (error) {
+      console.error('❌ Failed to create booking:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to create booking. Please try again.');
+    } finally {
+      setIsCreatingBooking(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-800">
@@ -305,7 +436,13 @@ function AddOns(): React.JSX.Element {
           </div>
         </section>
 
-        <BookingSummary compact={personalized} />
+        <BookingSummary 
+          compact={personalized} 
+          routeState={routeState}
+          isCreatingBooking={isCreatingBooking}
+          errorMessage={errorMessage}
+          onContinueToPayment={handleContinueToPayment}
+        />
       </div>
       <footer className="pb-8 text-center text-xs font-semibold text-slate-400">© 2024 Horizon Elite Airways. All data transmitted is encrypted using the highest industry standards.</footer>
     </main>

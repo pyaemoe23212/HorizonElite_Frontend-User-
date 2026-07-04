@@ -34,6 +34,8 @@ interface FareType {
   description: string;
 }
 
+// DEPRECATED: Fare type selection moved to backend once it provides fare type data
+
 const cabinClassMap: Record<string, string> = {
   ECONOMY: 'ECONOMY',
   PREMIUM_ECONOMY: 'PREMIUM_ECONOMY',
@@ -50,35 +52,18 @@ const formatTime = (value: string) =>
     minute: '2-digit',
   });
 
-const formatFareName = (fareType: string) =>
-  fareType.charAt(0).toUpperCase() + fareType.slice(1);
-
 const normalizeCabinClass = (value?: string) => {
   const normalized = value?.trim().toUpperCase().replace(/[\s-]+/g, '_');
   return cabinClassMap[normalized || ''] || 'ECONOMY';
 };
 
-const getFareTypesForFlight = (flight: FlightResultItem): FareType[] => {
-  const cabinClass = flight.cabin_class || 'Economy';
+interface FareType {
+  id: string;
+  name: string;
+  description: string;
+}
 
-  return [
-    {
-      id: 'economy',
-      name: `${cabinClass} Light`,
-      description: 'Basic fare, limited changes',
-    },
-    {
-      id: 'standard',
-      name: `${cabinClass} Standard`,
-      description: 'Standard fare, 1 free change',
-    },
-    {
-      id: 'flex',
-      name: `${cabinClass} Flex`,
-      description: 'Maximum flexibility, full refund',
-    },
-  ];
-};
+// DEPRECATED: Fare type selection moved to backend once it provides fare type data
 
 function FlightResults(): React.JSX.Element {
   const { state } = useLocation();
@@ -91,10 +76,8 @@ function FlightResults(): React.JSX.Element {
 
   const [phase, setPhase] = useState<FlightPhase>('outbound');
   const [selectedOutboundFlight, setSelectedOutboundFlight] = useState<FlightResultItem | null>(null);
-  const [selectedOutboundFareType, setSelectedOutboundFareType] = useState('');
   const [savedOutboundFlight, setSavedOutboundFlight] = useState<SelectedFlight | null>(null);
   const [selectedInboundFlight, setSelectedInboundFlight] = useState<FlightResultItem | null>(null);
-  const [selectedInboundFareType, setSelectedInboundFareType] = useState('');
   const [isSavingSelection, setIsSavingSelection] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showModify, setShowModify] = useState(false);
@@ -102,7 +85,6 @@ function FlightResults(): React.JSX.Element {
   const isRoundTrip = searchData.tripType === 'Return';
   const tripType: TripType = isRoundTrip ? 'ROUND_TRIP' : 'ONE_WAY';
   const currentFlight = phase === 'outbound' ? selectedOutboundFlight : selectedInboundFlight;
-  const currentFareType = phase === 'outbound' ? selectedOutboundFareType : selectedInboundFareType;
   const totalPrice =
     (selectedOutboundFlight ? Number(selectedOutboundFlight.total_price) : 0) +
     (selectedInboundFlight ? Number(selectedInboundFlight.total_price) : 0);
@@ -112,22 +94,11 @@ function FlightResults(): React.JSX.Element {
 
     if (phase === 'outbound') {
       setSelectedOutboundFlight(flight);
-      setSelectedOutboundFareType('');
       setSavedOutboundFlight(null);
       return;
     }
 
     setSelectedInboundFlight(flight);
-    setSelectedInboundFareType('');
-  };
-
-  const selectFareType = (fareTypeId: string) => {
-    if (phase === 'outbound') {
-      setSelectedOutboundFareType(fareTypeId);
-      return;
-    }
-
-    setSelectedInboundFareType(fareTypeId);
   };
 
   const buildSelectFlightRequest = (flight: FlightResultItem): SelectFlightRequest => ({
@@ -165,8 +136,8 @@ function FlightResults(): React.JSX.Element {
   };
 
   const continueToNextStep = async () => {
-    if (!currentFlight || !currentFareType) {
-      setErrorMessage('Please select both a flight and fare type before continuing.');
+    if (!currentFlight) {
+      setErrorMessage('Please select a flight before continuing.');
       return;
     }
 
@@ -180,7 +151,6 @@ function FlightResults(): React.JSX.Element {
       if (isRoundTrip && phase === 'outbound') {
         setSavedOutboundFlight(savedFlight);
         setSelectedInboundFlight(null);
-        setSelectedInboundFareType('');
         setPhase('inbound');
         return;
       }
@@ -315,52 +285,12 @@ function FlightResults(): React.JSX.Element {
                 const selected = currentFlight?.flight_result_id === flight.flight_result_id;
 
                 return (
-                  <div key={flight.flight_result_id} className="flex flex-col gap-3">
+                  <div key={flight.flight_result_id}>
                     <FlightCard
                       flight={flight}
                       selected={selected}
                       onSelect={() => selectFlight(flight)}
                     />
-
-                    {selected && (
-                      <section className="rounded-lg border-2 border-blue-200 bg-blue-50 p-6">
-                        <h3 className="mb-4 text-lg font-bold text-[#073b70]">Select Fare Type</h3>
-                        <div className="grid gap-3 md:grid-cols-3">
-                          {getFareTypesForFlight(flight).map((fareType) => (
-                            <button
-                              key={fareType.id}
-                              type="button"
-                              onClick={() => selectFareType(fareType.id)}
-                              className={`rounded-lg border-2 p-4 text-left transition ${
-                                currentFareType === fareType.id
-                                  ? 'border-blue-600 bg-white shadow-lg ring-2 ring-blue-300'
-                                  : 'border-blue-200 bg-white hover:border-blue-400'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <p className="font-bold text-[#073b70]">{fareType.name}</p>
-                                  <p className="text-xs text-slate-600">{fareType.description}</p>
-                                </div>
-                                <div
-                                  className={`mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${
-                                    currentFareType === fareType.id
-                                      ? 'border-blue-600 bg-blue-600'
-                                      : 'border-slate-300'
-                                  }`}
-                                >
-                                  {currentFareType === fareType.id && (
-                                    <svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  )}
-                                </div>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </section>
-                    )}
                   </div>
                 );
               })}
@@ -370,8 +300,7 @@ function FlightResults(): React.JSX.Element {
           <aside className="h-fit rounded-xl border border-slate-300 bg-white p-6 shadow-sm">
             <div className="mb-5 rounded bg-blue-50 p-3 text-xs font-black text-slate-600">
               {!currentFlight && (phase === 'outbound' ? 'Select your departure flight' : 'Select your return flight')}
-              {currentFlight && !currentFareType && 'Flight selected. Choose fare type'}
-              {currentFlight && currentFareType && (phase === 'outbound' ? 'Departure ready' : 'Return ready')}
+              {currentFlight && (phase === 'outbound' ? 'Departure ready' : 'Return ready')}
             </div>
 
             <p className="text-xs font-black uppercase tracking-wide text-slate-400">Total Price</p>
@@ -384,19 +313,17 @@ function FlightResults(): React.JSX.Element {
             <FlightSummaryItem
               title="Outbound"
               flight={selectedOutboundFlight}
-              fareType={selectedOutboundFareType}
             />
 
             {isRoundTrip && (
               <FlightSummaryItem
                 title="Return"
                 flight={selectedInboundFlight}
-                fareType={selectedInboundFareType}
               />
             )}
 
             <button
-              disabled={isSavingSelection || !currentFlight || !currentFareType}
+              disabled={isSavingSelection || !currentFlight}
               onClick={continueToNextStep}
               className="mt-5 flex h-16 w-full items-center justify-center rounded-xl bg-[#073b70] text-base font-black uppercase tracking-wide text-white transition hover:bg-[#0a2d51] disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -416,29 +343,20 @@ function FlightResults(): React.JSX.Element {
 function FlightSummaryItem({
   title,
   flight,
-  fareType,
 }: {
   title: string;
   flight: FlightResultItem | null;
-  fareType: string;
 }) {
   return (
     <div className="mb-4 bg-slate-50 p-4">
       <p className="text-[10px] font-black uppercase text-slate-400">{title}</p>
       {flight ? (
-        <div>
-          <p className="mt-2 text-sm font-black text-[#073b70]">
-            {flight.departure_airport} to {flight.arrival_airport}
-            <span className="block text-xs font-normal text-slate-500">
-              {new Date(flight.departure_datetime).toLocaleDateString()}
-            </span>
-          </p>
-          {fareType && (
-            <p className="mt-2 text-xs text-blue-600">
-              Fare: {formatFareName(fareType)}
-            </p>
-          )}
-        </div>
+        <p className="mt-2 text-sm font-black text-[#073b70]">
+          {flight.departure_airport} to {flight.arrival_airport}
+          <span className="block text-xs font-normal text-slate-500">
+            {new Date(flight.departure_datetime).toLocaleDateString()}
+          </span>
+        </p>
       ) : (
         <p className="mt-2 text-sm text-slate-500">Not selected</p>
       )}

@@ -1,8 +1,35 @@
 import React from 'react';
 import { BadgeCheck, Download, Plane, Printer } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
+
+interface BookingConfirmedState {
+  pnrReference?: string;
+  payment?: any;
+  payment_id?: string;
+  paymentStatus?: string;
+  duffelOrder?: any;
+  duffelOrderId?: string;
+  outboundFlight?: any;
+  inboundFlight?: any;
+  totalPaymentAmount?: number | string;
+  currency_code?: string;
+  booking?: any;
+}
 
 function BookingConfirmed(): React.JSX.Element {
+  const { state } = useLocation();
+  const bookingState = (state ?? {}) as BookingConfirmedState;
+
+  // Use real data from payment/booking or fallback to demo data
+  const pnrReference = bookingState.pnrReference || 'HE7429BL';
+  const totalPaid = bookingState.totalPaymentAmount || bookingState.payment?.total_payment_amount || '$1,095.50';
+  const currencyCode = bookingState.currency_code || bookingState.payment?.currency_code || 'USD';
+  const paymentStatus = bookingState.paymentStatus || bookingState.payment?.payment_status_code || 'PENDING';
+  const duffelOrderId = bookingState.duffelOrderId || bookingState.duffelOrder?.duffel_order?.data?.id || 'Not created';
+  const userEmail = bookingState.payment?.user_email_address || 'xxx@gmail.com';
+  
+  const outbound = bookingState.outboundFlight;
+  const inbound = bookingState.inboundFlight;
   return (
     <main className="min-h-screen bg-slate-100 px-6 py-20 text-slate-800">
       <section className="mx-auto max-w-7xl">
@@ -18,7 +45,7 @@ function BookingConfirmed(): React.JSX.Element {
 
           <div className="mt-5 inline-flex items-center rounded border border-slate-300 bg-slate-200 px-5 py-3">
             <span className="mr-4 text-sm font-black uppercase tracking-widest text-slate-600">Booking Ref:</span>
-            <span className="text-3xl font-black tracking-widest text-[#073b70]">HE7429BL</span>
+            <span className="text-3xl font-black tracking-widest text-[#073b70]">{pnrReference}</span>
           </div>
         </div>
 
@@ -32,9 +59,21 @@ function BookingConfirmed(): React.JSX.Element {
             <div className="grid min-h-72 items-start gap-8 px-8 py-10 md:grid-cols-[1fr_1.2fr_1fr]">
               <div>
                 <p className="text-xs font-black uppercase tracking-widest text-slate-500">Origin</p>
-                <p className="mt-4 text-4xl font-black text-[#073b70]">JFK</p>
-                <p className="mt-2 text-xl font-semibold text-slate-700">New York</p>
-                <p className="mt-3 text-base font-semibold text-slate-500">Jun 15, 2025 • 08:30 AM</p>
+                <p className="mt-4 text-4xl font-black text-[#073b70]">{outbound?.origin_airport_code || 'JFK'}</p>
+                <p className="mt-2 text-xl font-semibold text-slate-700">{outbound?.departure_airport || 'New York'}</p>
+                <p className="mt-3 text-base font-semibold text-slate-500">
+                  {outbound?.departure_datetime 
+                    ? new Date(outbound.departure_datetime).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                      }) + ' • ' + new Date(outbound.departure_datetime).toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })
+                    : 'Jun 15, 2025 • 08:30 AM'
+                  }
+                </p>
               </div>
 
               <div className="flex flex-col items-center pt-12 text-center">
@@ -43,14 +82,28 @@ function BookingConfirmed(): React.JSX.Element {
                   <Plane className="text-[#073b70]" size={34} strokeWidth={2.4} />
                   <span className="h-px bg-slate-300" />
                 </div>
-                <p className="mt-5 text-sm font-black uppercase tracking-widest text-cyan-600">Non-stop • 7h 15m</p>
+                <p className="mt-5 text-sm font-black uppercase tracking-widest text-cyan-600">
+                  {outbound?.total_stop_count === 0 ? 'Non-stop' : `${outbound?.total_stop_count} Stop(s)`} • {outbound?.duration || '7h 15m'}
+                </p>
               </div>
 
               <div className="text-left md:text-right">
                 <p className="text-xs font-black uppercase tracking-widest text-slate-500">Destination</p>
-                <p className="mt-4 text-4xl font-black text-[#073b70]">LHR</p>
-                <p className="mt-2 text-xl font-semibold text-slate-700">London</p>
-                <p className="mt-3 text-base font-semibold text-slate-500">Jun 16, 2025 • 08:45 PM</p>
+                <p className="mt-4 text-4xl font-black text-[#073b70]">{outbound?.arrival_airport || 'LHR'}</p>
+                <p className="mt-2 text-xl font-semibold text-slate-700">{outbound?.destination_airport_code || 'London'}</p>
+                <p className="mt-3 text-base font-semibold text-slate-500">
+                  {outbound?.arrival_datetime 
+                    ? new Date(outbound.arrival_datetime).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                      }) + ' • ' + new Date(outbound.arrival_datetime).toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })
+                    : 'Jun 16, 2025 • 08:45 PM'
+                  }
+                </p>
               </div>
             </div>
           </section>
@@ -79,16 +132,23 @@ function BookingConfirmed(): React.JSX.Element {
               <div className="mt-6 flex items-end justify-between">
                 <div>
                   <p className="text-base font-semibold text-slate-500">Total Paid</p>
-                  <p className="mt-2 text-3xl font-black text-[#073b70]">$1,095.50</p>
+                  <p className="mt-2 text-3xl font-black text-[#073b70]">{currencyCode} {Number(totalPaid).toFixed(2)}</p>
                 </div>
-                <span className="text-sm font-black uppercase text-cyan-600">Paid</span>
+                <span className={`text-sm font-black uppercase ${paymentStatus === 'PAID' ? 'text-green-600' : 'text-amber-600'}`}>
+                  {paymentStatus === 'PAID' ? 'Paid' : paymentStatus}
+                </span>
+              </div>
+
+              <div className="mt-6 border-t border-slate-200 pt-4">
+                <p className="text-sm font-semibold text-slate-500">Duffel Order ID</p>
+                <p className="mt-2 break-all text-sm font-black text-[#073b70]">{duffelOrderId}</p>
               </div>
             </section>
           </aside>
         </div>
 
         <div className="mt-14 text-center">
-          <p className="text-lg font-semibold text-slate-500">The eTicket and the payment receipt has been sent to xxx@gmail.com.</p>
+          <p className="text-lg font-semibold text-slate-500">The eTicket and the payment receipt has been sent to {userEmail}.</p>
           <div className="mt-9 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link to="/additional-services?flow=booking" className="flex h-14 w-64 items-center justify-center gap-2 rounded bg-[#073b70] text-base font-black text-white">
               <BadgeCheck size={20} />
