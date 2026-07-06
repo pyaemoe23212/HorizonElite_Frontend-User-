@@ -58,6 +58,32 @@ const getPaymentTokenForMethod = (method: PaymentMethod): string => {
   return testTokens[method];
 };
 
+const getErrorStatus = (error: any): number | undefined => {
+  return error?.response?.status || error?.status || error?.statusCode;
+};
+
+const getErrorMessage = (error: any): string => {
+  return (
+    error?.response?.data?.error ||
+    error?.response?.data?.message ||
+    error?.message ||
+    ''
+  );
+};
+
+const isOfferUnavailableError = (error: any): boolean => {
+  const status = getErrorStatus(error);
+  const message = getErrorMessage(error).toLowerCase();
+
+  return (
+    status === 409 ||
+    message.includes('offer is no longer available') ||
+    message.includes('no longer available')
+  );
+};
+
+const OFFER_UNAVAILABLE_MESSAGE =
+  'This flight price is no longer available. Please run a new flight search and choose another flight.';
 const steps = ['Flight', 'Passenger', 'Service', 'Payment', 'Additional Services', 'Personalized'];
 
 const methods: Array<{ id: PaymentMethod; title: string; subtitle: string; icon: string }> = [
@@ -93,12 +119,14 @@ const TripSummary = ({
   onPay,
   routeState,
   errorMessage,
+  offerUnavailable,
 }: { 
   method: PaymentMethod; 
   isProcessing: boolean; 
   onPay: () => void;
   routeState?: PaymentRouteState;
   errorMessage?: string;
+  offerUnavailable?: boolean;
 }) => {
   const pnrReference = routeState?.pnrReference || 'HE7429BL';
   const outboundFlight = routeState?.outboundFlight || routeState?.selectedFlight;
@@ -163,7 +191,7 @@ const TripSummary = ({
         disabled={isProcessing}
         className="mt-9 flex h-16 w-full items-center justify-center rounded bg-[#073b70] text-base font-black text-white shadow-lg shadow-blue-950/20 transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-500"
       >
-        {isProcessing ? 'Creating Payment...' : method === 'qr' ? 'Complete QR Payment' : `Pay ${currencyCode} ${totalAmount}`}
+        {offerUnavailable ? 'Search Again' : isProcessing ? 'Creating Payment...' : method === 'qr' ? 'Complete QR Payment' : `Pay ${currencyCode} ${totalAmount}`}
       </button>
       {isProcessing && <p className="mt-4 text-center text-xs font-black uppercase tracking-widest text-cyan-700">Processing...</p>}
       <div className="mt-7 text-center text-xs font-black uppercase tracking-widest text-slate-400">SSL 256-bit encrypted</div>
@@ -284,13 +312,20 @@ function Payment(): React.JSX.Element {
   const [method, setMethod] = useState<PaymentMethod>('card');
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [offerUnavailable, setOfferUnavailable] = useState(false);
 
   const handleCreatePayment = async () => {
     try {
+      if (offerUnavailable) {
+        navigate('/', { replace: true });
+        return;
+      }
+
       if (isProcessing) return;
       
       setIsProcessing(true);
       setErrorMessage('');
+      setOfferUnavailable(false);
 
       // Get user email from AuthContext (authenticated user)
       const userEmail = user?.email_address || 'user@example.com';
@@ -389,10 +424,21 @@ function Payment(): React.JSX.Element {
 
         console.log('🧾 Creating Duffel order with:', { booking_id: bookingId, payment_id: paymentId });
 
-        duffelOrderResult = await duffelOrderApi.createOrder({
-          booking_id: bookingId,
-          payment_id: paymentId,
-        });
+        try {
+          duffelOrderResult = await duffelOrderApi.createOrder({
+            booking_id: bookingId,
+            payment_id: paymentId,
+          });
+        } catch (orderError) {
+          if (isOfferUnavailableError(orderError)) {
+            console.error('❌ Duffel offer expired:', orderError);
+            setErrorMessage(OFFER_UNAVAILABLE_MESSAGE);
+            setIsProcessing(false);
+            return;
+          }
+
+          throw orderError;
+        }
 
         console.log('✅ Duffel order created successfully!');
         console.log('🆔 Duffel order ID:', duffelOrderResult.order?.duffel_order?.data?.id);
@@ -413,8 +459,13 @@ function Payment(): React.JSX.Element {
         });
       }, 1200);
     } catch (error) {
-      console.error('❌ Failed to create payment:', error);
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to create payment. Please try again.');
+      console.error('❌ Checkout failed:', error);
+      if (isOfferUnavailableError(error)) {
+        setOfferUnavailable(true);
+        setErrorMessage(OFFER_UNAVAILABLE_MESSAGE);
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : 'Checkout failed. Please try again.');
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -453,6 +504,7 @@ function Payment(): React.JSX.Element {
           onPay={handleCreatePayment}
           routeState={routeState}
           errorMessage={errorMessage}
+          offerUnavailable={offerUnavailable}
         />
       </div>
 
