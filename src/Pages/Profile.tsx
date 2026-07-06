@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
+import { api, type ProfileResponse } from '../Services/api';
 
 const menuItems = [
   'Personal Details',
@@ -59,9 +60,105 @@ const MenuIcon = () => (
   <span className="flex h-4 w-4 items-center justify-center rounded-sm bg-slate-200 text-[10px] text-slate-500">◆</span>
 );
 
+const getProfileEmail = (profile: Partial<ProfileResponse> | null) => (
+  profile?.email || (profile as any)?.email_address || ''
+);
+
+const getInitials = (firstName?: string, lastName?: string) => {
+  const initials = `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+  return initials || 'HE';
+};
+
+const formatDateTime = (value?: string) => {
+  if (!value) return 'Not available';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
 function Profile(): React.JSX.Element {
-  const { user } = useAuth();
-  const fullName = user ? `${user.title ? user.title + ' ' : ''}${user.first_name} ${user.last_name}` : '';
+  const { user, isAuthenticated, isLoading, updateUser } = useAuth();
+  const [profile, setProfile] = React.useState<Partial<ProfileResponse> | null>(user);
+  const [profileLoading, setProfileLoading] = React.useState(false);
+  const [profileError, setProfileError] = React.useState('');
+
+  React.useEffect(() => {
+    setProfile(user);
+  }, [user]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const loadProfile = async () => {
+      if (!isAuthenticated) return;
+
+      try {
+        setProfileLoading(true);
+        setProfileError('');
+        const profileData = await api.getProfile();
+        if (!cancelled) {
+          setProfile(profileData);
+          updateUser({
+            title: profileData.title,
+            first_name: profileData.first_name,
+            last_name: profileData.last_name,
+            phone_number: profileData.phone_number,
+            email_address: getProfileEmail(profileData),
+          });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setProfileError(error instanceof Error ? error.message : 'Failed to load profile');
+        }
+      } finally {
+        if (!cancelled) {
+          setProfileLoading(false);
+        }
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, updateUser]);
+
+  const emailAddress = getProfileEmail(profile);
+  const fullName = profile
+    ? `${profile.title ? profile.title + ' ' : ''}${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+    : '';
+
+  if (isLoading || (profileLoading && !profile)) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100 text-slate-800">
+        <div className="rounded border border-slate-300 bg-white p-8 text-center shadow-sm">
+          <p className="text-sm font-black uppercase tracking-widest text-[#073b70]">Loading Profile</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100 px-6 text-slate-800">
+        <div className="max-w-md rounded border border-amber-300 bg-amber-50 p-8 text-center">
+          <h1 className="text-2xl font-black text-amber-800">Sign in required</h1>
+          <p className="mt-3 text-sm font-semibold text-amber-700">Please sign in to view your profile information.</p>
+          <Link to="/signin" className="mt-6 inline-flex h-11 items-center justify-center rounded bg-[#073b70] px-6 text-sm font-black text-white">
+            Sign In
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-100 text-slate-800">
       <header className="border-b border-slate-300 bg-white">
@@ -77,16 +174,14 @@ function Profile(): React.JSX.Element {
           <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-col gap-7 sm:flex-row sm:items-center">
               <div className="relative flex h-36 w-36 items-center justify-center rounded-lg border-4 border-amber-300 bg-white shadow">
-                <svg className="h-20 w-20 text-blue-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm8 9a8 8 0 1 0-16 0h16Z" />
-                </svg>
+                <span className="text-4xl font-black text-[#073b70]">{getInitials(profile?.first_name, profile?.last_name)}</span>
                 <span className="absolute bottom-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-amber-300 text-xs text-[#073b70]">✎</span>
               </div>
               <div>
-                <h1 className="text-4xl font-black tracking-normal">{fullName}</h1>
+                <h1 className="text-4xl font-black tracking-normal">{fullName || 'Profile'}</h1>
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-                  <span className="rounded-full bg-amber-300 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-[#073b70]">Platinum Elite</span>
-                  <span className="font-bold">842,500 <span className="text-white/45">Points</span></span>
+                  <span className="rounded-full bg-amber-300 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-[#073b70]">Member</span>
+                  <span className="font-bold">{emailAddress || 'Email not available'}</span>
                 </div>
               </div>
             </div>
@@ -115,19 +210,25 @@ function Profile(): React.JSX.Element {
           </aside>
 
           <div className="space-y-8">
+            {profileError && (
+              <div className="rounded border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+                {profileError}
+              </div>
+            )}
+
             <Section title="Personal Details">
               <div className="grid gap-5 md:grid-cols-4">
-                <Label>Title *<SelectInput><option>{user?.title || 'Mr.'}</option></SelectInput></Label>
-                <Label>First Name *<TextInput value={user?.first_name || ''} /></Label>
+                <Label>Title *<SelectInput><option>{profile?.title || 'Not provided'}</option></SelectInput></Label>
+                <Label>First Name *<TextInput value={profile?.first_name || ''} /></Label>
                 <Label>Middle Name<TextInput /></Label>
-                <Label>Last Name *<TextInput value={user?.last_name || ''} /></Label>
-                <Label>Date of Birth *<TextInput value="09/14/1982" /></Label>
+                <Label>Last Name *<TextInput value={profile?.last_name || ''} /></Label>
+                <Label>Date of Birth *<TextInput placeholder="Not provided" /></Label>
                 <Label>Gender *<SelectInput><option>Male</option></SelectInput></Label>
-                <Label>Nationality *<SelectInput><option>British</option></SelectInput></Label>
+                <Label>Nationality *<SelectInput><option>Not provided</option></SelectInput></Label>
               </div>
               <div className="mt-5 grid gap-5 md:grid-cols-2">
-                <Label>Email Address *<TextInput value={user?.email_address || ''} /></Label>
-                <Label>Phone Number *<div className="grid grid-cols-[90px_1fr] gap-3"><SelectInput><option>🇺🇸</option></SelectInput><TextInput value={user?.phone_number || ''} /></div></Label>
+                <Label>Email Address *<TextInput value={emailAddress} /></Label>
+                <Label>Phone Number *<div className="grid grid-cols-[90px_1fr] gap-3"><SelectInput><option>Phone</option></SelectInput><TextInput value={profile?.phone_number || ''} placeholder="Not provided" /></div></Label>
               </div>
               <div className="mt-5">
                 <Label>Residential Address<textarea placeholder="Full residential address" className="h-24 w-full border border-slate-300 px-3 py-3 text-sm outline-none focus:border-[#073b70]" /></Label>
@@ -136,10 +237,10 @@ function Profile(): React.JSX.Element {
 
             <Section title="Contact Information">
               <div className="grid gap-5">
-                <Label>Email Address<TextInput value="a.sterling@horizon-elite.com" /></Label>
+                <Label>Email Address<TextInput value={emailAddress} /></Label>
                 <div className="grid gap-5 md:grid-cols-2">
-                  <Label>Phone Number<div className="grid grid-cols-[90px_1fr] gap-3"><SelectInput><option>🇺🇸</option></SelectInput><TextInput value="7700 900 123" /></div></Label>
-                  <Label>Phone Number<div className="grid grid-cols-[90px_1fr] gap-3"><SelectInput><option>🇺🇸</option></SelectInput><TextInput value="7700 900 123" /></div></Label>
+                  <Label>Phone Number<div className="grid grid-cols-[90px_1fr] gap-3"><SelectInput><option>Phone</option></SelectInput><TextInput value={profile?.phone_number || ''} placeholder="Not provided" /></div></Label>
+                  <Label>Alternate Phone<div className="grid grid-cols-[90px_1fr] gap-3"><SelectInput><option>Phone</option></SelectInput><TextInput placeholder="Not provided" /></div></Label>
                 </div>
                 <Label>Address<textarea placeholder="Full residential address" className="h-24 w-full border border-slate-300 px-3 py-3 text-sm outline-none focus:border-[#073b70]" /></Label>
               </div>
@@ -194,13 +295,13 @@ function Profile(): React.JSX.Element {
 
             <Section title="Loyalty & Membership" action="Sync Loyalty Data">
               <div className="mb-6 grid gap-5 bg-slate-100 p-5 md:grid-cols-2">
-                <div><p className="text-[10px] font-black uppercase text-slate-500">Status</p><p className="text-xl font-black text-[#073b70]">Platinum Elite <span className="text-xs text-emerald-500">Verified</span></p></div>
-                <div className="text-left md:text-right"><p className="text-[10px] font-black uppercase text-slate-500">Available Points</p><p className="text-xl font-black text-[#073b70]">842,500 <span className="text-xs text-slate-500">PTS</span></p></div>
+                <div><p className="text-[10px] font-black uppercase text-slate-500">Status</p><p className="text-xl font-black text-[#073b70]">Member <span className="text-xs text-emerald-500">Verified</span></p></div>
+                <div className="text-left md:text-right"><p className="text-[10px] font-black uppercase text-slate-500">Available Points</p><p className="text-xl font-black text-[#073b70]">0 <span className="text-xs text-slate-500">PTS</span></p></div>
               </div>
               <div className="grid gap-5 md:grid-cols-3">
                 <Label>Airline Partner<SelectInput><option>Horizon Connect</option></SelectInput></Label>
                 <Label>Member ID<TextInput value="HE-984421-S" /></Label>
-                <Label>Tier Level<SelectInput><option>Platinum</option></SelectInput></Label>
+                <Label>Tier Level<SelectInput><option>Member</option></SelectInput></Label>
               </div>
             </Section>
 
@@ -231,7 +332,7 @@ function Profile(): React.JSX.Element {
               <div className="grid gap-5">
                 <Label>Card Number<TextInput value="0000 0000 0000 0000" /></Label>
                 <div className="grid gap-5 md:grid-cols-[1fr_160px_110px]">
-                  <Label>Cardholder Name<TextInput value="Alistair Sterling" /></Label>
+                  <Label>Cardholder Name<TextInput value={fullName} /></Label>
                   <Label>Expiry Date<TextInput placeholder="MM/YY" /></Label>
                   <Label>CVV<TextInput value="123" /></Label>
                 </div>
@@ -261,8 +362,8 @@ function Profile(): React.JSX.Element {
                   </div>
                   <dl className="mt-8 grid grid-cols-2 gap-y-2 text-[11px] uppercase text-slate-500">
                     <dt>Account Status:</dt><dd className="text-right font-black text-cyan-600">Active</dd>
-                    <dt>Profile Created:</dt><dd className="text-right">Sept 12, 2021</dd>
-                    <dt>Last Modified:</dt><dd className="text-right">Oct 24, 2023, 14:22 GMT</dd>
+                    <dt>Profile Created:</dt><dd className="text-right">{formatDateTime(profile?.created_at)}</dd>
+                    <dt>Last Modified:</dt><dd className="text-right">{formatDateTime((profile as any)?.updated_at || (profile as any)?.date_modified)}</dd>
                   </dl>
                 </div>
               </div>

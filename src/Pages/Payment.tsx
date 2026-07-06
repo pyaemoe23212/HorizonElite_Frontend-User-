@@ -6,6 +6,16 @@ import { useAuth } from '../contexts/AuthContext';
 
 type PaymentMethod = 'card' | 'qr' | 'banking' | 'wallet';
 
+interface CardDetails {
+  cardNumber: string;
+  expiryDate: string;
+  cvv: string;
+  cardholderName: string;
+  acceptedTerms: boolean;
+}
+
+type CardErrors = Partial<Record<keyof CardDetails, string>>;
+
 interface PaymentRouteState {
   pnrReference?: string;
   booking?: any;
@@ -94,6 +104,137 @@ const methods: Array<{ id: PaymentMethod; title: string; subtitle: string; icon:
 ];
 
 const inputClass = 'h-14 w-full rounded border border-slate-300 bg-white px-5 text-lg text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#073b70]';
+const errorInputClass = 'border-red-500 focus:border-red-600';
+
+const onlyDigits = (value: string) => value.replace(/\D/g, '');
+
+const formatCardNumber = (value: string) => onlyDigits(value).slice(0, 19).replace(/(.{4})/g, '$1 ').trim();
+
+const formatExpiryDate = (value: string) => {
+  const digits = onlyDigits(value).slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+};
+
+const getCardBrand = (cardNumber: string) => {
+  const digits = onlyDigits(cardNumber);
+  if (/^4/.test(digits)) return 'Visa';
+  if (/^(5[1-5]|2[2-7])/.test(digits)) return 'Mastercard';
+  if (/^3[47]/.test(digits)) return 'American Express';
+  if (/^(6011|65|64[4-9])/.test(digits)) return 'Discover';
+  return 'Card';
+};
+
+const CardBrandLogo = ({ brand, compact = false }: { brand: string; compact?: boolean }) => {
+  if (brand === 'Mastercard') {
+    return (
+      <span className={`inline-flex items-center ${compact ? 'h-8 w-12' : 'h-12 w-20'} justify-center`} aria-label="Mastercard">
+        <span className={`${compact ? 'h-7 w-7' : 'h-10 w-10'} rounded-full bg-red-500`} />
+        <span className={`${compact ? '-ml-3 h-7 w-7' : '-ml-4 h-10 w-10'} rounded-full bg-amber-400 opacity-90`} />
+      </span>
+    );
+  }
+
+  if (brand === 'Visa') {
+    return (
+      <span className={`inline-flex ${compact ? 'h-8 w-14 text-lg' : 'h-12 w-24 text-4xl'} items-center justify-center rounded bg-white font-black italic text-[#173f8a] shadow-sm`} aria-label="Visa">
+        VISA
+      </span>
+    );
+  }
+
+  if (brand === 'American Express') {
+    return (
+      <span className={`inline-flex ${compact ? 'h-8 w-14 text-[10px]' : 'h-12 w-24 text-sm'} items-center justify-center rounded bg-[#2e77bb] font-black leading-none text-white shadow-sm`} aria-label="American Express">
+        AMEX
+      </span>
+    );
+  }
+
+  if (brand === 'Discover') {
+    return (
+      <span className={`inline-flex ${compact ? 'h-8 w-16 text-[10px]' : 'h-12 w-28 text-sm'} items-center justify-center rounded bg-gradient-to-r from-slate-900 via-orange-500 to-slate-900 font-black text-white shadow-sm`} aria-label="Discover">
+        DISCOVER
+      </span>
+    );
+  }
+
+  return (
+    <span className={`inline-flex ${compact ? 'h-8 w-12 text-[10px]' : 'h-12 w-20 text-xs'} items-center justify-center rounded border border-slate-300 bg-white font-black text-slate-500`} aria-label="Card">
+      CARD
+    </span>
+  );
+};
+
+const passesLuhn = (cardNumber: string) => {
+  const digits = onlyDigits(cardNumber);
+  if (digits.length < 13 || digits.length > 19) return false;
+
+  let sum = 0;
+  let shouldDouble = false;
+
+  for (let i = digits.length - 1; i >= 0; i -= 1) {
+    let digit = Number(digits[i]);
+    if (shouldDouble) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    shouldDouble = !shouldDouble;
+  }
+
+  return sum % 10 === 0;
+};
+
+const isValidExpiryDate = (value: string) => {
+  const match = value.match(/^(\d{2})\/(\d{2})$/);
+  if (!match) return false;
+
+  const month = Number(match[1]);
+  const year = Number(`20${match[2]}`);
+  if (month < 1 || month > 12) return false;
+
+  const expiry = new Date(year, month, 0, 23, 59, 59, 999);
+  return expiry >= new Date();
+};
+
+const validateCardDetails = (cardDetails: CardDetails): CardErrors => {
+  const errors: CardErrors = {};
+  const cardNumberDigits = onlyDigits(cardDetails.cardNumber);
+  const cvvDigits = onlyDigits(cardDetails.cvv);
+  const cardBrand = getCardBrand(cardDetails.cardNumber);
+
+  if (!cardNumberDigits) {
+    errors.cardNumber = 'Card number is required';
+  } else if (!passesLuhn(cardNumberDigits)) {
+    errors.cardNumber = 'Enter a valid card number';
+  }
+
+  if (!cardDetails.expiryDate.trim()) {
+    errors.expiryDate = 'Expiry date is required';
+  } else if (!isValidExpiryDate(cardDetails.expiryDate)) {
+    errors.expiryDate = 'Enter a valid future expiry date';
+  }
+
+  if (!cvvDigits) {
+    errors.cvv = 'CVV is required';
+  } else if (cardBrand === 'American Express' ? cvvDigits.length !== 4 : cvvDigits.length !== 3) {
+    errors.cvv = cardBrand === 'American Express' ? 'American Express CVV must be 4 digits' : 'CVV must be 3 digits';
+  }
+
+  const cleanName = cardDetails.cardholderName.trim();
+  if (!cleanName) {
+    errors.cardholderName = 'Cardholder name is required';
+  } else if (!/^[a-zA-Z][a-zA-Z\s'.-]{1,}$/.test(cleanName) || cleanName.split(/\s+/).length < 2) {
+    errors.cardholderName = 'Enter the full name shown on the card';
+  }
+
+  if (!cardDetails.acceptedTerms) {
+    errors.acceptedTerms = 'Please confirm you are authorized to use this payment method';
+  }
+
+  return errors;
+};
 
 const Stepper = () => (
   <div className="mx-auto grid max-w-5xl grid-cols-6 items-start gap-2 px-4 py-10">
@@ -199,44 +340,96 @@ const TripSummary = ({
   );
 };
 
-const CardPanel = () => (
+const CardPanel = ({
+  cardDetails,
+  cardErrors,
+  onCardChange,
+}: {
+  cardDetails: CardDetails;
+  cardErrors: CardErrors;
+  onCardChange: (field: keyof CardDetails, value: string | boolean) => void;
+}) => {
+  const cardBrand = getCardBrand(cardDetails.cardNumber);
+
+  return (
   <section>
     <h1 className="text-3xl font-black text-[#073b70]">Credit / Debit Card</h1>
     <p className="mt-3 text-base font-semibold text-slate-600">Enter your card details for secure payment processing.</p>
-    <div className="mt-8 flex items-center gap-8">
-      <div className="flex items-center">
-        <span className="h-10 w-10 rounded-full bg-red-500" />
-        <span className="-ml-4 h-10 w-10 rounded-full bg-amber-400 opacity-90" />
-      </div>
-      <p className="text-4xl font-black italic text-[#173f8a]">VISA</p>
+    <div className="mt-8 flex items-center gap-5">
+      <CardBrandLogo brand={cardBrand} />
+      <p className="text-sm font-black uppercase tracking-widest text-slate-500">{cardBrand === 'Card' ? 'Card type will appear as you type' : `${cardBrand} detected`}</p>
     </div>
     <div className="my-9 h-px bg-slate-200" />
     <form className="space-y-8">
       <label className="block">
         <span className="mb-3 block text-xs font-black uppercase tracking-widest text-[#073b70]">Card Number</span>
-        <input className={inputClass} placeholder="0000 0000 0000 0000" />
+        <div className={`flex h-14 items-center rounded border bg-white px-5 transition focus-within:border-[#073b70] ${cardErrors.cardNumber ? errorInputClass : 'border-slate-300'}`}>
+          <input
+            className="min-w-0 flex-1 bg-transparent text-lg text-slate-700 outline-none placeholder:text-slate-400"
+            inputMode="numeric"
+            autoComplete="cc-number"
+            value={cardDetails.cardNumber}
+            onChange={(event) => onCardChange('cardNumber', formatCardNumber(event.target.value))}
+            placeholder="0000 0000 0000 0000"
+            maxLength={23}
+          />
+          <CardBrandLogo brand={cardBrand} compact />
+        </div>
+        {cardErrors.cardNumber && <p className="mt-2 text-xs font-semibold text-red-600">{cardErrors.cardNumber}</p>}
       </label>
       <div className="grid gap-6 md:grid-cols-2">
         <label className="block">
           <span className="mb-3 block text-xs font-black uppercase tracking-widest text-[#073b70]">Expiry Date</span>
-          <input className={inputClass} placeholder="MM/YY" />
+          <input
+            className={`${inputClass} ${cardErrors.expiryDate ? errorInputClass : ''}`}
+            inputMode="numeric"
+            autoComplete="cc-exp"
+            value={cardDetails.expiryDate}
+            onChange={(event) => onCardChange('expiryDate', formatExpiryDate(event.target.value))}
+            placeholder="MM/YY"
+            maxLength={5}
+          />
+          {cardErrors.expiryDate && <p className="mt-2 text-xs font-semibold text-red-600">{cardErrors.expiryDate}</p>}
         </label>
         <label className="block">
           <span className="mb-3 block text-xs font-black uppercase tracking-widest text-[#073b70]">CVV</span>
-          <input className={inputClass} placeholder="123" />
+          <input
+            className={`${inputClass} ${cardErrors.cvv ? errorInputClass : ''}`}
+            inputMode="numeric"
+            autoComplete="cc-csc"
+            value={cardDetails.cvv}
+            onChange={(event) => onCardChange('cvv', onlyDigits(event.target.value).slice(0, cardBrand === 'American Express' ? 4 : 3))}
+            placeholder={cardBrand === 'American Express' ? '1234' : '123'}
+            maxLength={4}
+          />
+          {cardErrors.cvv && <p className="mt-2 text-xs font-semibold text-red-600">{cardErrors.cvv}</p>}
         </label>
       </div>
       <label className="block">
         <span className="mb-3 block text-xs font-black uppercase tracking-widest text-[#073b70]">Cardholder's Full Name</span>
-        <input className={inputClass} placeholder="As shown on card" />
+        <input
+          className={`${inputClass} ${cardErrors.cardholderName ? errorInputClass : ''}`}
+          autoComplete="cc-name"
+          value={cardDetails.cardholderName}
+          onChange={(event) => onCardChange('cardholderName', event.target.value.toUpperCase())}
+          placeholder="As shown on card"
+        />
+        {cardErrors.cardholderName && <p className="mt-2 text-xs font-semibold text-red-600">{cardErrors.cardholderName}</p>}
       </label>
       <label className="flex items-start gap-4 text-base font-semibold text-slate-600">
-        <input type="checkbox" className="mt-1 h-5 w-5 accent-[#073b70]" />
+        <input
+          type="checkbox"
+          checked={cardDetails.acceptedTerms}
+          onChange={(event) => onCardChange('acceptedTerms', event.target.checked)}
+          className="mt-1 h-5 w-5 accent-[#073b70]"
+        />
         <span>I agree to the <a href="#" className="font-black text-[#073b70]">Terms & Conditions</a> and confirm that I am authorized to use this payment method.</span>
       </label>
+      {cardErrors.acceptedTerms && <p className="-mt-6 text-xs font-semibold text-red-600">{cardErrors.acceptedTerms}</p>}
     </form>
   </section>
-);
+  );
+};
 
 const QrPanel = () => (
   <section>
@@ -295,8 +488,7 @@ const WalletPanel = () => (
   </section>
 );
 
-const panels: Record<PaymentMethod, React.ReactNode> = {
-  card: <CardPanel />,
+const panels: Record<Exclude<PaymentMethod, 'card'>, React.ReactNode> = {
   qr: <QrPanel />,
   banking: <BankingPanel />,
   wallet: <WalletPanel />,
@@ -313,6 +505,24 @@ function Payment(): React.JSX.Element {
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [offerUnavailable, setOfferUnavailable] = useState(false);
+  const [cardDetails, setCardDetails] = useState<CardDetails>({
+    cardNumber: '',
+    expiryDate: '',
+    cvv: '',
+    cardholderName: '',
+    acceptedTerms: false,
+  });
+  const [cardErrors, setCardErrors] = useState<CardErrors>({});
+
+  const handleCardChange = (field: keyof CardDetails, value: string | boolean) => {
+    setCardDetails(prev => ({ ...prev, [field]: value }));
+    setCardErrors(prev => {
+      const nextErrors = { ...prev };
+      delete nextErrors[field];
+      return nextErrors;
+    });
+    setErrorMessage('');
+  };
 
   const handleCreatePayment = async () => {
     try {
@@ -322,6 +532,16 @@ function Payment(): React.JSX.Element {
       }
 
       if (isProcessing) return;
+
+      if (method === 'card') {
+        const nextCardErrors = validateCardDetails(cardDetails);
+        setCardErrors(nextCardErrors);
+
+        if (Object.keys(nextCardErrors).length > 0) {
+          setErrorMessage('Please correct the highlighted card details before paying.');
+          return;
+        }
+      }
       
       setIsProcessing(true);
       setErrorMessage('');
@@ -413,6 +633,7 @@ function Payment(): React.JSX.Element {
 
       // Create Duffel order once payment is PAID
       let duffelOrderResult: any = null;
+      let ticketingIssue = '';
 
       if (finalizedPayment.payment_status_code === 'PAID') {
         const bookingId = routeState.booking?.booking_id || routeState.booking_id;
@@ -437,11 +658,16 @@ function Payment(): React.JSX.Element {
             return;
           }
 
-          throw orderError;
+          ticketingIssue = orderError instanceof Error
+            ? orderError.message
+            : 'Payment succeeded, but ticket order creation failed.';
+          console.error('Duffel order creation failed after payment:', orderError);
         }
 
-        console.log('✅ Duffel order created successfully!');
-        console.log('🆔 Duffel order ID:', duffelOrderResult.order?.duffel_order?.data?.id);
+        if (duffelOrderResult) {
+          console.log('✅ Duffel order created successfully!');
+          console.log('🆔 Duffel order ID:', duffelOrderResult.order?.duffel_order?.data?.id);
+        }
       }
 
       // Navigate to confirm payment or next step with payment_id
@@ -455,6 +681,8 @@ function Payment(): React.JSX.Element {
             paymentStatus: finalizedPayment.payment_status_code || 'PENDING',
             duffelOrder: duffelOrderResult?.order,
             duffelOrderId: duffelOrderResult?.order?.duffel_order?.data?.id,
+            ticketingStatus: duffelOrderResult ? 'ORDER_CREATED' : 'ORDER_PENDING',
+            ticketingIssue,
           },
         });
       }, 1200);
@@ -495,7 +723,15 @@ function Payment(): React.JSX.Element {
         </aside>
 
         <section className="border-t-8 border-[#073b70] bg-white p-10 shadow-md">
-          {panels[method]}
+          {method === 'card' ? (
+            <CardPanel
+              cardDetails={cardDetails}
+              cardErrors={cardErrors}
+              onCardChange={handleCardChange}
+            />
+          ) : (
+            panels[method]
+          )}
         </section>
 
         <TripSummary 

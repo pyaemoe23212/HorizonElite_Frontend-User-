@@ -17,6 +17,35 @@ interface Airport {
   timezone: string;
 }
 
+const AIRPORT_CACHE_KEY = 'horizon_elite_airports_v1';
+
+const fallbackAirports: Airport[] = [
+  { city: 'Bangkok', country: 'Thailand', name: 'Suvarnabhumi Airport', IATA: 'BKK', ICAO: 'VTBS', lat: '13.6900', lon: '100.7501', timezone: 'Asia/Bangkok' },
+  { city: 'Bangkok', country: 'Thailand', name: 'Don Mueang International Airport', IATA: 'DMK', ICAO: 'VTBD', lat: '13.9126', lon: '100.6070', timezone: 'Asia/Bangkok' },
+  { city: 'Yangon', country: 'Myanmar', name: 'Yangon International Airport', IATA: 'RGN', ICAO: 'VYYY', lat: '16.9073', lon: '96.1332', timezone: 'Asia/Yangon' },
+  { city: 'Mandalay', country: 'Myanmar', name: 'Mandalay International Airport', IATA: 'MDL', ICAO: 'VYMD', lat: '21.7022', lon: '95.9779', timezone: 'Asia/Yangon' },
+  { city: 'Singapore', country: 'Singapore', name: 'Singapore Changi Airport', IATA: 'SIN', ICAO: 'WSSS', lat: '1.3644', lon: '103.9915', timezone: 'Asia/Singapore' },
+  { city: 'Kuala Lumpur', country: 'Malaysia', name: 'Kuala Lumpur International Airport', IATA: 'KUL', ICAO: 'WMKK', lat: '2.7456', lon: '101.7072', timezone: 'Asia/Kuala_Lumpur' },
+  { city: 'Ho Chi Minh City', country: 'Vietnam', name: 'Tan Son Nhat International Airport', IATA: 'SGN', ICAO: 'VVTS', lat: '10.8188', lon: '106.6519', timezone: 'Asia/Ho_Chi_Minh' },
+  { city: 'Hanoi', country: 'Vietnam', name: 'Noi Bai International Airport', IATA: 'HAN', ICAO: 'VVNB', lat: '21.2212', lon: '105.8072', timezone: 'Asia/Ho_Chi_Minh' },
+  { city: 'Phnom Penh', country: 'Cambodia', name: 'Phnom Penh International Airport', IATA: 'PNH', ICAO: 'VDPP', lat: '11.5466', lon: '104.8441', timezone: 'Asia/Phnom_Penh' },
+  { city: 'Siem Reap', country: 'Cambodia', name: 'Siem Reap Angkor International Airport', IATA: 'SAI', ICAO: 'VDSA', lat: '13.3692', lon: '104.2230', timezone: 'Asia/Phnom_Penh' },
+  { city: 'Vientiane', country: 'Laos', name: 'Wattay International Airport', IATA: 'VTE', ICAO: 'VLVT', lat: '17.9883', lon: '102.5633', timezone: 'Asia/Vientiane' },
+  { city: 'Jakarta', country: 'Indonesia', name: 'Soekarno-Hatta International Airport', IATA: 'CGK', ICAO: 'WIII', lat: '-6.1256', lon: '106.6559', timezone: 'Asia/Jakarta' },
+  { city: 'Bali', country: 'Indonesia', name: 'Ngurah Rai International Airport', IATA: 'DPS', ICAO: 'WADD', lat: '-8.7482', lon: '115.1670', timezone: 'Asia/Makassar' },
+  { city: 'Manila', country: 'Philippines', name: 'Ninoy Aquino International Airport', IATA: 'MNL', ICAO: 'RPLL', lat: '14.5086', lon: '121.0194', timezone: 'Asia/Manila' },
+  { city: 'Hong Kong', country: 'Hong Kong', name: 'Hong Kong International Airport', IATA: 'HKG', ICAO: 'VHHH', lat: '22.3080', lon: '113.9185', timezone: 'Asia/Hong_Kong' },
+  { city: 'Tokyo', country: 'Japan', name: 'Tokyo Haneda Airport', IATA: 'HND', ICAO: 'RJTT', lat: '35.5494', lon: '139.7798', timezone: 'Asia/Tokyo' },
+  { city: 'Tokyo', country: 'Japan', name: 'Narita International Airport', IATA: 'NRT', ICAO: 'RJAA', lat: '35.7720', lon: '140.3929', timezone: 'Asia/Tokyo' },
+  { city: 'Seoul', country: 'South Korea', name: 'Incheon International Airport', IATA: 'ICN', ICAO: 'RKSI', lat: '37.4602', lon: '126.4407', timezone: 'Asia/Seoul' },
+  { city: 'Dubai', country: 'United Arab Emirates', name: 'Dubai International Airport', IATA: 'DXB', ICAO: 'OMDB', lat: '25.2532', lon: '55.3657', timezone: 'Asia/Dubai' },
+  { city: 'Doha', country: 'Qatar', name: 'Hamad International Airport', IATA: 'DOH', ICAO: 'OTHH', lat: '25.2731', lon: '51.6081', timezone: 'Asia/Qatar' },
+  { city: 'London', country: 'United Kingdom', name: 'Heathrow Airport', IATA: 'LHR', ICAO: 'EGLL', lat: '51.4700', lon: '-0.4543', timezone: 'Europe/London' },
+  { city: 'New York', country: 'United States', name: 'John F. Kennedy International Airport', IATA: 'JFK', ICAO: 'KJFK', lat: '40.6413', lon: '-73.7781', timezone: 'America/New_York' },
+  { city: 'Los Angeles', country: 'United States', name: 'Los Angeles International Airport', IATA: 'LAX', ICAO: 'KLAX', lat: '33.9416', lon: '-118.4085', timezone: 'America/Los_Angeles' },
+  { city: 'Sydney', country: 'Australia', name: 'Sydney Kingsford Smith Airport', IATA: 'SYD', ICAO: 'YSSY', lat: '-33.9399', lon: '151.1753', timezone: 'Australia/Sydney' },
+];
+
 interface SearchData {
   tripType: string;
   adultCount: number;
@@ -120,15 +149,41 @@ function Home(): React.JSX.Element {
   const fromRef = useRef<HTMLInputElement>(null);
   const toRef = useRef<HTMLInputElement>(null);
 
+  const getValidAirports = (data: Airport[]) =>
+    data.filter(a => a.IATA && a.IATA.length === 3 && a.IATA !== '\\N');
+
   // Fetch Airports
   useEffect(() => {
+    const cachedAirports = localStorage.getItem(AIRPORT_CACHE_KEY);
+    if (cachedAirports) {
+      try {
+        const parsed = JSON.parse(cachedAirports) as Airport[];
+        const validCached = getValidAirports(parsed);
+        if (validCached.length > 0) {
+          setAirports(validCached);
+          setIsLoadingAirports(false);
+        }
+      } catch {
+        localStorage.removeItem(AIRPORT_CACHE_KEY);
+      }
+    }
+
     fetch('https://raw.githubusercontent.com/konsalex/airport-autocomplete-js/master/src/data/airports.json')
-      .then(res => res.json())
-      .then((data: Airport[]) => {
-        const valid = data.filter(a => a.IATA && a.IATA.length === 3 && a.IATA !== '\\N');
-        setAirports(valid);
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Airport data request failed with status ${res.status}`);
+        }
+        return res.json();
       })
-      .catch(() => {})
+      .then((data: Airport[]) => {
+        const valid = getValidAirports(data);
+        setAirports(valid);
+        localStorage.setItem(AIRPORT_CACHE_KEY, JSON.stringify(valid));
+      })
+      .catch((error) => {
+        console.warn('Airport data fetch failed, using local fallback:', error);
+        setAirports(prev => (prev.length > 0 ? prev : fallbackAirports));
+      })
       .finally(() => setIsLoadingAirports(false));
   }, []);
 
@@ -164,12 +219,12 @@ function Home(): React.JSX.Element {
     if (query.length < 2) return [];
     const q = query.toLowerCase();
     return airports.filter(a => 
-      a.city.toLowerCase().includes(q) || a.name.toLowerCase().includes(q) ||
-      a.IATA.toLowerCase().includes(q) || a.country.toLowerCase().includes(q)
+      (a.city || '').toLowerCase().includes(q) || (a.name || '').toLowerCase().includes(q) ||
+      (a.IATA || '').toLowerCase().includes(q) || (a.country || '').toLowerCase().includes(q)
     ).slice(0, 10);
   };
 
-  const formatAirportDisplay = (a: Airport) => `${a.city} (${a.IATA})`;
+  const formatAirportDisplay = (a: Airport) => `${a.city}, ${a.country} (${a.IATA})`;
 
   const focusNext = (ref: any) => setTimeout(() => ref.current?.focus(), 80);
 
@@ -370,8 +425,8 @@ function Home(): React.JSX.Element {
                 <div className="absolute z-50 mt-2 w-full rounded-2xl bg-white py-2 shadow-xl border border-slate-100 max-h-80 overflow-auto">
                   {fromSuggestions.map((airport, index) => (
                     <div key={airport.IATA} onClick={() => selectFromAirport(airport)} className={`px-5 py-3.5 hover:bg-slate-50 cursor-pointer ${index === activeFromIndex ? 'bg-slate-100' : ''}`}>
-                      <div className="font-semibold text-slate-900">{airport.city} ({airport.IATA})</div>
-                      <div className="text-sm text-slate-500">{airport.name} • {airport.country}</div>
+                      <div className="font-semibold text-slate-900">{airport.city}{airport.country ? `, ${airport.country}` : ''} ({airport.IATA})</div>
+                      <div className="text-sm text-slate-500">{airport.name}{airport.country ? ` • ${airport.country}` : ''}</div>
                     </div>
                   ))}
                 </div>
@@ -405,8 +460,8 @@ function Home(): React.JSX.Element {
                 <div className="absolute z-50 mt-2 w-full rounded-2xl bg-white py-2 shadow-xl border border-slate-100 max-h-80 overflow-auto">
                   {toSuggestions.map((airport, index) => (
                     <div key={airport.IATA} onClick={() => selectToAirport(airport)} className={`px-5 py-3.5 hover:bg-slate-50 cursor-pointer ${index === activeToIndex ? 'bg-slate-100' : ''}`}>
-                      <div className="font-semibold text-slate-900">{airport.city} ({airport.IATA})</div>
-                      <div className="text-sm text-slate-500">{airport.name} • {airport.country}</div>
+                      <div className="font-semibold text-slate-900">{airport.city}{airport.country ? `, ${airport.country}` : ''} ({airport.IATA})</div>
+                      <div className="text-sm text-slate-500">{airport.name}{airport.country ? ` • ${airport.country}` : ''}</div>
                     </div>
                   ))}
                 </div>

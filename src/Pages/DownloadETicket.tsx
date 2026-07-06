@@ -1,8 +1,45 @@
 import React from "react";
 import { BadgeCheck, Download, Luggage as Suitcase, Mail, Plane, Printer } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
+import { ticketApi } from "../Services/api";
 
 function DownloadETicket(): React.JSX.Element {
+  const { state } = useLocation();
+  const ticketState = (state ?? {}) as any;
+  const bookingId = ticketState.bookingId || ticketState.booking_id || ticketState.booking?.booking_id;
+  const pnrReference = ticketState.pnrReference || ticketState.booking?.pnr_reference || "Not available";
+  const paymentStatus = ticketState.paymentStatus || ticketState.payment?.payment_status_code || "Unknown";
+  const passengers = ticketState.passengers || ticketState.booking?.passengers || [];
+  const primaryPassenger = passengers[0] || {};
+  const outbound = ticketState.outboundFlight || ticketState.selectedFlight;
+  const [downloadError, setDownloadError] = React.useState("");
+  const [isDownloading, setIsDownloading] = React.useState(false);
+
+  const handleDownload = async () => {
+    if (!bookingId) {
+      setDownloadError("Missing booking ID. Please open this page from your booking confirmation.");
+      return;
+    }
+
+    try {
+      setIsDownloading(true);
+      setDownloadError("");
+      const pdfBlob = await ticketApi.downloadETicket(bookingId);
+      const url = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Horizon-Elite-${pnrReference}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      setDownloadError(error instanceof Error ? error.message : "Failed to download e-ticket.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-slate-100 px-6 py-14">
       <div className="mx-auto max-w-7xl">
@@ -42,7 +79,7 @@ function DownloadETicket(): React.JSX.Element {
 
             {/* Booking Summary */}
             <div className="mt-8 grid gap-6 md:grid-cols-4">
-              <Info label="PNR" value="HZN7XL" />
+              <Info label="PNR" value={pnrReference} />
 
               <Info
                 label="Status"
@@ -50,9 +87,9 @@ function DownloadETicket(): React.JSX.Element {
                 valueColor="text-cyan-700"
               />
 
-              <Info label="Payment" value="Paid" />
+              <Info label="Payment" value={paymentStatus === "PAID" ? "Paid" : paymentStatus} />
 
-              <Info label="Date" value="15 June 2026" />
+              <Info label="Date" value={ticketState.booking?.booking_date_timestamp ? new Date(ticketState.booking.booking_date_timestamp).toLocaleDateString() : "Not available"} />
             </div>
 
             <hr className="my-8" />
@@ -61,14 +98,14 @@ function DownloadETicket(): React.JSX.Element {
             <div className="grid gap-6 md:grid-cols-3">
               <Info
                 label="Passenger Name"
-                value="Mr. TunBhone PyaeMoe"
+                value={[primaryPassenger.pi_title, primaryPassenger.pi_first_name, primaryPassenger.pi_last_name].filter(Boolean).join(" ") || "Not available"}
               />
 
-              <Info label="Type" value="Adult" />
+              <Info label="Type" value={primaryPassenger.pi_passenger_type_code || "Not available"} />
 
               <Info
                 label="Email"
-                value="example@email.com"
+                value={primaryPassenger.pi_contact_email || ticketState.payment?.user_email_address || ticketState.booking?.user_email_address || "Not available"}
               />
             </div>
 
@@ -83,33 +120,33 @@ function DownloadETicket(): React.JSX.Element {
               <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
                 <div>
                   <p className="text-4xl font-black text-[#073b70]">
-                    RGN
+                    {outbound?.origin_airport_code || outbound?.departure_airport || "--"}
                   </p>
 
-                  <p className="text-slate-500">Yangon</p>
+                  <p className="text-slate-500">Origin</p>
 
                   <Plane className="my-2 text-cyan-700" size={24} />
 
                   <p className="text-4xl font-black text-[#073b70]">
-                    BKK
+                    {outbound?.destination_airport_code || outbound?.arrival_airport || "--"}
                   </p>
 
-                  <p className="text-slate-500">Bangkok</p>
+                  <p className="text-slate-500">Destination</p>
                 </div>
 
                 <Info
                   label="Schedule"
                   value={
                     <>
-                      <p>18 June 2026</p>
+                      <p>{outbound?.departure_datetime ? new Date(outbound.departure_datetime).toLocaleDateString() : "Not available"}</p>
                       <p className="text-sm font-normal">
-                        09:30 AM - 11:10 AM
+                        {outbound?.departure_datetime ? new Date(outbound.departure_datetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--"} - {outbound?.arrival_datetime ? new Date(outbound.arrival_datetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--"}
                       </p>
                     </>
                   }
                 />
 
-                <Info label="Cabin" value="Economy" />
+                <Info label="Cabin" value={outbound?.cabin_class || ticketState.booking?.cabin_class || "Not available"} />
 
                 <Info
                   label="Seat"
@@ -117,7 +154,7 @@ function DownloadETicket(): React.JSX.Element {
                   valueColor="text-[#073b70]"
                 />
 
-                <Info label="Baggage" value="20 KG" />
+                <Info label="Baggage" value={outbound?.baggage_allowance || "Not available"} />
               </div>
             </div>
 
@@ -128,9 +165,20 @@ function DownloadETicket(): React.JSX.Element {
 
             {/* Buttons */}
             <div className="mt-8 flex flex-wrap gap-4">
-              <button className="inline-flex items-center gap-2 rounded bg-[#073b70] px-6 py-3 font-bold text-white hover:bg-[#052f59]">
+              {downloadError && (
+                <div className="w-full rounded border border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-700">
+                  {downloadError}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleDownload}
+                disabled={isDownloading || !bookingId}
+                className="inline-flex items-center gap-2 rounded bg-[#073b70] px-6 py-3 font-bold text-white hover:bg-[#052f59] disabled:cursor-not-allowed disabled:opacity-60"
+              >
                 <Download size={18} />
-                Download E-ticket PDF
+                {isDownloading ? "Downloading..." : "Download E-ticket PDF"}
               </button>
 
               <button className="inline-flex items-center gap-2 rounded border border-[#073b70] px-6 py-3 font-bold text-[#073b70] hover:bg-slate-50">

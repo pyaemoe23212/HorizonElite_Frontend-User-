@@ -270,13 +270,29 @@ axiosInstance.interceptors.response.use(
   (response) => response.data,
   (error: AxiosError) => {
     const responseData = error.response?.data as any;
+    const detailMessages =
+      Array.isArray(responseData?.details?.errors)
+        ? responseData.details.errors.map((item: any) => item.message || item.title || item.code).filter(Boolean).join(', ')
+        : Array.isArray(responseData?.details)
+          ? responseData.details.join(', ')
+          : typeof responseData?.details === 'string'
+            ? responseData.details
+            : undefined;
     const message =
       responseData?.message ||
       responseData?.error ||
-      (Array.isArray(responseData?.details) ? responseData.details.join(', ') : undefined) ||
+      detailMessages ||
       error.message ||
       'An error occurred';
-    return Promise.reject(new Error(message));
+    const normalizedError = new Error(message) as Error & {
+      status?: number;
+      details?: any;
+      responseData?: any;
+    };
+    normalizedError.status = error.response?.status;
+    normalizedError.details = responseData?.details;
+    normalizedError.responseData = responseData;
+    return Promise.reject(normalizedError);
   },
 );
 
@@ -556,6 +572,7 @@ export interface BookingPassenger {
 export interface CreateBookingResponse {
   message: string;
   booking: {
+    booking_id?: string;
     pnr_reference: string;
     user_email_address: string;
     selected_flight_id: string;
@@ -648,6 +665,35 @@ export interface CreateDuffelOrderResponse {
       [key: string]: any;
     };
   };
+}
+
+export interface AddonRequest {
+  booking_id: string;
+  passenger_id: string;
+  addon_type: string;
+  addon_code: string;
+  addon_name: string;
+  quantity: number;
+  price: number;
+  currency_code: string;
+}
+
+export interface SelectBaggageRequest {
+  booking_id: string;
+  passenger_id: string;
+  selected_flight_id: string;
+  baggage_code: string;
+}
+
+export interface ApiMessageDataResponse<T = any> {
+  message: string;
+  data: T;
+}
+
+export interface SelectSeatRequest {
+  order_id: string;
+  passenger_id: string;
+  seat_id: string;
 }
 
 // ─── Passenger Types ─────────────────────────────────────────────────────────
@@ -751,7 +797,7 @@ export const paymentApi = {
    * Test connection to Omise payment gateway
    */
   testConnection: (): Promise<any> =>
-    axiosInstance.get('/payments/test'),
+    axiosInstance.get('/payments/test-omise'),
 
   /**
    * Create a payment record for a booking
@@ -791,6 +837,70 @@ export const duffelOrderApi = {
    */
   createOrder: (data: CreateDuffelOrderRequest): Promise<CreateDuffelOrderResponse> =>
     axiosInstance.post('/duffel/orders/create', data),
+};
+
+export const ticketApi = {
+  /**
+   * Download generated e-ticket PDF for a completed booking.
+   */
+  downloadETicket: async (bookingId: string): Promise<Blob> => {
+    const response = await axiosInstance.get(`/tickets/${bookingId}`, {
+      responseType: 'blob',
+    });
+    return response as unknown as Blob;
+  },
+};
+
+export const addonApi = {
+  /**
+   * Save a selected add-on for a booking passenger.
+   */
+  addAddon: (data: AddonRequest): Promise<ApiMessageDataResponse> =>
+    axiosInstance.post('/addons', data),
+
+  /**
+   * Get saved add-ons for a booking.
+   */
+  getBookingAddons: (bookingId: string): Promise<ApiMessageDataResponse<any[]>> =>
+    axiosInstance.get(`/addons/${bookingId}`),
+
+  /**
+   * Get baggage options.
+   */
+  getBaggageOptions: (): Promise<ApiMessageDataResponse<any[]>> =>
+    axiosInstance.get('/addons/baggage/options'),
+
+  /**
+   * Check available add-ons for a Duffel offer.
+   */
+  getAddonAvailability: (offerId: string): Promise<ApiMessageDataResponse<any>> =>
+    axiosInstance.get(`/addons/availability/${offerId}`),
+
+  /**
+   * Save passenger baggage selection.
+   */
+  selectBaggage: (data: SelectBaggageRequest): Promise<ApiMessageDataResponse> =>
+    axiosInstance.post('/addons/baggage/select', data),
+};
+
+export const mealApi = {
+  /**
+   * Get available meal options.
+   */
+  getMeals: (): Promise<ApiMessageDataResponse<any[]>> =>
+    axiosInstance.get('/meals'),
+};
+
+export const seatApi = {
+  /**
+   * Seats are intentionally disabled for now.
+   */
+  getSeatMap: async (_offerId: string): Promise<false> => false,
+
+  /**
+   * Seats are intentionally disabled for now.
+   */
+  selectSeat: async (_data: SelectSeatRequest): Promise<false> => false,
 };
 
 export default api;

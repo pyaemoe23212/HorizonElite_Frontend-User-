@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { BadgeCheck, Plane } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { bookingApi, type CreateBookingRequest } from '../Services/api';
+import { addonApi, bookingApi, mealApi, seatApi, type CreateBookingRequest } from '../Services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 type AddOnKey = 'seat' | 'meal' | 'baggage' | 'assistance' | 'lounge' | 'insurance';
@@ -72,6 +72,38 @@ const mealOptions = [
   ['RVML: Raw Vegetarian', 'Uncooked fruit and vegetables.'],
 ];
 
+const baggageOptions = [
+  { code: 'BG20', name: 'Extra Baggage 20 kg', weight: '20 kg', desc: 'Medium stays', price: 1450 },
+  { code: 'BG25', name: 'Extra Baggage 25 kg', weight: '25 kg', desc: 'Long trips', price: 1850 },
+  { code: 'BG30', name: 'Extra Baggage 30 kg', weight: '30 kg', desc: 'Comprehensive', price: 2200 },
+];
+
+const assistanceOptions = [
+  { code: 'WCHR', name: 'Wheelchair Assistance' },
+  { code: 'SENSORY', name: 'Sensory Support' },
+  { code: 'MEDICAL', name: 'Medical Clearance' },
+  { code: 'ACCESS', name: 'Visual/Hearing Assistance' },
+];
+
+const loungeOptions = [
+  { code: 'SLV-WING', name: 'The Silver Wing', meta: 'Flagship lounge - BKK', price: 2800, image: 'https://images.unsplash.com/photo-1617104678098-de229db51175?q=80&w=900&auto=format&fit=crop' },
+  { code: 'ZENITH', name: 'Zenith Club', meta: 'Boutique lounge - BKK', price: 1800, image: 'https://images.unsplash.com/photo-1600566753151-384129cf4e3e?q=80&w=900&auto=format&fit=crop' },
+];
+
+const insuranceOptions = [
+  { code: 'INS-BASIC', name: 'Basic', desc: 'Essential medical and luggage coverage for your journey.', price: 850 },
+  { code: 'INS-PREMIUM', name: 'Premium', desc: 'Comprehensive protection including flight delay and trip cancellation.', price: 1420 },
+  { code: 'INS-ULTIMATE', name: 'Ultimate', desc: 'Maximum peace of mind with 24/7 global concierge and unlimited medical.', price: 2450 },
+];
+
+interface SelectedAddon {
+  type: 'MEAL' | 'BAGGAGE' | 'ASSISTANCE' | 'LOUNGE' | 'INSURANCE';
+  code: string;
+  name: string;
+  price: number;
+  quantity?: number;
+}
+
 const steps = ['Flight', 'Passenger', 'Service', 'Payment', 'Additional Services', 'Personalized'];
 
 const Stepper = () => (
@@ -108,16 +140,36 @@ interface AddOnsRouteState {
 const BookingSummary = ({ 
   compact = false,
   routeState,
+  selectedAddons,
+  fareTotal,
+  addOnsTotal,
+  currencyCode,
   isCreatingBooking = false,
   errorMessage = '',
   onContinueToPayment,
 }: { 
   compact?: boolean;
   routeState?: AddOnsRouteState;
+  selectedAddons: SelectedAddon[];
+  fareTotal: number;
+  addOnsTotal: number;
+  currencyCode: string;
   isCreatingBooking?: boolean;
   errorMessage?: string;
   onContinueToPayment?: () => void;
-}) => (
+}) => {
+  const outboundFlight = routeState?.selectedFlight || routeState?.outboundFlight;
+  const passengers = routeState?.passengers || [];
+  const passengerSummary = passengers.length
+    ? passengers.map((passenger) => {
+        const name = [passenger.pi_title, passenger.pi_first_name, passenger.pi_last_name].filter(Boolean).join(' ');
+        const type = passenger.pi_passenger_type_code === 'CHD' ? 'Child' : passenger.pi_passenger_type_code === 'INF' ? 'Infant' : 'Adult';
+        return `${type}${name ? ` (${name})` : ''}`;
+      }).join(', ')
+    : `${routeState?.passengerIds?.length || 0} passenger(s)`;
+  const formatMoney = (amount: number) => `${currencyCode} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  return (
   <aside className="h-fit rounded border border-slate-300 bg-white shadow-sm">
     <div className={`${compact ? 'bg-[#073b70] text-white' : 'bg-white'} border-b border-slate-300 px-7 py-6`}>
       <h2 className={`text-2xl font-black ${compact ? 'text-white' : 'text-[#073b70]'}`}>Booking Summary</h2>
@@ -130,29 +182,34 @@ const BookingSummary = ({
           <a href="#" className="text-xs font-black uppercase text-cyan-600 underline">Flight Details</a>
         </div>
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <div><p className="text-sm font-semibold text-slate-600">Sun, 31 May 2024</p><p className="text-2xl font-black text-[#073b70]">06:00 <span className="text-sm">BKK</span></p></div>
+          <div><p className="text-sm font-semibold text-slate-600">{outboundFlight?.airline_name || 'Selected flight'}</p><p className="text-2xl font-black text-[#073b70]">{outboundFlight?.origin_airport_code || '--'} <span className="text-sm">{outboundFlight?.flight_number || ''}</span></p></div>
           <div className="flex flex-col items-center gap-1 text-center text-xs font-bold text-slate-400"><Plane size={17} />4h 25m</div>
-          <div className="text-right"><p className="text-sm font-semibold text-slate-600">Business Flex</p><p className="text-2xl font-black text-[#073b70]">11:25 <span className="text-sm">SIN</span></p></div>
+          <div className="text-right"><p className="text-sm font-semibold text-slate-600">{outboundFlight?.cabin_class || 'Cabin'}</p><p className="text-2xl font-black text-[#073b70]">{outboundFlight?.destination_airport_code || '--'}</p></div>
         </div>
       </div>
       <div className="border-y border-slate-300 py-5">
         <p className="mb-3 text-xs font-black uppercase tracking-wide text-slate-500">Passengers & Contact</p>
-        <p className="font-semibold text-slate-700">1 Adult (Mr. John Smith)</p>
+        <p className="font-semibold text-slate-700">{passengerSummary}</p>
       </div>
       <div>
         <p className="mb-3 text-xs font-black uppercase tracking-wide text-slate-500">Selected Add-ons</p>
         <div className="space-y-2 text-sm font-semibold text-slate-700">
-          <div className="flex justify-between"><span>Standard Seat (12A)</span><span className="text-cyan-600">Free</span></div>
-          <div className="flex justify-between"><span>Chef's Special Meal</span><span className="text-cyan-600">Included</span></div>
-          <div className="flex justify-between"><span>Extra Baggage (25kg)</span><span className="text-[#073b70]">THB 1,850</span></div>
+          {selectedAddons.length === 0 ? (
+            <div className="text-slate-500">No add-ons selected</div>
+          ) : selectedAddons.map((addon) => (
+            <div key={`${addon.type}-${addon.code}`} className="flex justify-between gap-3">
+              <span>{addon.name}</span>
+              <span className={addon.price > 0 ? 'text-[#073b70]' : 'text-cyan-600'}>{addon.price > 0 ? formatMoney(addon.price) : 'Free'}</span>
+            </div>
+          ))}
         </div>
       </div>
       <div className="space-y-3 border-t border-slate-300 pt-5 text-sm font-semibold text-slate-700">
-        <div className="flex justify-between"><span>Fare & Taxes</span><span>THB 32,590</span></div>
-        <div className="flex justify-between"><span>Add-ons Total</span><span>THB 1,850</span></div>
+        <div className="flex justify-between"><span>Fare & Taxes</span><span>{formatMoney(fareTotal)}</span></div>
+        <div className="flex justify-between"><span>Add-ons Total</span><span>{formatMoney(addOnsTotal)}</span></div>
         <div className="flex items-end justify-between pt-3">
           <span className="text-xs font-black uppercase tracking-wide text-slate-500">Total Price</span>
-          <span className="text-3xl font-black text-[#073b70]">THB 32,590</span>
+          <span className="text-3xl font-black text-[#073b70]">{formatMoney(fareTotal + addOnsTotal)}</span>
         </div>
       </div>
       {errorMessage && (
@@ -172,86 +229,114 @@ const BookingSummary = ({
       </Link>
     </div>
   </aside>
-);
+  );
+};
 
 const SeatContent = () => (
   <div className="border-t border-slate-300 bg-slate-50 p-7">
-    <div className="mx-auto grid max-w-xl grid-cols-5 gap-6 rounded-[3rem] bg-white p-12 shadow-inner">
-      {['10A', '10E', '10F', '10L', '12A', '12E', '12F', '12L'].map((seat) => (
-        <button key={seat} className={`h-14 w-14 font-black ${seat === '12A' ? 'bg-amber-300 text-white' : seat.endsWith('F') || seat.endsWith('L') || seat === '10A' || seat === '12E' ? 'bg-[#073b70] text-white' : 'bg-slate-200 text-slate-500'}`}>
-          {seat}
-        </button>
-      ))}
+    <div className="rounded border border-slate-300 bg-white p-6 text-center">
+      <p className="text-lg font-black text-[#073b70]">Seat selection is currently unavailable</p>
+      <p className="mt-2 text-sm font-semibold text-slate-600">Seats will be assigned during check-in for this booking.</p>
     </div>
-    <button className="mt-6 h-14 w-full rounded bg-[#073b70] text-sm font-black uppercase tracking-widest text-white">Confirm Seat 12A</button>
   </div>
 );
 
-const MealContent = () => (
+const MealContent = ({
+  selectedCode,
+  onSelect,
+}: {
+  selectedCode?: string;
+  onSelect: (addon: SelectedAddon) => void;
+}) => (
   <div className="border-t border-slate-300 p-7">
     <p className="mb-5 text-xs font-black uppercase tracking-widest text-slate-500">Dietary & Medical</p>
     <div className="grid gap-4 md:grid-cols-3">
-      {mealOptions.map(([name, desc], index) => (
-        <button key={name} className={`min-h-24 rounded border p-4 text-left ${index === 1 ? 'border-[#073b70] bg-blue-50' : 'border-slate-300 bg-white'}`}>
+      {mealOptions.map(([name, desc]) => {
+        const [code] = name.split(':');
+        return (
+        <button
+          key={name}
+          type="button"
+          onClick={() => onSelect({ type: 'MEAL', code, name, price: 0 })}
+          className={`min-h-24 rounded border p-4 text-left ${selectedCode === code ? 'border-[#073b70] bg-blue-50' : 'border-slate-300 bg-white'}`}
+        >
           <span className="block text-sm font-black text-[#073b70]">{name}</span>
           <span className="mt-1 block text-xs font-semibold text-slate-500">{desc}</span>
         </button>
-      ))}
+      )})}
     </div>
-    <button className="mt-7 h-14 w-full rounded bg-[#073b70] text-sm font-black uppercase tracking-widest text-white">Confirm Selection</button>
   </div>
 );
 
-const BaggageContent = () => (
+const BaggageContent = ({
+  selectedCode,
+  onSelect,
+}: {
+  selectedCode?: string;
+  onSelect: (addon: SelectedAddon) => void;
+}) => (
   <div className="border-t border-slate-300 p-7">
     <div className="grid gap-6 md:grid-cols-3">
-      {[
-        ['20 kg', 'Medium stays', '1,450 THB'],
-        ['25 kg', 'Long trips', '1,850 THB'],
-        ['30 kg', 'Comprehensive', '2,200 THB'],
-      ].map(([weight, desc, price], index) => (
-        <button key={weight} className={`h-36 border p-5 text-center ${index === 1 ? 'border-[#073b70] bg-blue-50' : 'border-slate-300 bg-white'}`}>
-          <span className="block text-2xl font-black text-[#073b70]">{weight}</span>
-          <span className="mt-2 block text-sm font-semibold text-slate-500">{desc}</span>
-          <span className="mt-4 block text-sm font-black text-[#073b70]">{price}</span>
+      {baggageOptions.map((option) => (
+        <button
+          key={option.code}
+          type="button"
+          onClick={() => onSelect({ type: 'BAGGAGE', code: option.code, name: option.name, price: option.price })}
+          className={`h-36 border p-5 text-center ${selectedCode === option.code ? 'border-[#073b70] bg-blue-50' : 'border-slate-300 bg-white'}`}
+        >
+          <span className="block text-2xl font-black text-[#073b70]">{option.weight}</span>
+          <span className="mt-2 block text-sm font-semibold text-slate-500">{option.desc}</span>
+          <span className="mt-4 block text-sm font-black text-[#073b70]">THB {option.price.toLocaleString()}</span>
         </button>
       ))}
     </div>
     <div className="mt-6 rounded bg-[#073b70] p-4 text-sm font-semibold text-white">Elite Privilege: You receive a 15% discount on all pre-booked extra baggage weight.</div>
-    <div className="mt-6 flex justify-end"><button className="h-12 rounded bg-[#073b70] px-10 text-sm font-black text-white">Confirm Selection</button></div>
   </div>
 );
 
-const AssistanceContent = () => (
+const AssistanceContent = ({
+  selectedCode,
+  onSelect,
+}: {
+  selectedCode?: string;
+  onSelect: (addon: SelectedAddon) => void;
+}) => (
   <div className="border-t border-slate-300 p-7">
     <div className="grid gap-6 md:grid-cols-2">
-      {['Wheelchair Assistance', 'Sensory Support', 'Medical Clearance', 'Visual/Hearing Assistance'].map((service) => (
-        <button key={service} className="min-h-36 border border-slate-300 bg-white p-6 text-center">
-          <span className="block text-lg font-black text-[#073b70]">{service}</span>
+      {assistanceOptions.map((service) => (
+        <button
+          key={service.code}
+          type="button"
+          onClick={() => onSelect({ type: 'ASSISTANCE', code: service.code, name: service.name, price: 0 })}
+          className={`min-h-36 border p-6 text-center ${selectedCode === service.code ? 'border-[#073b70] bg-blue-50' : 'border-slate-300 bg-white'}`}
+        >
+          <span className="block text-lg font-black text-[#073b70]">{service.name}</span>
           <span className="mt-2 block text-sm font-semibold text-slate-500">Personalized care during your journey.</span>
           <span className="mt-4 block text-xs font-black uppercase text-cyan-600">Free of charge</span>
         </button>
       ))}
     </div>
     <div className="mt-6 rounded bg-[#073b70] p-4 text-sm font-semibold text-white">Elite Service: Our crew will be notified of your specific requirements to ensure your comfort.</div>
-    <div className="mt-6 flex justify-end"><button className="h-12 rounded bg-[#073b70] px-10 text-sm font-black text-white">Confirm Selection</button></div>
   </div>
 );
 
-const LoungeContent = () => (
+const LoungeContent = ({
+  selectedCode,
+  onSelect,
+}: {
+  selectedCode?: string;
+  onSelect: (addon: SelectedAddon) => void;
+}) => (
   <div className="border-t border-slate-300 p-7">
     <div className="grid gap-8 md:grid-cols-2">
-      {[
-        ['The Silver Wing', 'Flagship lounge - BKK', 'THB 2,800', 'https://images.unsplash.com/photo-1617104678098-de229db51175?q=80&w=900&auto=format&fit=crop'],
-        ['Zenith Club', 'Boutique lounge - BKK', 'THB 1,800', 'https://images.unsplash.com/photo-1600566753151-384129cf4e3e?q=80&w=900&auto=format&fit=crop'],
-      ].map(([name, meta, price, image]) => (
-        <article key={name} className="border border-slate-300 bg-white">
-          <img src={image} alt={name} className="h-56 w-full object-cover" />
+      {loungeOptions.map((option) => (
+        <article key={option.code} className={`border bg-white ${selectedCode === option.code ? 'border-[#073b70]' : 'border-slate-300'}`}>
+          <img src={option.image} alt={option.name} className="h-56 w-full object-cover" />
           <div className="p-6">
-            <h3 className="text-3xl font-black text-[#073b70]">{name}</h3>
-            <p className="mt-2 text-xs font-black uppercase tracking-widest text-slate-500">{meta}</p>
+            <h3 className="text-3xl font-black text-[#073b70]">{option.name}</h3>
+            <p className="mt-2 text-xs font-black uppercase tracking-widest text-slate-500">{option.meta}</p>
             <p className="mt-4 min-h-20 text-base font-semibold leading-7 text-slate-600">A quiet sanctuary with premium dining, work spaces, and calm pre-flight service.</p>
-            <button className="mt-5 h-12 w-full border border-[#073b70] bg-[#073b70] text-sm font-black tracking-widest text-white">{price}</button>
+            <button type="button" onClick={() => onSelect({ type: 'LOUNGE', code: option.code, name: option.name, price: option.price })} className="mt-5 h-12 w-full border border-[#073b70] bg-[#073b70] text-sm font-black tracking-widest text-white">THB {option.price.toLocaleString()}</button>
           </div>
         </article>
       ))}
@@ -259,34 +344,27 @@ const LoungeContent = () => (
   </div>
 );
 
-const InsuranceContent = () => (
+const InsuranceContent = ({
+  selectedCode,
+  onSelect,
+}: {
+  selectedCode?: string;
+  onSelect: (addon: SelectedAddon) => void;
+}) => (
   <div className="border-t border-slate-300 p-7">
     <div className="grid gap-6 md:grid-cols-3">
-      {[
-        ['Basic', 'Essential medical and luggage coverage for your journey.', '850'],
-        ['Premium', 'Comprehensive protection including flight delay and trip cancellation.', '1,420'],
-        ['Ultimate', 'Maximum peace of mind with 24/7 global concierge and unlimited medical.', '2,450'],
-      ].map(([name, desc, price], index) => (
-        <article key={name} className={`relative border p-6 text-center ${index === 1 ? 'border-amber-400' : 'border-slate-300'}`}>
+      {insuranceOptions.map((option, index) => (
+        <article key={option.code} className={`relative border p-6 text-center ${selectedCode === option.code ? 'border-[#073b70] bg-blue-50' : index === 1 ? 'border-amber-400' : 'border-slate-300'}`}>
           {index === 1 && <span className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 bg-amber-300 px-4 py-1 text-[10px] font-black uppercase text-white">Recommended</span>}
-          <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">{name}</h3>
-          <p className="mt-5 min-h-20 text-base font-semibold text-slate-600">{desc}</p>
-          <p className="mt-4 text-sm text-slate-500">THB <span className="text-4xl font-black text-[#073b70]">{price}</span></p>
-          <button className={`mt-5 h-11 w-full border border-[#073b70] text-sm font-black ${index === 1 ? 'bg-[#073b70] text-white' : 'text-[#073b70]'}`}>Select</button>
+          <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">{option.name}</h3>
+          <p className="mt-5 min-h-20 text-base font-semibold text-slate-600">{option.desc}</p>
+          <p className="mt-4 text-sm text-slate-500">THB <span className="text-4xl font-black text-[#073b70]">{option.price.toLocaleString()}</span></p>
+          <button type="button" onClick={() => onSelect({ type: 'INSURANCE', code: option.code, name: `${option.name} Insurance`, price: option.price })} className={`mt-5 h-11 w-full border border-[#073b70] text-sm font-black ${selectedCode === option.code || index === 1 ? 'bg-[#073b70] text-white' : 'text-[#073b70]'}`}>Select</button>
         </article>
       ))}
     </div>
   </div>
 );
-
-const contentMap: Record<AddOnKey, React.ReactNode> = {
-  seat: <SeatContent />,
-  meal: <MealContent />,
-  baggage: <BaggageContent />,
-  assistance: <AssistanceContent />,
-  lounge: <LoungeContent />,
-  insurance: <InsuranceContent />,
-};
 
 function AddOns(): React.JSX.Element {
   const { state } = useLocation();
@@ -299,8 +377,65 @@ function AddOns(): React.JSX.Element {
   const [openSection, setOpenSection] = useState<AddOnKey | null>(null);
   const [isCreatingBooking, setIsCreatingBooking] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [addonWarning, setAddonWarning] = useState('');
+  const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
   
   const personalized = openSection === 'assistance';
+
+  const toNumberOrZero = (value: unknown): number => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const getFlightPrice = (flight: any): number => {
+    if (!flight) return 0;
+    return (
+      toNumberOrZero(flight.selected_fare_price) ||
+      toNumberOrZero(flight.total_price) ||
+      toNumberOrZero(flight.total_amount) ||
+      toNumberOrZero(flight.total_fare_price) ||
+      0
+    );
+  };
+
+  const outboundFlight = routeState.selectedFlight || routeState.outboundFlight;
+  const inboundFlight = routeState.returnFlight || routeState.inboundFlight;
+  const fareTotal = useMemo(() => getFlightPrice(outboundFlight) + getFlightPrice(inboundFlight), [outboundFlight, inboundFlight]);
+  const addOnsTotal = useMemo(() => selectedAddons.reduce((total, addon) => total + addon.price * (addon.quantity || 1), 0), [selectedAddons]);
+  const currencyCode = routeState.selectedFlight?.currency_code || routeState.outboundFlight?.currency_code || 'USD';
+
+  const selectAddon = (addon: SelectedAddon) => {
+    setSelectedAddons((current) => [...current.filter((item) => item.type !== addon.type), addon]);
+  };
+
+  const getSelectedCode = (type: SelectedAddon['type']) => selectedAddons.find((addon) => addon.type === type)?.code;
+
+  const renderContent = (key: AddOnKey) => {
+    switch (key) {
+      case 'seat':
+        return <SeatContent />;
+      case 'meal':
+        return <MealContent selectedCode={getSelectedCode('MEAL')} onSelect={selectAddon} />;
+      case 'baggage':
+        return <BaggageContent selectedCode={getSelectedCode('BAGGAGE')} onSelect={selectAddon} />;
+      case 'assistance':
+        return <AssistanceContent selectedCode={getSelectedCode('ASSISTANCE')} onSelect={selectAddon} />;
+      case 'lounge':
+        return <LoungeContent selectedCode={getSelectedCode('LOUNGE')} onSelect={selectAddon} />;
+      case 'insurance':
+        return <InsuranceContent selectedCode={getSelectedCode('INSURANCE')} onSelect={selectAddon} />;
+      default:
+        return null;
+    }
+  };
+
+  useEffect(() => {
+    void seatApi.getSeatMap(outboundFlight?.flight_offer_id || '').then((seatMap) => {
+      if (seatMap === false) return;
+    });
+    void mealApi.getMeals().catch(() => undefined);
+    void addonApi.getBaggageOptions().catch(() => undefined);
+  }, [outboundFlight?.flight_offer_id]);
 
   useEffect(() => {
     const requestedSection = hash.replace('#', '') as AddOnKey;
@@ -313,6 +448,7 @@ function AddOns(): React.JSX.Element {
     try {
       setIsCreatingBooking(true);
       setErrorMessage('');
+      setAddonWarning('');
 
       const toNumberOrZero = (value: unknown): number => {
         const parsed = Number(value);
@@ -342,7 +478,7 @@ function AddOns(): React.JSX.Element {
       const outboundPrice = getFlightPrice(outboundFlight);
       const inboundPrice = getFlightPrice(inboundFlight);
       
-      const totalPrice = outboundPrice + inboundPrice;
+      const totalPrice = fareTotal + addOnsTotal;
 
       console.log('💰 [AddOns] Price Calculation:');
       console.log('   - Outbound (selectedFlight):', outboundPrice);
@@ -360,7 +496,7 @@ function AddOns(): React.JSX.Element {
         selected_flight_id: routeState.selectedFlightId,
         passenger_ids: routeState.passengerIds,
         total_payment_amount: totalPrice,
-        currency_code: routeState.selectedFlight?.currency_code || routeState.outboundFlight?.currency_code || 'USD',
+        currency_code: currencyCode,
         trip_type: routeState.tripType || 'ONE_WAY',
         cabin_class: routeState.selectedFlight?.cabin_class || routeState.outboundFlight?.cabin_class || 'ECONOMY',
       };
@@ -374,17 +510,57 @@ function AddOns(): React.JSX.Element {
       console.log('🎫 PNR Reference:', response.booking.pnr_reference);
       console.log('📊 Booking Status:', response.booking.booking_status);
 
+      const bookingId = response.booking.booking_id;
+      let currentAddonWarning = '';
+
+      if (bookingId && selectedAddons.length > 0) {
+        const firstPassengerId = routeState.passengerIds[0];
+        const selectedFlightId = routeState.selectedFlightId;
+        try {
+          await Promise.all(selectedAddons.map(async (addon) => {
+            if (addon.type === 'BAGGAGE') {
+              await addonApi.selectBaggage({
+                booking_id: bookingId,
+                passenger_id: firstPassengerId,
+                selected_flight_id: selectedFlightId,
+                baggage_code: addon.code,
+              });
+            }
+
+            await addonApi.addAddon({
+              booking_id: bookingId,
+              passenger_id: firstPassengerId,
+              addon_type: addon.type,
+              addon_code: addon.code,
+              addon_name: addon.name,
+              quantity: addon.quantity || 1,
+              price: addon.price,
+              currency_code: currencyCode,
+            });
+          }));
+        } catch (addonError) {
+          console.warn('Could not save add-ons, continuing to payment:', addonError);
+          currentAddonWarning = 'Your add-ons were kept for checkout, but the backend could not save them yet.';
+          setAddonWarning(currentAddonWarning);
+        }
+      }
+
       // Navigate to payment with booking data
       navigate('/payment', {
         state: {
           ...routeState,
           booking: response.booking,
+          booking_id: bookingId,
           pnrReference: response.booking.pnr_reference,
           bookingStatus: response.booking.booking_status,
           totalPaymentAmount: totalPrice,  // Use calculated total, not backend response
-          currency_code: routeState.selectedFlight?.currency_code || routeState.outboundFlight?.currency_code || 'USD',
-          outboundFlight: routeState.selectedFlight || routeState.outboundFlight,
-          inboundFlight: routeState.returnFlight || routeState.inboundFlight,
+          currency_code: currencyCode,
+          outboundFlight,
+          inboundFlight,
+          selectedAddons,
+          fareTotal,
+          addOnsTotal,
+          addonWarning: currentAddonWarning,
         },
       });
     } catch (error) {
@@ -429,7 +605,7 @@ function AddOns(): React.JSX.Element {
                     </span>
                     <span className="text-2xl font-black text-[#073b70]">{open ? '^' : '+'}</span>
                   </button>
-                  {open && contentMap[item.key]}
+                  {open && renderContent(item.key)}
                 </article>
               );
             })}
@@ -439,8 +615,12 @@ function AddOns(): React.JSX.Element {
         <BookingSummary 
           compact={personalized} 
           routeState={routeState}
+          selectedAddons={selectedAddons}
+          fareTotal={fareTotal}
+          addOnsTotal={addOnsTotal}
+          currencyCode={currencyCode}
           isCreatingBooking={isCreatingBooking}
-          errorMessage={errorMessage}
+          errorMessage={errorMessage || addonWarning}
           onContinueToPayment={handleContinueToPayment}
         />
       </div>

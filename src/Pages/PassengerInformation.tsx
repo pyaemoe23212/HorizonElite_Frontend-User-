@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { BadgeCheck, Mail, Plane, X } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
 import { Link, useLocation, useNavigate } from 'react-router';
 import type { SelectedFlightResponse, CreatePassengerRequest, Passenger } from '../Services/api';
 import { passengerApi } from '../Services/api';
+import {
+  isValidPhoneNumber,
+  parsePhoneNumber,
+  AsYouType,
+  getCountries,
+  getCountryCallingCode,
+  type PhoneNumber,
+} from 'libphonenumber-js';
 
 const steps = ['Flight', 'Passenger', 'Service', 'Payment', 'Additional Services', 'Personalized'];
 
@@ -58,6 +68,14 @@ const Stepper = () => (
   </div>
 );
 
+interface CountryOption {
+  flagUrl: string;
+  label: string;
+  name: string;
+  dialCode: string;
+  iso: string;
+}
+
 interface PassengerRouteState {
   selectedFlight?: SelectedFlightResponse['selectedFlight'];
   selectedFlightId?: string;
@@ -67,8 +85,88 @@ interface PassengerRouteState {
   tripType?: 'ONE_WAY' | 'ROUND_TRIP';
   searchData?: {
     passengers?: string;
+    adultCount?: number;
+    childCount?: number;
+    infantCount?: number;
   };
 }
+
+const toDateString = (date: Date | null) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const fromDateString = (value: string) => value ? new Date(`${value}T00:00:00`) : null;
+
+const todayAtStart = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+};
+
+const calculateAge = (birthDateValue: string) => {
+  const birthDate = fromDateString(birthDateValue);
+  if (!birthDate) return null;
+
+  const today = todayAtStart();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age -= 1;
+  }
+  return age;
+};
+
+const getPassengerTypeLabel = (typeCode: string) => {
+  if (typeCode === 'CHD') return 'Child';
+  if (typeCode === 'INF') return 'Infant';
+  return 'Adult';
+};
+
+const addYears = (date: Date, years: number) => {
+  const nextDate = new Date(date);
+  nextDate.setFullYear(nextDate.getFullYear() + years);
+  return nextDate;
+};
+
+const getYearsAgoDate = (years: number) => {
+  const date = todayAtStart();
+  date.setFullYear(date.getFullYear() - years);
+  return date;
+};
+
+const getDateAfterYearsAgo = (years: number) => {
+  const date = todayAtStart();
+  date.setFullYear(date.getFullYear() - years);
+  date.setDate(date.getDate() + 1);
+  return date;
+};
+
+const getBirthDateRangeForType = (typeCode: string) => {
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  if (typeCode === 'ADT') {
+    return {
+      maxDate: getYearsAgoDate(18),
+      minDate: addYears(todayAtStart(), -120),
+    };
+  }
+
+  if (typeCode === 'CHD') {
+    return {
+      maxDate: yesterday,
+      minDate: getDateAfterYearsAgo(18),
+    };
+  }
+
+  return {
+    maxDate: yesterday,
+    minDate: getDateAfterYearsAgo(2),
+  };
+};
 
 const formatFlightDate = (value?: string) => {
   if (!value) return 'Date unavailable';
@@ -167,9 +265,67 @@ function PassengerInformation(): React.JSX.Element {
   const [isContinuing, setIsContinuing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [phoneCountry, setPhoneCountry] = useState('TH');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [parsedPhone, setParsedPhone] = useState<PhoneNumber | null>(null);
+  const [isCountryListOpen, setIsCountryListOpen] = useState(false);
 
   // Required passenger count based on search data
-  const requiredPassengerCount = parseInt(searchData?.passengers?.split(' ')[0] || '1');
+  const passengerCountFromLabel = parseInt(searchData?.passengers?.split(' ')[0] || '1');
+  const providedAdultCount = Number(searchData?.adultCount ?? 0);
+  const providedChildCount = Number(searchData?.childCount ?? 0);
+  const providedInfantCount = Number(searchData?.infantCount ?? 0);
+  const providedPassengerTotal = providedAdultCount + providedChildCount + providedInfantCount;
+  const requiredPassengerCount = providedPassengerTotal > 0 ? providedPassengerTotal : passengerCountFromLabel;
+  const adultCount = providedPassengerTotal > 0 ? providedAdultCount : requiredPassengerCount;
+  const childCount = providedPassengerTotal > 0 ? providedChildCount : 0;
+  const infantCount = providedPassengerTotal > 0 ? providedInfantCount : 0;
+
+  const countryOptions = React.useMemo(() => {
+    const countryNames =
+      typeof Intl !== 'undefined' && Intl.DisplayNames
+        ? new Intl.DisplayNames(['en'], { type: 'region' })
+        : null;
+
+    return getCountries()
+      .map((iso) => {
+        const dialCode = `+${getCountryCallingCode(iso)}`;
+        const name = countryNames?.of(iso) ?? iso;
+
+        return {
+          flagUrl: `https://flagcdn.com/w40/${iso.toLowerCase()}.png`,
+          label: `${name} (${dialCode})`,
+          name,
+          dialCode,
+          iso,
+        } as CountryOption;
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, []);
+
+  const selectedCountry = React.useMemo(
+    () => countryOptions.find(country => country.iso === phoneCountry) ?? null,
+    [countryOptions, phoneCountry]
+  );
+
+  const nextPassengerType = React.useMemo(() => {
+    const addedAdults = passengers.filter(p => p.pi_passenger_type_code === 'ADT').length;
+    const addedChildren = passengers.filter(p => p.pi_passenger_type_code === 'CHD').length;
+    const addedInfants = passengers.filter(p => p.pi_passenger_type_code === 'INF').length;
+
+    if (addedAdults < adultCount) return 'ADT';
+    if (addedChildren < childCount) return 'CHD';
+    if (addedInfants < infantCount) return 'INF';
+    return 'ADT';
+  }, [adultCount, childCount, infantCount, passengers]);
+  const nextPassengerTypeIndex = React.useMemo(() => {
+    return passengers.filter(p => p.pi_passenger_type_code === nextPassengerType).length + 1;
+  }, [nextPassengerType, passengers]);
+  const birthDateRange = React.useMemo(
+    () => getBirthDateRangeForType(formData.pi_passenger_type_code),
+    [formData.pi_passenger_type_code]
+  );
 
   // ✈️ LOG: Page initialization
   useEffect(() => {
@@ -194,8 +350,57 @@ function PassengerInformation(): React.JSX.Element {
     }
   }, [passengers]);
 
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, pi_passenger_type_code: nextPassengerType }));
+  }, [nextPassengerType]);
+
+  const validatePhone = (number: string, iso: string): boolean => {
+    if (!number.trim()) {
+      setPhoneError('Phone number is required');
+      setParsedPhone(null);
+      return false;
+    }
+
+    const dialCode = countryOptions.find(c => c.iso === iso)?.dialCode ?? '';
+    if (!isValidPhoneNumber(dialCode + number, iso as any)) {
+      setPhoneError('Please enter a valid phone number for the selected country');
+      setParsedPhone(null);
+      return false;
+    }
+
+    try {
+      const parsed = parsePhoneNumber(number, iso as any);
+      setParsedPhone(parsed);
+    } catch {
+      setParsedPhone(null);
+    }
+
+    setPhoneError('');
+    return true;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = new AsYouType(phoneCountry as any).input(e.target.value);
+    setPhoneNumber(formatted);
+    setPhoneError('');
+    setParsedPhone(null);
+  };
+
+  const handleCountryChange = (iso: string) => {
+    setPhoneCountry(iso);
+    setPhoneNumber('');
+    setPhoneError('');
+    setParsedPhone(null);
+    setIsCountryListOpen(false);
+    setFormData(prev => ({ ...prev, pi_contact_phone: '' }));
+  };
+
   const validateForm = (): boolean => {
     console.log('🔍 [PassengerInformation] Validating form data...');
+    const today = todayAtStart();
+    const birthDate = fromDateString(formData.pi_date_of_birth);
+    const passportExpiryDate = fromDateString(formData.pi_passport_expiry_date);
+    const age = calculateAge(formData.pi_date_of_birth);
     
     if (!formData.pi_first_name.trim()) {
       console.warn('⚠️ Validation failed: First name is required');
@@ -212,6 +417,26 @@ function PassengerInformation(): React.JSX.Element {
       setErrorMessage('Date of birth is required');
       return false;
     }
+    if (!birthDate || birthDate >= today) {
+      console.warn('⚠️ Validation failed: Date of birth must be in the past');
+      setErrorMessage('Date of birth must be a past date');
+      return false;
+    }
+    if (formData.pi_passenger_type_code === 'ADT' && (age === null || age < 18)) {
+      console.warn('⚠️ Validation failed: Adult passenger is under 18');
+      setErrorMessage('Adult passengers must be at least 18 years old');
+      return false;
+    }
+    if (formData.pi_passenger_type_code === 'CHD' && (age === null || age >= 18)) {
+      console.warn('⚠️ Validation failed: Child passenger is 18 or older');
+      setErrorMessage('Child passengers must be under 18 years old');
+      return false;
+    }
+    if (formData.pi_passenger_type_code === 'INF' && (age === null || age >= 2)) {
+      console.warn('⚠️ Validation failed: Infant passenger is 2 or older');
+      setErrorMessage('Infant passengers must be under 2 years old');
+      return false;
+    }
     if (!formData.pi_passport_number.trim()) {
       console.warn('⚠️ Validation failed: Passport number is required');
       setErrorMessage('Passport number is required');
@@ -222,14 +447,23 @@ function PassengerInformation(): React.JSX.Element {
       setErrorMessage('Passport expiry date is required');
       return false;
     }
+    if (!passportExpiryDate || passportExpiryDate <= today) {
+      console.warn('⚠️ Validation failed: Passport expiry date must be in the future');
+      setErrorMessage('Passport expiry date must be a future date');
+      return false;
+    }
     if (!formData.pi_contact_email.trim()) {
       console.warn('⚠️ Validation failed: Email is required');
       setErrorMessage('Email is required');
       return false;
     }
-    if (!formData.pi_contact_phone.trim()) {
+    if (!phoneNumber.trim()) {
       console.warn('⚠️ Validation failed: Phone number is required');
       setErrorMessage('Phone number is required');
+      return false;
+    }
+    if (!validatePhone(phoneNumber, phoneCountry)) {
+      setErrorMessage('Please enter a valid phone number for the selected country');
       return false;
     }
     
@@ -255,6 +489,7 @@ function PassengerInformation(): React.JSX.Element {
 
     try {
       setIsAddingPassenger(true);
+      const parsedContactPhone = parsePhoneNumber(phoneNumber, phoneCountry as any);
 
       const request: CreatePassengerRequest = {
         selected_flight_id: selectedFlightId,
@@ -270,7 +505,7 @@ function PassengerInformation(): React.JSX.Element {
         pi_passport_issuing_country: formData.pi_passport_issuing_country,
         pi_passport_expiry_date: formData.pi_passport_expiry_date,
         pi_contact_email: formData.pi_contact_email,
-        pi_contact_phone: formData.pi_contact_phone,
+        pi_contact_phone: parsedContactPhone.format('E.164'),
       };
 
       // ✈️ LOG: Passenger data being sent to API
@@ -312,6 +547,9 @@ function PassengerInformation(): React.JSX.Element {
         pi_contact_email: '',
         pi_contact_phone: '',
       });
+      setPhoneNumber('');
+      setPhoneError('');
+      setParsedPhone(null);
 
       // ✈️ LOG: Form reset
       console.log('🔄 [PassengerInformation] Form reset for next passenger');
@@ -491,6 +729,18 @@ function PassengerInformation(): React.JSX.Element {
           {/* Add Passenger Form */}
           {passengers.length < requiredPassengerCount && (
             <div className="space-y-8">
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-5">
+                <p className="text-xs font-black uppercase tracking-widest text-slate-500">
+                  Passenger {passengers.length + 1} of {requiredPassengerCount}
+                </p>
+                <p className="mt-2 text-2xl font-black text-[#073b70]">
+                  {getPassengerTypeLabel(formData.pi_passenger_type_code)} {nextPassengerTypeIndex}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-slate-600">
+                  This passenger type is detected from your search selection: {adultCount} adult(s), {childCount} child(ren), {infantCount} infant(s).
+                </p>
+              </div>
+
               <Panel title="Personal Information" icon={<BadgeCheck size={20} />}>
                 <div className="grid gap-5 md:grid-cols-3">
                   <Label label="Title*">
@@ -565,11 +815,17 @@ function PassengerInformation(): React.JSX.Element {
                   </Label>
                   <span className="hidden md:block" />
                   <Label label="Date of Birth*">
-                    <input
-                      type="date"
-                      value={formData.pi_date_of_birth}
-                      onChange={(e) => setFormData({ ...formData, pi_date_of_birth: e.target.value })}
+                    <DatePicker
+                      selected={fromDateString(formData.pi_date_of_birth)}
+                      onChange={(date: Date | null) => setFormData({ ...formData, pi_date_of_birth: toDateString(date) })}
                       className={inputClass}
+                      placeholderText="Select date of birth"
+                      dateFormat="dd MMM yyyy"
+                      minDate={birthDateRange.minDate}
+                      maxDate={birthDateRange.maxDate}
+                      showMonthDropdown
+                      showYearDropdown
+                      dropdownMode="select"
                     />
                   </Label>
                   <Label label="Nationality*">
@@ -588,7 +844,7 @@ function PassengerInformation(): React.JSX.Element {
                     </select>
                   </Label>
                   <Label label="Passenger Type">
-                    <input className={inputClass} value="ADULT" readOnly />
+                    <input className={inputClass} value={getPassengerTypeLabel(formData.pi_passenger_type_code)} readOnly />
                   </Label>
                 </div>
               </Panel>
@@ -617,11 +873,16 @@ function PassengerInformation(): React.JSX.Element {
                     </select>
                   </Label>
                   <Label label="Expiry Date*">
-                    <input
-                      type="date"
-                      value={formData.pi_passport_expiry_date}
-                      onChange={(e) => setFormData({ ...formData, pi_passport_expiry_date: e.target.value })}
+                    <DatePicker
+                      selected={fromDateString(formData.pi_passport_expiry_date)}
+                      onChange={(date: Date | null) => setFormData({ ...formData, pi_passport_expiry_date: toDateString(date) })}
                       className={inputClass}
+                      placeholderText="Select expiry date"
+                      dateFormat="dd MMM yyyy"
+                      minDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
+                      showMonthDropdown
+                      showYearDropdown
+                      dropdownMode="select"
                     />
                   </Label>
                 </div>
@@ -639,13 +900,75 @@ function PassengerInformation(): React.JSX.Element {
                     />
                   </Label>
                   <Label label="Phone Number*">
-                    <input
-                      type="tel"
-                      value={formData.pi_contact_phone}
-                      onChange={(e) => setFormData({ ...formData, pi_contact_phone: e.target.value })}
-                      className={inputClass}
-                      placeholder="0812345678"
-                    />
+                    <div className="flex gap-3">
+                      <div className="relative w-48">
+                        <button
+                          type="button"
+                          onClick={() => setIsCountryListOpen(open => !open)}
+                          className="flex h-12 w-full items-center justify-between rounded-md border border-slate-300 bg-slate-50 px-3 text-left text-sm font-semibold text-slate-800 outline-none transition focus:border-[#073b70] focus:bg-white"
+                          aria-haspopup="listbox"
+                          aria-expanded={isCountryListOpen}
+                        >
+                          <span className="flex min-w-0 items-center gap-2">
+                            {selectedCountry && (
+                              <img
+                                src={selectedCountry.flagUrl}
+                                alt={selectedCountry.iso}
+                                className="h-3 w-5 shrink-0 object-cover"
+                              />
+                            )}
+                            <span className="truncate text-xs">
+                              {selectedCountry ? `${selectedCountry.iso} (${selectedCountry.dialCode})` : 'Country'}
+                            </span>
+                          </span>
+                          <span className="ml-2 text-xs text-slate-500">▼</span>
+                        </button>
+
+                        {isCountryListOpen && (
+                          <div
+                            className="absolute left-0 right-0 top-[calc(100%+8px)] z-30 max-h-72 overflow-y-auto rounded border border-slate-300 bg-white p-2 shadow-2xl"
+                            role="listbox"
+                          >
+                            {countryOptions.map(country => (
+                              <button
+                                key={country.iso}
+                                type="button"
+                                role="option"
+                                aria-selected={country.iso === phoneCountry}
+                                onClick={() => handleCountryChange(country.iso)}
+                                className={`flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm font-semibold text-slate-800 outline-none transition hover:bg-slate-100 ${
+                                  country.iso === phoneCountry ? 'bg-slate-100' : ''
+                                }`}
+                              >
+                                <img
+                                  src={country.flagUrl}
+                                  alt={country.iso}
+                                  className="h-3 w-5 shrink-0 object-cover"
+                                />
+                                <span className="truncate">
+                                  {country.name} <span className="text-slate-400">({country.dialCode})</span>
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <input
+                        type="tel"
+                        value={phoneNumber}
+                        onChange={handlePhoneChange}
+                        onBlur={() => validatePhone(phoneNumber, phoneCountry)}
+                        className={`${inputClass} flex-1 ${phoneError ? 'border-red-500 focus:border-red-600' : ''}`}
+                        placeholder="Phone number"
+                      />
+                    </div>
+                    {phoneError && (
+                      <p className="mt-1 text-xs font-semibold text-red-500">{phoneError}</p>
+                    )}
+                    {parsedPhone && !phoneError && (
+                      <p className="mt-1 text-xs font-semibold text-green-600">{parsedPhone.formatInternational()}</p>
+                    )}
                   </Label>
                 </div>
               </Panel>

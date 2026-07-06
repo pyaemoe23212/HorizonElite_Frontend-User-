@@ -9,12 +9,54 @@ interface BookingConfirmedState {
   paymentStatus?: string;
   duffelOrder?: any;
   duffelOrderId?: string;
+  booking_id?: string;
   outboundFlight?: any;
   inboundFlight?: any;
   totalPaymentAmount?: number | string;
   currency_code?: string;
   booking?: any;
+  passengers?: any[];
+  passengerIds?: string[];
+  ticketingStatus?: string;
+  ticketingIssue?: string;
 }
+
+const formatPassengerName = (passenger: any) => {
+  return [
+    passenger?.pi_title,
+    passenger?.pi_first_name,
+    passenger?.pi_middle_name,
+    passenger?.pi_last_name,
+  ].filter(Boolean).join(' ');
+};
+
+const getPassengerTypeLabel = (typeCode?: string) => {
+  if (typeCode === 'ADT') return 'Adult';
+  if (typeCode === 'CHD') return 'Child';
+  if (typeCode === 'INF') return 'Infant';
+  return typeCode || 'Passenger';
+};
+
+const formatDate = (value?: string) => {
+  if (!value) return 'Not provided';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+
+  return parsed.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+const getFlightClass = (bookingState: BookingConfirmedState) => {
+  return (
+    bookingState.outboundFlight?.cabin_class ||
+    bookingState.inboundFlight?.cabin_class ||
+    bookingState.booking?.cabin_class ||
+    'Not provided'
+  );
+};
 
 function BookingConfirmed(): React.JSX.Element {
   const { state } = useLocation();
@@ -25,8 +67,18 @@ function BookingConfirmed(): React.JSX.Element {
   const totalPaid = bookingState.totalPaymentAmount || bookingState.payment?.total_payment_amount || '$1,095.50';
   const currencyCode = bookingState.currency_code || bookingState.payment?.currency_code || 'USD';
   const paymentStatus = bookingState.paymentStatus || bookingState.payment?.payment_status_code || 'PENDING';
+  const ticketingStatus = bookingState.ticketingStatus || (bookingState.duffelOrderId ? 'ORDER_CREATED' : 'ORDER_PENDING');
+  const ticketingIssue = bookingState.ticketingIssue;
+  const bookingId = bookingState.booking_id || bookingState.booking?.booking_id;
   const duffelOrderId = bookingState.duffelOrderId || bookingState.duffelOrder?.duffel_order?.data?.id || 'Not created';
-  const userEmail = bookingState.payment?.user_email_address || 'xxx@gmail.com';
+  const passengers = bookingState.passengers || bookingState.booking?.passengers || [];
+  const primaryPassenger = passengers[0];
+  const userEmail =
+    bookingState.payment?.user_email_address ||
+    primaryPassenger?.pi_contact_email ||
+    bookingState.booking?.user_email_address ||
+    'your email';
+  const cabinClass = getFlightClass(bookingState);
   
   const outbound = bookingState.outboundFlight;
   const inbound = bookingState.inboundFlight;
@@ -47,6 +99,18 @@ function BookingConfirmed(): React.JSX.Element {
             <span className="mr-4 text-sm font-black uppercase tracking-widest text-slate-600">Booking Ref:</span>
             <span className="text-3xl font-black tracking-widest text-[#073b70]">{pnrReference}</span>
           </div>
+
+          {paymentStatus === 'PAID' && ticketingStatus !== 'ORDER_CREATED' && (
+            <div className="mx-auto mt-6 max-w-3xl rounded-lg border border-amber-300 bg-amber-50 p-5 text-left">
+              <p className="text-sm font-black uppercase tracking-widest text-amber-700">Payment received, ticketing pending</p>
+              <p className="mt-2 text-sm font-semibold text-amber-800">
+                Your payment was successful, but the airline order could not be created automatically. Please contact support with booking reference {pnrReference}.
+              </p>
+              {ticketingIssue && (
+                <p className="mt-2 text-xs font-semibold text-amber-700">{ticketingIssue}</p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="mt-16 grid gap-8 lg:grid-cols-[1fr_360px]">
@@ -111,20 +175,53 @@ function BookingConfirmed(): React.JSX.Element {
           <aside className="space-y-8">
             <section className="rounded-lg border border-slate-300 bg-white p-8 shadow-sm">
               <h2 className="border-b border-slate-200 pb-4 text-sm font-black uppercase tracking-widest text-slate-600">Passenger Details</h2>
-              <div className="mt-6">
-                <p className="text-sm font-semibold text-slate-500">Name</p>
-                <p className="mt-2 text-2xl font-black text-[#073b70]">Jonathan Doe</p>
-              </div>
-              <div className="mt-7 grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm font-semibold text-slate-500">Seat</p>
-                  <p className="mt-2 text-2xl font-black text-[#073b70]">14A</p>
+              {passengers.length > 0 ? (
+                <div className="mt-6 space-y-5">
+                  {passengers.map((passenger: any, index: number) => (
+                    <div key={passenger.passenger_id || passenger.passengerId || index} className="rounded border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-widest text-slate-500">
+                            Passenger {index + 1} • {getPassengerTypeLabel(passenger.pi_passenger_type_code)}
+                          </p>
+                          <p className="mt-2 text-xl font-black text-[#073b70]">{formatPassengerName(passenger) || 'Name not provided'}</p>
+                        </div>
+                        <span className="rounded bg-white px-3 py-1 text-xs font-black uppercase text-[#073b70]">{cabinClass}</span>
+                      </div>
+
+                      <div className="mt-4 grid gap-4 text-sm font-semibold text-slate-600 sm:grid-cols-2">
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-wide text-slate-400">Date of Birth</p>
+                          <p className="mt-1 text-slate-700">{formatDate(passenger.pi_date_of_birth)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-wide text-slate-400">Nationality</p>
+                          <p className="mt-1 text-slate-700">{passenger.pi_nationality || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-wide text-slate-400">Passport</p>
+                          <p className="mt-1 text-slate-700">{passenger.pi_passport_number || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-wide text-slate-400">Passport Expiry</p>
+                          <p className="mt-1 text-slate-700">{formatDate(passenger.pi_passport_expiry_date)}</p>
+                        </div>
+                      </div>
+
+                      {(passenger.pi_contact_email || passenger.pi_contact_phone) && (
+                        <div className="mt-4 border-t border-slate-200 pt-3 text-sm font-semibold text-slate-600">
+                          {passenger.pi_contact_email && <p>{passenger.pi_contact_email}</p>}
+                          {passenger.pi_contact_phone && <p>{passenger.pi_contact_phone}</p>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-500">Class</p>
-                  <p className="mt-2 text-2xl font-black text-[#073b70]">Economy</p>
+              ) : (
+                <div className="mt-6 rounded border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+                  Passenger details were not included in this confirmation state.
                 </div>
-              </div>
+              )}
             </section>
 
             <section className="rounded-lg border border-slate-300 bg-white p-8 shadow-sm">
@@ -154,7 +251,11 @@ function BookingConfirmed(): React.JSX.Element {
               <BadgeCheck size={20} />
               Additional Services
             </Link>
-            <Link to="/download-e-ticket" className="flex h-14 w-64 items-center justify-center gap-2 rounded border border-[#073b70] bg-white text-base font-black text-[#073b70]">
+            <Link
+              to="/download-e-ticket"
+              state={{ ...bookingState, bookingId }}
+              className="flex h-14 w-64 items-center justify-center gap-2 rounded border border-[#073b70] bg-white text-base font-black text-[#073b70]"
+            >
               <Download size={20} />
               Download E-Ticket
             </Link>

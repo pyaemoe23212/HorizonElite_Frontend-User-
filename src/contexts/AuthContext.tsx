@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../Services/api';
 
 export interface User {
@@ -26,11 +26,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('jwt_token'));
   const [isLoading, setIsLoading] = useState(true);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('jwt_token');
     setToken(null);
     setUser(null);
-  };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,20 +63,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, logout]);
 
-  const login = (newToken: string, userData: User) => {
+  const login = useCallback((newToken: string, userData: User) => {
     localStorage.setItem('jwt_token', newToken);
     setToken(newToken);
     setUser(userData);
-  };
+  }, []);
 
-  const updateUser = (userData: User) => {
+  const updateUser = useCallback((userData: User) => {
     setUser(userData);
-  };
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({ user, token, isAuthenticated: !!token, isLoading, login, logout, updateUser }),
+    [user, token, isLoading, login, logout, updateUser]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!token, isLoading, login, logout, updateUser }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
