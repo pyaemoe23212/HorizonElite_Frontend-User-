@@ -126,7 +126,7 @@ function Home(): React.JSX.Element {
     firstClass: 'First Class',
   });
 
-  const [searchData, setSearchData] = useState({
+  const [searchData, setSearchData] = useState<SearchData>({
     tripType: 'Return',
     adultCount: 1,
     childCount: 0,

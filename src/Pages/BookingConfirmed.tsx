@@ -81,7 +81,6 @@ function BookingConfirmed(): React.JSX.Element {
   const cabinClass = getFlightClass(bookingState);
   
   const outbound = bookingState.outboundFlight;
-  const inbound = bookingState.inboundFlight;
   return (
     <main className="min-h-screen bg-slate-100 px-6 py-20 text-slate-800">
       <section className="mx-auto max-w-7xl">
@@ -247,7 +246,7 @@ function BookingConfirmed(): React.JSX.Element {
         <div className="mt-14 text-center">
           <p className="text-lg font-semibold text-slate-500">The eTicket and the payment receipt has been sent to {userEmail}.</p>
           <div className="mt-9 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link to="/additional-services?flow=booking" className="flex h-14 w-64 items-center justify-center gap-2 rounded bg-[#073b70] text-base font-black text-white">
+            <Link to="/additional-services?flow=booking" state={{ ...bookingState, bookingId }} className="flex h-14 w-64 items-center justify-center gap-2 rounded bg-[#073b70] text-base font-black text-white">
               <BadgeCheck size={20} />
               Additional Services
             </Link>
@@ -259,7 +258,8 @@ function BookingConfirmed(): React.JSX.Element {
               <Download size={20} />
               Download E-Ticket
             </Link>
-            <Link to="/manage-booking" className="flex h-14 w-64 items-center justify-center rounded border border-amber-300 bg-white text-base font-black text-amber-500">Manage Booking</Link>
+            <Link to="/manage-booking" state={{ ...bookingState, bookingId }} className="flex h-14 w-64 items-center justify-center rounded border border-amber-300 bg-white text-base font-black text-amber-500">Manage Booking</Link>
+            <Link to="/personalized-services" state={{ ...bookingState, bookingId }} className="flex h-14 w-64 items-center justify-center rounded border border-purple-300 bg-white text-base font-black text-purple-700">Personalized Services</Link>
             <Link to="/" className="flex h-14 w-64 items-center justify-center gap-2 rounded text-base font-black text-[#073b70]">
               <Printer size={20} />
               Print Receipt

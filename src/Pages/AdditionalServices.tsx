@@ -48,8 +48,9 @@ const services = [
 ];
 
 function AdditionalServices(): React.JSX.Element {
-    const { hash, search } = useLocation();
+    const { hash, search, state } = useLocation();
     const isBookingFlow = new URLSearchParams(search).get("flow") === "booking";
+    const routeState = (state ?? {}) as Record<string, unknown>;
 
     useEffect(() => {
         if (!hash) return;
@@ -96,26 +97,15 @@ function AdditionalServices(): React.JSX.Element {
                                 </>
                             );
 
-                            if (isBookingFlow) {
-                                return (
-                                    <Link
-                                        key={service.title}
-                                        to="/personalized-services"
-                                        state={{ selectedService: service.title }}
-                                        className={cardClass}
-                                    >
-                                        {content}
-                                    </Link>
-                                );
-                            }
-
                             return (
-                                <article
+                                <Link
                                     key={service.title}
+                                    to={service.action}
+                                    state={{ ...routeState, selectedService: service.title }}
                                     className={cardClass}
                                 >
                                     {content}
-                                </article>
+                                </Link>
                             )
                         })}
                     </div>
@@ -164,11 +154,11 @@ function AdditionalServices(): React.JSX.Element {
                                     <span>$4,670.00</span>
                                 </div>
 
-                                <Link to="/booking-confirmed" className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded bg-[#073b70] font-black text-white">
+                                <Link to="/booking-confirmed" state={routeState} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded bg-[#073b70] font-black text-white">
                                     <Printer size={18} />
                                     Print Itinerary
                                 </Link>
-                                <Link to="/personalized-services" className="mt-5 inline-block font-black text-cyan-700 hover:underline">
+                                <Link to="/personalized-services" state={routeState} className="mt-5 inline-block font-black text-cyan-700 hover:underline">
                                     Personalized Services →
                                 </Link>
                             </div>
@@ -184,7 +174,7 @@ function AdditionalServices(): React.JSX.Element {
                                 Class travelers.
                             </p>
 
-                            <Link to="/manage-booking" className="mt-5 inline-block font-black text-cyan-700 hover:underline">
+                            <Link to="/case-management" className="mt-5 inline-block font-black text-cyan-700 hover:underline">
                                 Live Chat →
                             </Link>
                         </section>

@@ -181,11 +181,9 @@ const formatFlightDate = (value?: string) => {
 const TripSummary = ({
   selectedFlight,
   returnFlight,
-  nextState,
 }: {
   selectedFlight: SelectedFlightResponse['selectedFlight'];
   returnFlight?: SelectedFlightResponse['selectedFlight'] | null;
-  nextState: PassengerRouteState;
 }) => {
   const flights: Array<[string, SelectedFlightResponse['selectedFlight']]> = [
     ['Outbound Flight', selectedFlight],
@@ -219,9 +217,9 @@ const TripSummary = ({
         <div className="flex justify-between border-t border-slate-300 pt-3 font-black text-[#073b70]"><span>Total</span><span>{currencyCode} {total.toFixed(2)}</span></div>
       </div>
 
-      <Link to="/add-ons" state={nextState} className="flex h-14 items-center justify-center rounded bg-[#073b70] text-sm font-black text-white shadow-md shadow-blue-950/15">
-        Continue to Add-ons
-      </Link>
+      <div className="rounded bg-blue-50 p-4 text-sm font-semibold text-[#073b70]">
+        Add all passenger details to continue to add-ons.
+      </div>
 
       <div className="text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Secure Checkout</div>
     </div>
@@ -646,16 +644,6 @@ function PassengerInformation(): React.JSX.Element {
     );
   }
 
-  const nextState = {
-    selectedFlight,
-    selectedFlightId,
-    returnFlight,
-    selectedReturnFlightId,
-    flightSearchId,
-    tripType,
-    searchData,
-  };
-
   return (
     <main className="min-h-screen bg-slate-100 text-slate-800">
       <header className="border-b border-slate-200 bg-white">
@@ -1012,7 +1000,7 @@ function PassengerInformation(): React.JSX.Element {
           </div>
         </section>
 
-        <TripSummary selectedFlight={selectedFlight} returnFlight={returnFlight} nextState={nextState} />
+        <TripSummary selectedFlight={selectedFlight} returnFlight={returnFlight} />
       </div>
     </main>
   );

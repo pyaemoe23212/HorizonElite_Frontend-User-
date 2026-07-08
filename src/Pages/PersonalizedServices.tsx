@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BadgeCheck, Bell, CalendarDays, CheckSquare, ClipboardList, Mail, MessageSquare, Star } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 
 const steps = ['Flight', 'Passenger', 'Review', 'Payment', 'Services', 'Personalized'];
 
@@ -39,6 +39,7 @@ const services = [
 ];
 
 function PersonalizedServices(): React.JSX.Element {
+  const { state } = useLocation();
   const [enabled, setEnabled] = useState(() => services.map((_, index) => index !== 5));
 
   return (
@@ -82,8 +83,8 @@ function PersonalizedServices(): React.JSX.Element {
         </div>
 
         <div className="mt-14 flex flex-col items-center gap-5">
-          <Link to="/booking-confirmed" className="flex h-14 w-56 items-center justify-center rounded bg-[#073b70] text-sm font-black text-white shadow-lg shadow-blue-950/20">Finish Booking</Link>
-          <Link to="/booking-confirmed" className="text-sm font-semibold text-slate-600 underline">Skip for now</Link>
+          <Link to="/booking-confirmed" state={state} className="flex h-14 w-56 items-center justify-center rounded bg-[#073b70] text-sm font-black text-white shadow-lg shadow-blue-950/20">Finish Booking</Link>
+          <Link to="/booking-confirmed" state={state} className="text-sm font-semibold text-slate-600 underline">Skip for now</Link>
         </div>
       </section>
     </main>

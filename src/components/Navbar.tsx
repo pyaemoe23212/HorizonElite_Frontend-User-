@@ -153,7 +153,7 @@ function Navbar(): React.JSX.Element {
             <Link to="/additional-services" className="transition hover:text-blue-600">
               Services
             </Link>
-            <Link to="/manage-booking" className="transition hover:text-blue-600">
+            <Link to="/case-management" className="transition hover:text-blue-600">
               Help Desk
             </Link>
           </div>

@@ -70,15 +70,17 @@ export interface TranslateResponse {
 }
 
 export interface BulkTranslateRequest {
-  texts: string[];
+  texts: Record<string, string>;
   target_language: string;
   source_language?: string;
 }
 
 export interface BulkTranslateResponse {
-  translated_texts: string[];
+  translations: Record<string, string>;
   source_language: string;
   target_language: string;
+  total_items?: number;
+  character_count?: number;
 }
 
 export interface FlightContentResponse {
@@ -276,12 +278,16 @@ axiosInstance.interceptors.response.use(
         : Array.isArray(responseData?.details)
           ? responseData.details.join(', ')
           : typeof responseData?.details === 'string'
-            ? responseData.details
-            : undefined;
+          ? responseData.details
+          : undefined;
+    const backendError = responseData?.error;
+    const genericStatusError =
+      typeof backendError === 'string' &&
+      /^Request failed with status code \d+$/i.test(backendError);
     const message =
       responseData?.message ||
-      responseData?.error ||
       detailMessages ||
+      (genericStatusError ? undefined : backendError) ||
       error.message ||
       'An error occurred';
     const normalizedError = new Error(message) as Error & {
@@ -670,11 +676,12 @@ export interface CreateDuffelOrderResponse {
 export interface AddonRequest {
   booking_id: string;
   passenger_id: string;
+  selected_flight_id: string;
   addon_type: string;
   addon_code: string;
-  addon_name: string;
+  addon_detail: string;
   quantity: number;
-  price: number;
+  addon_price: number;
   currency_code: string;
 }
 
@@ -694,6 +701,49 @@ export interface SelectSeatRequest {
   order_id: string;
   passenger_id: string;
   seat_id: string;
+}
+
+export interface ManageBookingDetails {
+  booking: {
+    booking_id: string;
+    selected_flight_id?: string;
+    pnr_reference: string;
+    booking_status: string;
+    ticketing_status?: string;
+    total_payment_amount?: string;
+    currency_code?: string;
+    trip_type?: 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_CITY';
+    cabin_class?: string;
+    is_guest?: boolean;
+  };
+  flight: {
+    airline_name?: string;
+    flight_number?: string;
+    origin?: string;
+    destination?: string;
+    departure?: string;
+    arrival?: string;
+  };
+  passengers: Array<{
+    passenger_id: string;
+    first_name?: string;
+    last_name?: string;
+    type?: string;
+    email?: string;
+    phone?: string;
+  }>;
+  segments: Array<{
+    segment_number: number;
+    departure?: string;
+    arrival?: string;
+    from?: string;
+    to?: string;
+  }>;
+}
+
+export interface ManageBookingResponse {
+  message: string;
+  data: ManageBookingDetails;
 }
 
 // ─── Passenger Types ─────────────────────────────────────────────────────────
@@ -789,6 +839,9 @@ export const bookingApi = {
    */
   createBooking: (data: CreateBookingRequest): Promise<CreateBookingResponse> =>
     axiosInstance.post('/bookings', data),
+
+  getManageBooking: (pnr: string, lastName: string): Promise<ManageBookingResponse> =>
+    axiosInstance.get(`/bookings/manage/${encodeURIComponent(pnr)}/${encodeURIComponent(lastName)}`),
 };
 
 // Extended API object with payment endpoints

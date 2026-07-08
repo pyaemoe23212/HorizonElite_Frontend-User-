@@ -73,9 +73,19 @@ const getErrorStatus = (error: any): number | undefined => {
 };
 
 const getErrorMessage = (error: any): string => {
+  const responseData = error?.responseData || error?.response?.data;
+  const detailMessages = Array.isArray(responseData?.details?.errors)
+    ? responseData.details.errors.map((item: any) => item.message || item.title || item.code).filter(Boolean).join(', ')
+    : Array.isArray(responseData?.details)
+      ? responseData.details.join(', ')
+      : typeof responseData?.details === 'string'
+        ? responseData.details
+        : '';
+
   return (
-    error?.response?.data?.error ||
-    error?.response?.data?.message ||
+    detailMessages ||
+    responseData?.error ||
+    responseData?.message ||
     error?.message ||
     ''
   );

@@ -28,14 +28,6 @@ interface SearchState {
   flightResults?: FlightResultItem[];
 }
 
-interface FareType {
-  id: string;
-  name: string;
-  description: string;
-}
-
-// DEPRECATED: Fare type selection moved to backend once it provides fare type data
-
 const cabinClassMap: Record<string, string> = {
   ECONOMY: 'ECONOMY',
   PREMIUM_ECONOMY: 'PREMIUM_ECONOMY',
@@ -56,14 +48,6 @@ const normalizeCabinClass = (value?: string) => {
   const normalized = value?.trim().toUpperCase().replace(/[\s-]+/g, '_');
   return cabinClassMap[normalized || ''] || 'ECONOMY';
 };
-
-interface FareType {
-  id: string;
-  name: string;
-  description: string;
-}
-
-// DEPRECATED: Fare type selection moved to backend once it provides fare type data
 
 function FlightResults(): React.JSX.Element {
   const { state } = useLocation();

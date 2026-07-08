@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router';
 import { AuthProvider } from '../contexts/AuthContext';
+import AutoTranslate from './AutoTranslate';
 
 /**
  * Root layout that provides AuthContext to all routes.
@@ -9,6 +10,7 @@ import { AuthProvider } from '../contexts/AuthContext';
 export default function AuthLayout() {
   return (
     <AuthProvider>
+      <AutoTranslate />
       <Outlet />
     </AuthProvider>
   );

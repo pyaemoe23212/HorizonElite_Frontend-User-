@@ -45,7 +45,7 @@ function DownloadETicket(): React.JSX.Element {
       <div className="mx-auto max-w-7xl">
         {/* Back */}
         <Link
-          to="/services"
+          to="/manage-booking"
           className="mb-8 inline-flex items-center gap-2 text-sm font-semibold uppercase text-[#073b70] hover:underline"
         >
           ← Back
@@ -206,9 +206,9 @@ function DownloadETicket(): React.JSX.Element {
                 download the file, please contact Horizon Elite support.
               </p>
 
-              <button className="mt-6 w-full rounded border border-[#073b70] py-3 font-bold text-[#073b70] hover:bg-slate-50">
+              <Link to="/case-management" className="mt-6 flex w-full items-center justify-center rounded border border-[#073b70] py-3 font-bold text-[#073b70] hover:bg-slate-50">
                 Contact Support
-              </button>
+              </Link>
             </section>
 
             {/* Travel Note */}

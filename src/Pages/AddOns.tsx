@@ -125,6 +125,11 @@ const Stepper = () => (
 );
 
 interface AddOnsRouteState {
+  booking?: any;
+  booking_id?: string;
+  bookingId?: string;
+  pnrReference?: string;
+  managedBooking?: boolean;
   selectedFlight?: any;
   selectedFlightId?: string;
   returnFlight?: any | null;
@@ -224,7 +229,7 @@ const BookingSummary = ({
       >
         {isCreatingBooking ? 'Creating Booking...' : 'Continue to Payment'}
       </button>
-      <Link to="/passenger-information" className="flex h-12 items-center justify-center rounded border border-slate-300 text-sm font-black text-slate-600">
+      <Link to="/passenger-information" state={routeState} className="flex h-12 items-center justify-center rounded border border-slate-300 text-sm font-black text-slate-600">
         Back
       </Link>
     </div>
@@ -479,6 +484,7 @@ function AddOns(): React.JSX.Element {
       const inboundPrice = getFlightPrice(inboundFlight);
       
       const totalPrice = fareTotal + addOnsTotal;
+      const existingBookingId = routeState.booking_id || routeState.bookingId || routeState.booking?.booking_id;
 
       console.log('💰 [AddOns] Price Calculation:');
       console.log('   - Outbound (selectedFlight):', outboundPrice);
@@ -489,6 +495,60 @@ function AddOns(): React.JSX.Element {
       const userEmail = user?.email_address || 'user@example.com';
 
       console.log('👤 Using authenticated email for booking:', userEmail);
+
+      if (routeState.managedBooking && existingBookingId) {
+        let currentAddonWarning = '';
+
+        if (selectedAddons.length > 0) {
+          const firstPassengerId = routeState.passengerIds[0];
+          const selectedFlightId = routeState.selectedFlightId;
+
+          try {
+            await Promise.all(selectedAddons.map(async (addon) => {
+              if (addon.type === 'BAGGAGE') {
+                await addonApi.selectBaggage({
+                  booking_id: existingBookingId,
+                  passenger_id: firstPassengerId,
+                  selected_flight_id: selectedFlightId,
+                  baggage_code: addon.code,
+                });
+              }
+
+              await addonApi.addAddon({
+                booking_id: existingBookingId,
+                passenger_id: firstPassengerId,
+                selected_flight_id: selectedFlightId,
+                addon_type: addon.type,
+                addon_code: addon.code,
+                addon_detail: addon.name,
+                quantity: addon.quantity || 1,
+                addon_price: addon.price,
+                currency_code: currencyCode,
+              });
+            }));
+          } catch (addonError) {
+            console.warn('Could not save add-ons for managed booking:', addonError);
+            currentAddonWarning = 'Your booking was found, but the backend could not save one or more add-ons.';
+            setAddonWarning(currentAddonWarning);
+          }
+        }
+
+        navigate(addOnsTotal > 0 ? '/payment' : '/booking-confirmed', {
+          state: {
+            ...routeState,
+            booking_id: existingBookingId,
+            selectedAddons,
+            fareTotal: 0,
+            addOnsTotal,
+            totalPaymentAmount: addOnsTotal,
+            currency_code: currencyCode,
+            outboundFlight,
+            inboundFlight,
+            addonWarning: currentAddonWarning,
+          },
+        });
+        return;
+      }
 
       // Build booking request
       const bookingRequest: CreateBookingRequest = {
@@ -530,11 +590,12 @@ function AddOns(): React.JSX.Element {
             await addonApi.addAddon({
               booking_id: bookingId,
               passenger_id: firstPassengerId,
+              selected_flight_id: selectedFlightId,
               addon_type: addon.type,
               addon_code: addon.code,
-              addon_name: addon.name,
+              addon_detail: addon.name,
               quantity: addon.quantity || 1,
-              price: addon.price,
+              addon_price: addon.price,
               currency_code: currencyCode,
             });
           }));
