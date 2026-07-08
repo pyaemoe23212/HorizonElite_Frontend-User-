@@ -86,9 +86,36 @@ const getErrorMessage = (error: any): string => {
     detailMessages ||
     responseData?.error ||
     responseData?.message ||
+    error?.responseData?.message ||
+    error?.responseData?.error ||
     error?.message ||
     ''
   );
+};
+
+const isOfferUnavailableError = (error: any): boolean => {
+  const status = getErrorStatus(error);
+  const message = getErrorMessage(error).toLowerCase();
+const getDuffelRequestId = (error: any): string | undefined => {
+  return (
+    error?.responseData?.duffel_request_id ||
+    error?.responseData?.details?.meta?.request_id ||
+    error?.details?.meta?.request_id ||
+    error?.response?.data?.duffel_request_id ||
+    error?.response?.data?.details?.meta?.request_id
+  );
+};
+
+const getTicketingIssueMessage = (error: any): string => {
+  const requestId = getDuffelRequestId(error);
+  const baseMessage =
+    error?.responseData?.retryable || [503, 504].includes(getErrorStatus(error) || 0)
+      ? 'Payment succeeded, but Duffel is temporarily unavailable. Ticketing is pending and can be retried without charging again.'
+      : getErrorMessage(error) || 'Payment succeeded, but ticket order creation failed.';
+
+  return requestId
+    ? `${baseMessage} Duffel request ID: ${requestId}.`
+    : baseMessage;
 };
 
 const isOfferUnavailableError = (error: any): boolean => {
@@ -668,9 +695,7 @@ function Payment(): React.JSX.Element {
             return;
           }
 
-          ticketingIssue = orderError instanceof Error
-            ? orderError.message
-            : 'Payment succeeded, but ticket order creation failed.';
+          ticketingIssue = getTicketingIssueMessage(orderError);
           console.error('Duffel order creation failed after payment:', orderError);
         }
 

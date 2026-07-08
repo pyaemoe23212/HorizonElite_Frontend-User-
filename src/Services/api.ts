@@ -288,6 +288,7 @@ axiosInstance.interceptors.response.use(
       responseData?.message ||
       detailMessages ||
       (genericStatusError ? undefined : backendError) ||
+      responseData?.error ||
       error.message ||
       'An error occurred';
     const normalizedError = new Error(message) as Error & {

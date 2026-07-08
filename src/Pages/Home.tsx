@@ -46,18 +46,6 @@ const fallbackAirports: Airport[] = [
   { city: 'Sydney', country: 'Australia', name: 'Sydney Kingsford Smith Airport', IATA: 'SYD', ICAO: 'YSSY', lat: '-33.9399', lon: '151.1753', timezone: 'Australia/Sydney' },
 ];
 
-interface SearchData {
-  tripType: string;
-  adultCount: number;
-  childCount: number;
-  infantCount: number;
-  cabinClass: string;
-  from: string;
-  to: string;
-  departDate: Date | null;
-  returnDate: Date | null;
-}
-
 const PlaneIcon = ({ className = 'h-4 w-4' }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6 5-3 3-3-1-2 2 4.5 1.5 1.5 4.5 2-2-1-3 3-3 5 6 1.2-.7c.4-.2.7-.6.6-1.1z" />
