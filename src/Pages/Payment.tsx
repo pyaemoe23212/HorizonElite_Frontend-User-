@@ -96,6 +96,14 @@ const getErrorMessage = (error: any): string => {
 const isOfferUnavailableError = (error: any): boolean => {
   const status = getErrorStatus(error);
   const message = getErrorMessage(error).toLowerCase();
+
+  return (
+    status === 409 ||
+    message.includes('offer is no longer available') ||
+    message.includes('no longer available')
+  );
+};
+
 const getDuffelRequestId = (error: any): string | undefined => {
   return (
     error?.responseData?.duffel_request_id ||
@@ -116,17 +124,6 @@ const getTicketingIssueMessage = (error: any): string => {
   return requestId
     ? `${baseMessage} Duffel request ID: ${requestId}.`
     : baseMessage;
-};
-
-const isOfferUnavailableError = (error: any): boolean => {
-  const status = getErrorStatus(error);
-  const message = getErrorMessage(error).toLowerCase();
-
-  return (
-    status === 409 ||
-    message.includes('offer is no longer available') ||
-    message.includes('no longer available')
-  );
 };
 
 const OFFER_UNAVAILABLE_MESSAGE =
