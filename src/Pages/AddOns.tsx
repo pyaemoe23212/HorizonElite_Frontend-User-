@@ -101,7 +101,25 @@ interface SelectedAddon {
   code: string;
   name: string;
   price: number;
+  currencyCode?: string;
   quantity?: number;
+}
+
+interface PricedMealOption {
+  code: string;
+  name: string;
+  desc: string;
+  price: number;
+  currencyCode?: string;
+}
+
+interface PricedBaggageOption {
+  code: string;
+  name: string;
+  weight: string;
+  desc: string;
+  price: number;
+  currencyCode?: string;
 }
 
 const steps = ['Flight', 'Passenger', 'Service', 'Payment', 'Additional Services', 'Personalized'];
@@ -204,7 +222,11 @@ const BookingSummary = ({
           ) : selectedAddons.map((addon) => (
             <div key={`${addon.type}-${addon.code}`} className="flex justify-between gap-3">
               <span>{addon.name}</span>
-              <span className={addon.price > 0 ? 'text-[#073b70]' : 'text-cyan-600'}>{addon.price > 0 ? formatMoney(addon.price) : 'Free'}</span>
+              <span className={addon.price > 0 ? 'text-[#073b70]' : 'text-cyan-600'}>
+                {addon.price > 0
+                  ? `${addon.currencyCode || currencyCode} ${addon.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : 'Free'}
+              </span>
             </div>
           ))}
         </div>
@@ -248,25 +270,31 @@ const SeatContent = () => (
 
 const MealContent = ({
   selectedCode,
+  options,
+  currencyCode,
   onSelect,
 }: {
   selectedCode?: string;
+  options: PricedMealOption[];
+  currencyCode: string;
   onSelect: (addon: SelectedAddon) => void;
 }) => (
   <div className="border-t border-slate-300 p-7">
     <p className="mb-5 text-xs font-black uppercase tracking-widest text-slate-500">Dietary & Medical</p>
     <div className="grid gap-4 md:grid-cols-3">
-      {mealOptions.map(([name, desc]) => {
-        const [code] = name.split(':');
+      {options.map((option) => {
         return (
         <button
-          key={name}
+          key={option.code}
           type="button"
-          onClick={() => onSelect({ type: 'MEAL', code, name, price: 0 })}
-          className={`min-h-24 rounded border p-4 text-left ${selectedCode === code ? 'border-[#073b70] bg-blue-50' : 'border-slate-300 bg-white'}`}
+          onClick={() => onSelect({ type: 'MEAL', code: option.code, name: option.name, price: option.price, currencyCode: option.currencyCode })}
+          className={`min-h-24 rounded border p-4 text-left ${selectedCode === option.code ? 'border-[#073b70] bg-blue-50' : 'border-slate-300 bg-white'}`}
         >
-          <span className="block text-sm font-black text-[#073b70]">{name}</span>
-          <span className="mt-1 block text-xs font-semibold text-slate-500">{desc}</span>
+          <span className="block text-sm font-black text-[#073b70]">{option.name}</span>
+          <span className="mt-1 block text-xs font-semibold text-slate-500">{option.desc}</span>
+          <span className="mt-3 block text-xs font-black uppercase text-cyan-600">
+            {option.price > 0 ? `${option.currencyCode || currencyCode} ${option.price.toLocaleString()}` : 'Free of charge'}
+          </span>
         </button>
       )})}
     </div>
@@ -275,23 +303,27 @@ const MealContent = ({
 
 const BaggageContent = ({
   selectedCode,
+  options,
+  currencyCode,
   onSelect,
 }: {
   selectedCode?: string;
+  options: PricedBaggageOption[];
+  currencyCode: string;
   onSelect: (addon: SelectedAddon) => void;
 }) => (
   <div className="border-t border-slate-300 p-7">
     <div className="grid gap-6 md:grid-cols-3">
-      {baggageOptions.map((option) => (
+      {options.map((option) => (
         <button
           key={option.code}
           type="button"
-          onClick={() => onSelect({ type: 'BAGGAGE', code: option.code, name: option.name, price: option.price })}
+          onClick={() => onSelect({ type: 'BAGGAGE', code: option.code, name: option.name, price: option.price, currencyCode: option.currencyCode })}
           className={`h-36 border p-5 text-center ${selectedCode === option.code ? 'border-[#073b70] bg-blue-50' : 'border-slate-300 bg-white'}`}
         >
           <span className="block text-2xl font-black text-[#073b70]">{option.weight}</span>
           <span className="mt-2 block text-sm font-semibold text-slate-500">{option.desc}</span>
-          <span className="mt-4 block text-sm font-black text-[#073b70]">THB {option.price.toLocaleString()}</span>
+          <span className="mt-4 block text-sm font-black text-[#073b70]">{option.currencyCode || currencyCode} {option.price.toLocaleString()}</span>
         </button>
       ))}
     </div>
@@ -384,6 +416,8 @@ function AddOns(): React.JSX.Element {
   const [errorMessage, setErrorMessage] = useState('');
   const [addonWarning, setAddonWarning] = useState('');
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
+  const [backendMeals, setBackendMeals] = useState<PricedMealOption[]>([]);
+  const [backendBaggage, setBackendBaggage] = useState<PricedBaggageOption[]>([]);
   
   const personalized = openSection === 'assistance';
 
@@ -409,6 +443,25 @@ function AddOns(): React.JSX.Element {
   const addOnsTotal = useMemo(() => selectedAddons.reduce((total, addon) => total + addon.price * (addon.quantity || 1), 0), [selectedAddons]);
   const currencyCode = routeState.selectedFlight?.currency_code || routeState.outboundFlight?.currency_code || 'USD';
 
+  const getBackendPrice = (item: any): number => (
+    toNumberOrZero(item?.price ?? item?.addon_price ?? item?.meal_price ?? item?.amount ?? item?.extra_price)
+  );
+
+  const getBackendCurrency = (item: any): string | undefined => (
+    item?.currency_code || item?.currency || item?.currencyCode
+  );
+
+  const mealDisplayOptions: PricedMealOption[] = backendMeals.length > 0
+    ? backendMeals
+    : mealOptions.map(([name, desc]) => {
+        const [code] = name.split(':');
+        return { code, name, desc, price: 0, currencyCode };
+      });
+
+  const baggageDisplayOptions: PricedBaggageOption[] = backendBaggage.length > 0
+    ? backendBaggage
+    : baggageOptions.map((option) => ({ ...option, currencyCode: 'THB' }));
+
   const selectAddon = (addon: SelectedAddon) => {
     setSelectedAddons((current) => [...current.filter((item) => item.type !== addon.type), addon]);
   };
@@ -420,9 +473,9 @@ function AddOns(): React.JSX.Element {
       case 'seat':
         return <SeatContent />;
       case 'meal':
-        return <MealContent selectedCode={getSelectedCode('MEAL')} onSelect={selectAddon} />;
+        return <MealContent selectedCode={getSelectedCode('MEAL')} options={mealDisplayOptions} currencyCode={currencyCode} onSelect={selectAddon} />;
       case 'baggage':
-        return <BaggageContent selectedCode={getSelectedCode('BAGGAGE')} onSelect={selectAddon} />;
+        return <BaggageContent selectedCode={getSelectedCode('BAGGAGE')} options={baggageDisplayOptions} currencyCode={currencyCode} onSelect={selectAddon} />;
       case 'assistance':
         return <AssistanceContent selectedCode={getSelectedCode('ASSISTANCE')} onSelect={selectAddon} />;
       case 'lounge':
@@ -438,8 +491,43 @@ function AddOns(): React.JSX.Element {
     void seatApi.getSeatMap(outboundFlight?.flight_offer_id || '').then((seatMap) => {
       if (seatMap === false) return;
     });
-    void mealApi.getMeals().catch(() => undefined);
-    void addonApi.getBaggageOptions().catch(() => undefined);
+    void mealApi.getMeals()
+      .then((response) => {
+        const meals = Array.isArray(response.data)
+          ? response.data.map((item: any) => {
+              const code = item?.meal_code || item?.code || item?.addon_code || '';
+              const rawName = item?.meal_name || item?.name || item?.addon_detail || item?.description || code;
+              const name = code && !String(rawName).startsWith(`${code}:`) ? `${code}: ${rawName}` : String(rawName);
+              return {
+                code,
+                name,
+                desc: item?.meal_description || item?.description || item?.desc || item?.meal_category || 'Pre-order this meal for your flight.',
+                price: getBackendPrice(item),
+                currencyCode: getBackendCurrency(item),
+              };
+            }).filter((item) => item.code)
+          : [];
+        setBackendMeals(meals);
+      })
+      .catch(() => setBackendMeals([]));
+    void addonApi.getBaggageOptions()
+      .then((response) => {
+        const baggage = Array.isArray(response.data)
+          ? response.data.map((item: any) => {
+              const desc = item?.description || item?.addon_detail || item?.desc || 'Extra checked baggage';
+              return {
+                code: item?.code || item?.baggage_code || item?.addon_code || '',
+                name: item?.name || desc,
+                weight: item?.weight ? `${item.weight} kg` : item?.baggage_weight || item?.weight_label || '',
+                desc,
+                price: getBackendPrice(item),
+                currencyCode: getBackendCurrency(item),
+              };
+            }).filter((item) => item.code)
+          : [];
+        setBackendBaggage(baggage);
+      })
+      .catch(() => setBackendBaggage([]));
   }, [outboundFlight?.flight_offer_id]);
 
   useEffect(() => {
@@ -448,6 +536,18 @@ function AddOns(): React.JSX.Element {
       setOpenSection(requestedSection);
     }
   }, [hash]);
+
+  const getAddOnPriceLabel = (key: AddOnKey, fallback: string): string => {
+    const options = key === 'meal' ? mealDisplayOptions : key === 'baggage' ? baggageDisplayOptions : [];
+    const paidOptions = options.filter((option) => option.price > 0);
+    if (paidOptions.length === 0) return fallback;
+
+    const lowest = paidOptions.reduce((currentLowest, option) => (
+      option.price < currentLowest.price ? option : currentLowest
+    ), paidOptions[0]);
+
+    return `From ${lowest.currencyCode || currencyCode} ${lowest.price.toLocaleString()}`;
+  };
 
   const handleContinueToPayment = async () => {
     try {
@@ -523,7 +623,7 @@ function AddOns(): React.JSX.Element {
                 addon_detail: addon.name,
                 quantity: addon.quantity || 1,
                 addon_price: addon.price,
-                currency_code: currencyCode,
+                currency_code: addon.currencyCode || currencyCode,
               });
             }));
           } catch (addonError) {
@@ -596,7 +696,7 @@ function AddOns(): React.JSX.Element {
               addon_detail: addon.name,
               quantity: addon.quantity || 1,
               addon_price: addon.price,
-              currency_code: currencyCode,
+              currency_code: addon.currencyCode || currencyCode,
             });
           }));
         } catch (addonError) {
@@ -662,7 +762,7 @@ function AddOns(): React.JSX.Element {
                     <span className="min-w-0 flex-1">
                       <span className="block text-2xl font-black text-[#073b70]">{item.title}</span>
                       <span className="mt-1 block text-sm font-semibold text-slate-600">{item.subtitle}</span>
-                      <span className="mt-1 block text-xs font-black uppercase text-cyan-600">{item.price}</span>
+                      <span className="mt-1 block text-xs font-black uppercase text-cyan-600">{getAddOnPriceLabel(item.key, item.price)}</span>
                     </span>
                     <span className="text-2xl font-black text-[#073b70]">{open ? '^' : '+'}</span>
                   </button>
