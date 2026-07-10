@@ -8,6 +8,8 @@ import Payment from "../Pages/Payment";
 import Profile from "../Pages/Profile";
 import Signin from "../Pages/Signin";
 import Signup from "../Pages/Signup";
+import SocialAuthCallback from "../Pages/SocialAuthCallback";
+import VerifyEmail from "../Pages/VerifyEmail";
 import AdditionalServices from "../Pages/AdditionalServices";
 import ManageBooking from "../Pages/ManageBooking";
 import FlightStatus from "../Pages/FlightStatus";
@@ -41,6 +43,14 @@ const router = createBrowserRouter([
       {
         path: "/signup",
         Component: Signup
+      },
+      {
+        path: "/social-auth-callback",
+        Component: SocialAuthCallback
+      },
+      {
+        path: "/verify-email",
+        Component: VerifyEmail
       },
       {
         path: "/profile",

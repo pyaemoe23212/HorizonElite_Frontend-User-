@@ -17,6 +17,18 @@ interface Airport {
   timezone: string;
 }
 
+interface SearchData {
+  tripType: 'Return' | 'One-way';
+  adultCount: number;
+  childCount: number;
+  infantCount: number;
+  cabinClass: string;
+  from: string;
+  to: string;
+  departDate: Date | null;
+  returnDate: Date | null;
+}
+
 const AIRPORT_CACHE_KEY = 'horizon_elite_airports_v1';
 
 const fallbackAirports: Airport[] = [
@@ -122,8 +134,8 @@ function Home(): React.JSX.Element {
     cabinClass: 'Economy',
     from: '',
     to: '',
-    departDate: null as Date | null,
-    returnDate: null as Date | null,
+    departDate: null,
+    returnDate: null,
   });
 
   const [fromSuggestions, setFromSuggestions] = useState<Airport[]>([]);
@@ -282,12 +294,6 @@ function Home(): React.JSX.Element {
     }
     if (searchData.tripType === 'Return' && !searchData.returnDate) {
       setSearchError('Please select a return date');
-      return;
-    }
-
-    const token = localStorage.getItem('jwt_token');
-    if (!token) {
-      setSearchError('Please log in before searching for flights');
       return;
     }
 
@@ -504,7 +510,7 @@ function Home(): React.JSX.Element {
             {/* SEARCH BUTTON */}
             <button
               type="submit"
-              disabled={isSearching || !searchData.from || !searchData.to || !searchData.departDate || (searchData.tripType === 'Return' && !searchData.returnDate) || !localStorage.getItem('jwt_token')}
+              disabled={isSearching || !searchData.from || !searchData.to || !searchData.departDate || (searchData.tripType === 'Return' && !searchData.returnDate)}
               className="lg:col-span-2 h-16 rounded-2xl bg-blue-600 text-white font-semibold flex items-center justify-center hover:bg-blue-700 transition disabled:opacity-60 shadow-lg mt-8 lg:mt-0"
             >
               {isSearching ? 'Searching...' : <SearchIcon />}

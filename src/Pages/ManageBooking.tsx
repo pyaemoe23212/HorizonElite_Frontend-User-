@@ -28,6 +28,7 @@ const onlineServices = [
 
 const mapManagedBookingToRouteState = (details: ManageBookingDetails) => {
   const primaryPassenger = details.passengers[0];
+  const bookingRecord = details.booking as ManageBookingDetails["booking"] & { booking?: { selected_flight_id?: string } };
   const outboundFlight = {
     airline_name: details.flight.airline_name,
     flight_number: details.flight.flight_number,
@@ -58,7 +59,7 @@ const mapManagedBookingToRouteState = (details: ManageBookingDetails) => {
     pnrReference: details.booking.pnr_reference,
     selectedFlight: outboundFlight,
     outboundFlight,
-    selectedFlightId: details.booking.selected_flight_id,
+    selectedFlightId: bookingRecord.selected_flight_id || bookingRecord.booking?.selected_flight_id,
     flightSearchId: undefined,
     tripType: details.booking.trip_type || "ONE_WAY",
     currency_code: details.booking.currency_code,
@@ -67,6 +68,7 @@ const mapManagedBookingToRouteState = (details: ManageBookingDetails) => {
     passengerIds: passengers.map((passenger) => passenger.passenger_id),
     managedBooking: true,
     primaryPassenger,
+    existingAddons: details.addons || [],
   };
 };
 
@@ -196,6 +198,7 @@ function ManageBooking(): React.JSX.Element {
                       <Info label="Route" value={`${bookingDetails.flight.origin || "--"} to ${bookingDetails.flight.destination || "--"}`} />
                       <Info label="Flight" value={bookingDetails.flight.flight_number || "Not available"} />
                       <Info label="Payment" value={`${bookingDetails.booking.currency_code || ""} ${bookingDetails.booking.total_payment_amount || ""}`.trim()} />
+                      <Info label="Add-ons" value={`${bookingDetails.addons?.length || 0} paid service(s)`} />
                     </div>
                   </div>
 

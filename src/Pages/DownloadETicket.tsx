@@ -14,6 +14,9 @@ function DownloadETicket(): React.JSX.Element {
   const outbound = ticketState.outboundFlight || ticketState.selectedFlight;
   const [downloadError, setDownloadError] = React.useState("");
   const [isDownloading, setIsDownloading] = React.useState(false);
+  const [emailStatus, setEmailStatus] = React.useState("");
+  const [emailError, setEmailError] = React.useState("");
+  const [isSendingEmail, setIsSendingEmail] = React.useState(false);
 
   const handleDownload = async () => {
     if (!bookingId) {
@@ -37,6 +40,25 @@ function DownloadETicket(): React.JSX.Element {
       setDownloadError(error instanceof Error ? error.message : "Failed to download e-ticket.");
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!bookingId) {
+      setEmailError("Missing booking ID. Please open this page from your booking confirmation.");
+      return;
+    }
+
+    try {
+      setIsSendingEmail(true);
+      setEmailError("");
+      setEmailStatus("");
+      const response = await ticketApi.sendETicketEmail(bookingId);
+      setEmailStatus(`E-ticket sent to ${response.data.recipient_email}.`);
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : "Failed to send e-ticket email.");
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -171,6 +193,18 @@ function DownloadETicket(): React.JSX.Element {
                 </div>
               )}
 
+              {emailStatus && (
+                <div className="w-full rounded border border-green-300 bg-green-50 p-3 text-sm font-semibold text-green-700">
+                  {emailStatus}
+                </div>
+              )}
+
+              {emailError && (
+                <div className="w-full rounded border border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-700">
+                  {emailError}
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={handleDownload}
@@ -181,9 +215,14 @@ function DownloadETicket(): React.JSX.Element {
                 {isDownloading ? "Downloading..." : "Download E-ticket PDF"}
               </button>
 
-              <button className="inline-flex items-center gap-2 rounded border border-[#073b70] px-6 py-3 font-bold text-[#073b70] hover:bg-slate-50">
+              <button
+                type="button"
+                onClick={handleSendEmail}
+                disabled={isSendingEmail || !bookingId}
+                className="inline-flex items-center gap-2 rounded border border-[#073b70] px-6 py-3 font-bold text-[#073b70] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
                 <Mail size={18} />
-                Send E-ticket to Email
+                {isSendingEmail ? "Sending..." : "Send E-ticket to Email"}
               </button>
 
               <button className="inline-flex items-center gap-2 font-bold text-[#073b70] hover:underline">

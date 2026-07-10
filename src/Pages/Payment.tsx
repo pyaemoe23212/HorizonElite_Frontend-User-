@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BadgeCheck, Plane } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router';
-import { duffelOrderApi, paymentApi, type CreatePaymentRequest } from '../Services/api';
+import { addonApi, duffelOrderApi, paymentApi, type CreatePaymentRequest } from '../Services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 type PaymentMethod = 'card' | 'qr' | 'banking' | 'wallet';
@@ -20,13 +20,38 @@ interface PaymentRouteState {
   pnrReference?: string;
   booking?: any;
   booking_id?: string;
+  user_email_address?: string;
   totalPaymentAmount?: string | number;
   currency_code?: string;
   outboundFlight?: any;
   inboundFlight?: any;
   selectedFlight?: any;
   returnFlight?: any;
+  passengers?: any[];
+  selectedAddons?: any[];
+  pendingAddonIds?: string[];
+  addOnsTotal?: number;
+  postBookingAddonPayment?: boolean;
 }
+
+const PRIMARY_CURRENCY_CODE = 'USD';
+const PAYMENT_CHECKOUT_STATE_KEY = 'horizon_elite_checkout_state';
+
+const readSavedPaymentCheckoutState = (): PaymentRouteState => {
+  try {
+    const savedState = window.sessionStorage.getItem(PAYMENT_CHECKOUT_STATE_KEY);
+    return savedState ? JSON.parse(savedState) as PaymentRouteState : {};
+  } catch {
+    return {};
+  }
+};
+
+const hasUsablePaymentState = (state?: PaymentRouteState) => {
+  return Boolean(
+    state?.pnrReference &&
+    (state.totalPaymentAmount || state.booking_id || state.booking?.booking_id)
+  );
+};
 
 const parseAmount = (value: unknown): number => {
   const parsed = Number(value);
@@ -295,6 +320,7 @@ const TripSummary = ({
   routeState,
   errorMessage,
   offerUnavailable,
+  isMissingCheckoutState,
 }: { 
   method: PaymentMethod; 
   isProcessing: boolean; 
@@ -302,6 +328,7 @@ const TripSummary = ({
   routeState?: PaymentRouteState;
   errorMessage?: string;
   offerUnavailable?: boolean;
+  isMissingCheckoutState?: boolean;
 }) => {
   const pnrReference = routeState?.pnrReference || 'HE7429BL';
   const outboundFlight = routeState?.outboundFlight || routeState?.selectedFlight;
@@ -309,7 +336,7 @@ const TripSummary = ({
   
   const totalAmount = calculateTotalAmount(routeState);
   
-  const currencyCode = routeState?.currency_code || outboundFlight?.currency_code || 'THB';
+  const currencyCode = routeState?.currency_code || PRIMARY_CURRENCY_CODE;
 
   console.log('💵 TripSummary - Calculated total amount:', totalAmount, 'from:', {
     passed: routeState?.totalPaymentAmount,
@@ -366,7 +393,7 @@ const TripSummary = ({
         disabled={isProcessing}
         className="mt-9 flex h-16 w-full items-center justify-center rounded bg-[#073b70] text-base font-black text-white shadow-lg shadow-blue-950/20 transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-500"
       >
-        {offerUnavailable ? 'Search Again' : isProcessing ? 'Creating Payment...' : method === 'qr' ? 'Complete QR Payment' : `Pay ${currencyCode} ${totalAmount}`}
+        {offerUnavailable ? 'Search Again' : isMissingCheckoutState ? 'Return to Booking' : isProcessing ? 'Creating Payment...' : method === 'qr' ? 'Complete QR Payment' : `Pay ${currencyCode} ${totalAmount}`}
       </button>
       {isProcessing && <p className="mt-4 text-center text-xs font-black uppercase tracking-widest text-cyan-700">Processing...</p>}
       <div className="mt-7 text-center text-xs font-black uppercase tracking-widest text-slate-400">SSL 256-bit encrypted</div>
@@ -465,7 +492,7 @@ const CardPanel = ({
   );
 };
 
-const QrPanel = () => (
+const QrPanel = ({ amount, currencyCode }: { amount: number; currencyCode: string }) => (
   <section>
     <h1 className="text-3xl font-black text-[#073b70]">Thai QR / PromptPay</h1>
     <p className="mt-3 text-base font-semibold text-slate-600">Scan this QR code using your Thai mobile banking app.</p>
@@ -478,7 +505,9 @@ const QrPanel = () => (
           ))}
         </div>
       </div>
-      <p className="mt-8 text-3xl font-black text-slate-900">THB 19,925</p>
+      <p className="mt-8 text-3xl font-black text-slate-900">
+        {currencyCode} {amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </p>
       <p className="mt-4 text-base font-black text-red-600">QR code expires in 10:00</p>
     </div>
     <p className="mt-8 text-center text-sm font-semibold text-slate-600">Once scanned, the payment will be processed immediately. Do not close this page.</p>
@@ -522,8 +551,7 @@ const WalletPanel = () => (
   </section>
 );
 
-const panels: Record<Exclude<PaymentMethod, 'card'>, React.ReactNode> = {
-  qr: <QrPanel />,
+const panels: Record<Exclude<PaymentMethod, 'card' | 'qr'>, React.ReactNode> = {
   banking: <BankingPanel />,
   wallet: <WalletPanel />,
 };
@@ -533,7 +561,13 @@ function Payment(): React.JSX.Element {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  const routeState = (state ?? {}) as PaymentRouteState;
+  const locationState = (state ?? {}) as PaymentRouteState;
+  const routeState = hasUsablePaymentState(locationState)
+    ? locationState
+    : readSavedPaymentCheckoutState();
+  const paymentCurrencyCode = routeState.currency_code || PRIMARY_CURRENCY_CODE;
+  const paymentAmount = calculateTotalAmount(routeState);
+  const isMissingCheckoutState = !hasUsablePaymentState(routeState);
   
   const [method, setMethod] = useState<PaymentMethod>('card');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -565,6 +599,12 @@ function Payment(): React.JSX.Element {
         return;
       }
 
+      if (isMissingCheckoutState) {
+        setErrorMessage('Payment details were lost. Please return to Manage Booking or complete the add-ons step again.');
+        navigate('/manage-booking', { replace: true });
+        return;
+      }
+
       if (isProcessing) return;
 
       if (method === 'card') {
@@ -581,21 +621,29 @@ function Payment(): React.JSX.Element {
       setErrorMessage('');
       setOfferUnavailable(false);
 
-      // Get user email from AuthContext (authenticated user)
-      const userEmail = user?.email_address || 'user@example.com';
+      const contactEmail =
+        routeState.user_email_address ||
+        routeState.booking?.user_email_address ||
+        routeState.passengers?.find(passenger => passenger.pi_contact_email)?.pi_contact_email;
+      const userEmail = user?.email_address || contactEmail;
+
+      if (!userEmail) {
+        throw new Error('Passenger contact email is required for guest payment.');
+      }
       
-      console.log('📧 Using authenticated email:', userEmail);
+      console.log('📧 Using payment contact email:', userEmail);
       console.log('📊 Route state received:', routeState);
       console.log('💰 Total Payment Amount from state:', routeState.totalPaymentAmount, typeof routeState.totalPaymentAmount);
       
       // Validate required data from AddOns/Booking
       if (!routeState.pnrReference) {
-        throw new Error('Missing PNR reference. Please go back and complete your booking.');
+        throw new Error('Missing PNR reference. Please return to Manage Booking or complete the add-ons step again.');
       }
 
       const outboundFlight = routeState.outboundFlight || routeState.selectedFlight;
       const inboundFlight = routeState.inboundFlight || routeState.returnFlight;
       const totalAmount = calculateTotalAmount(routeState);
+      const bookingIdForPayment = routeState.booking?.booking_id || routeState.booking_id;
 
       console.log('💰 Total Amount Calculation:');
       console.log('   - From totalPaymentAmount:', routeState.totalPaymentAmount);
@@ -618,11 +666,32 @@ function Payment(): React.JSX.Element {
         user_email_address: userEmail,
         payment_method: paymentMethodMap[method],
         payment_region: 'ASIA',
-        currency_code: routeState.currency_code || outboundFlight?.currency_code || 'THB',
+        currency_code: routeState.currency_code || PRIMARY_CURRENCY_CODE,
         total_payment_amount: totalAmount || 0,
       };
 
       console.log('💳 Creating Payment with request:', createPaymentRequest);
+
+      if (!routeState.postBookingAddonPayment) {
+        if (!bookingIdForPayment) {
+          throw new Error('Missing booking_id for offer validation.');
+        }
+
+        try {
+          await duffelOrderApi.validateOffer({
+            booking_id: bookingIdForPayment,
+          });
+        } catch (offerError) {
+          if (isOfferUnavailableError(offerError)) {
+            setOfferUnavailable(true);
+            setErrorMessage(OFFER_UNAVAILABLE_MESSAGE);
+            setIsProcessing(false);
+            return;
+          }
+
+          throw offerError;
+        }
+      }
 
       // Call payment API to create payment record
       const response = await paymentApi.createPayment(createPaymentRequest);
@@ -643,11 +712,13 @@ function Payment(): React.JSX.Element {
           pnr_reference: routeState.pnrReference,
           payment_token: paymentToken,
           amount: totalAmount,
-          currency: routeState.currency_code || outboundFlight?.currency_code || 'THB',
+          currency: routeState.currency_code || PRIMARY_CURRENCY_CODE,
           description: `Flight booking ${routeState.pnrReference}`,
           metadata: {
             pnr_reference: routeState.pnrReference,
             user_email_address: userEmail,
+            payment_purpose: routeState.postBookingAddonPayment ? 'ADD_ONS' : 'TICKET',
+            pending_addon_ids: routeState.pendingAddonIds || [],
           },
         });
 
@@ -669,7 +740,26 @@ function Payment(): React.JSX.Element {
       let duffelOrderResult: any = null;
       let ticketingIssue = '';
 
-      if (finalizedPayment.payment_status_code === 'PAID') {
+      if (
+        finalizedPayment.payment_status_code === 'PAID' &&
+        routeState.postBookingAddonPayment &&
+        routeState.booking_id &&
+        routeState.pendingAddonIds?.length
+      ) {
+        try {
+          await addonApi.markAddonsPaid({
+            booking_id: routeState.booking_id,
+            passenger_id: routeState.passengers?.[0]?.passenger_id,
+            addon_ids: routeState.pendingAddonIds,
+            payment_id: finalizedPayment.payment_id || response.payment.payment_id,
+          });
+        } catch (addonPaymentError) {
+          console.error('Could not mark add-ons as paid after payment:', addonPaymentError);
+          ticketingIssue = 'Payment succeeded, but add-on payment status could not be updated automatically. Please contact support.';
+        }
+      }
+
+      if (finalizedPayment.payment_status_code === 'PAID' && !routeState.postBookingAddonPayment) {
         const bookingId = routeState.booking?.booking_id || routeState.booking_id;
         const paymentId = finalizedPayment.payment_id || response.payment.payment_id;
 
@@ -687,13 +777,12 @@ function Payment(): React.JSX.Element {
         } catch (orderError) {
           if (isOfferUnavailableError(orderError)) {
             console.error('❌ Duffel offer expired:', orderError);
-            setErrorMessage(OFFER_UNAVAILABLE_MESSAGE);
-            setIsProcessing(false);
-            return;
-          }
+            ticketingIssue = 'Payment was processed, but the selected airline offer expired before ticketing. The booking cannot be ticketed from this offer. Please contact support with this PNR so the payment can be voided/refunded or a fresh flight can be booked.';
+          } else {
 
           ticketingIssue = getTicketingIssueMessage(orderError);
           console.error('Duffel order creation failed after payment:', orderError);
+          }
         }
 
         if (duffelOrderResult) {
@@ -713,8 +802,9 @@ function Payment(): React.JSX.Element {
             paymentStatus: finalizedPayment.payment_status_code || 'PENDING',
             duffelOrder: duffelOrderResult?.order,
             duffelOrderId: duffelOrderResult?.order?.duffel_order?.data?.id,
-            ticketingStatus: duffelOrderResult ? 'ORDER_CREATED' : 'ORDER_PENDING',
+            ticketingStatus: routeState.postBookingAddonPayment ? 'ADD_ONS_PAID' : duffelOrderResult ? 'ORDER_CREATED' : ticketingIssue ? 'ORDER_FAILED' : 'ORDER_PENDING',
             ticketingIssue,
+            postBookingAddonPayment: routeState.postBookingAddonPayment,
           },
         });
       }, 1200);
@@ -761,6 +851,8 @@ function Payment(): React.JSX.Element {
               cardErrors={cardErrors}
               onCardChange={handleCardChange}
             />
+          ) : method === 'qr' ? (
+            <QrPanel amount={paymentAmount} currencyCode={paymentCurrencyCode} />
           ) : (
             panels[method]
           )}
@@ -773,6 +865,7 @@ function Payment(): React.JSX.Element {
           routeState={routeState}
           errorMessage={errorMessage}
           offerUnavailable={offerUnavailable}
+          isMissingCheckoutState={isMissingCheckoutState}
         />
       </div>
 

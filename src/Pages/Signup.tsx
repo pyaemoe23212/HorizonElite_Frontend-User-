@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { api } from '../Services/api';
 import {
   isValidPhoneNumber,
@@ -52,8 +52,16 @@ const FieldLabel = ({ children }: { children: React.ReactNode }) => (
   <span className="mb-2 block text-[11px] font-black uppercase tracking-wide text-[#063b70]">{children}</span>
 );
 
+const isEmailStructureValid = (email: string): boolean =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+
+const startFacebookLogin = () => {
+  window.location.href = `${API_BASE_URL.replace(/\/$/, '')}/auth/facebook`;
+};
+
 function Signup(): React.JSX.Element {
-  const navigate = useNavigate();
   const [formData, setFormData] = React.useState({
     title: '',
     first_name: '',
@@ -64,7 +72,11 @@ function Signup(): React.JSX.Element {
     confirm_password: '',
   });
   const [error, setError] = React.useState('');
+  const [info, setInfo] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [emailError, setEmailError] = React.useState('');
+  const [verificationEmail, setVerificationEmail] = React.useState('');
+  const [resendLoading, setResendLoading] = React.useState(false);
   const [phoneCountry, setPhoneCountry] = React.useState('TH');
   const [phoneNumber, setPhoneNumber] = React.useState('');
   const [phoneError, setPhoneError] = React.useState('');
@@ -139,11 +151,33 @@ function Signup(): React.JSX.Element {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setError('');
+    setInfo('');
+    if (name === 'email_address') {
+      setEmailError('');
+    }
+  };
+
+  const validateEmail = (): boolean => {
+    const email = formData.email_address.trim();
+
+    if (!email) {
+      setEmailError('Email is required.');
+      return false;
+    }
+
+    if (!isEmailStructureValid(email)) {
+      setEmailError('Email structure is invalid.');
+      return false;
+    }
+
+    setEmailError('');
+    return true;
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
+    setInfo('');
 
     if (!formData.title) {
       setError('Please select a title');
@@ -159,6 +193,10 @@ function Signup(): React.JSX.Element {
     }
     if (!formData.email_address.trim()) {
       setError('Email is required');
+      return;
+    }
+    if (!validateEmail()) {
+      setError('Please enter a valid email address.');
       return;
     }
     if (!formData.password) {
@@ -180,15 +218,36 @@ function Signup(): React.JSX.Element {
     setLoading(true);
 
     try {
+      const normalizedEmail = formData.email_address.trim().toLowerCase();
+
       await api.register({
         ...formData,
-        phone_number: parsedPhone?.formatInternational() || phoneNumber,
+        email_address: normalizedEmail,
+        phone_number: parsedPhone?.format('E.164') || phoneNumber,
       });
-      navigate('/signin');
+      setVerificationEmail(normalizedEmail);
+      setInfo(`We sent a verification email to ${normalizedEmail}. Please click the Verify Email button in that email.`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerificationEmail = async () => {
+    setError('');
+    setInfo('');
+    setResendLoading(true);
+
+    try {
+      await api.resendVerificationEmail({
+        email_address: verificationEmail,
+      });
+      setInfo(`A new verification email was sent to ${verificationEmail}.`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not resend verification email');
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -233,6 +292,31 @@ function Signup(): React.JSX.Element {
             </div>
           )}
 
+          {info && (
+            <div className="mt-4 rounded bg-green-50 p-4 text-sm font-medium text-green-700 border border-green-200">
+              {info}
+            </div>
+          )}
+
+          {verificationEmail ? (
+            <div className="mt-8 space-y-5 rounded border border-slate-300 bg-slate-50 p-5">
+              <p className="text-sm font-semibold leading-6 text-slate-700">
+                We sent a verification email to <span className="font-black text-[#063b70]">{verificationEmail}</span>.
+                Open the email and click the Verify Email button to activate your account.
+              </p>
+              <button
+                disabled={resendLoading}
+                type="button"
+                onClick={handleResendVerificationEmail}
+                className="h-11 w-full rounded border border-slate-300 bg-white text-sm font-black text-[#063b70] transition hover:border-blue-600 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {resendLoading ? 'Sending...' : 'Resend Verification Email'}
+              </button>
+              <Link to="/signin" className="flex h-11 w-full items-center justify-center rounded bg-[#063b70] text-sm font-black text-white transition hover:bg-[#052f59]">
+                Go to Sign In
+              </Link>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <label className="block">
               <FieldLabel>Title <span className="text-red-500">*</span></FieldLabel>
@@ -258,7 +342,12 @@ function Signup(): React.JSX.Element {
 
             <label className="block">
               <FieldLabel>Email Address <span className="text-red-500">*</span></FieldLabel>
-              <input required type="email" name="email_address" value={formData.email_address} onChange={handleChange} placeholder="jane.doe@example.com" className="h-11 w-full rounded border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600" />
+              <input required type="email" name="email_address" value={formData.email_address} onChange={handleChange} onBlur={validateEmail} placeholder="jane.doe@example.com" className={`h-11 w-full rounded border bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 ${
+                emailError ? 'border-red-500 focus:border-red-600' : 'border-slate-300 focus:border-blue-600'
+              }`} />
+              {emailError && (
+                <p className="mt-1 text-xs text-red-500">{emailError}</p>
+              )}
             </label>
 
             <label className="block">
@@ -387,10 +476,11 @@ function Signup(): React.JSX.Element {
             </div>
 
             <button disabled={loading} type="submit" className="flex h-12 w-full items-center justify-center gap-2 rounded bg-[#063b70] text-sm font-black text-white transition hover:bg-[#052f59] disabled:opacity-70 disabled:cursor-not-allowed">
-              {loading ? 'Creating Account...' : 'Create Account'}
+              {loading ? 'Sending verification email...' : 'Create Account'}
               {!loading && <ArrowRightIcon />}
             </button>
           </form>
+          )}
 
           <div className="my-7 flex items-center gap-4">
             <span className="h-px flex-1 bg-slate-200" />
@@ -400,14 +490,14 @@ function Signup(): React.JSX.Element {
 
           <div className="space-y-3">
             {[
-              ['Continue with Line', <LineIcon key="line" />],
-              ['Continue with Google', <GoogleIcon key="google" />],
-              ['Continue with Facebook', <FacebookIcon key="facebook" />],
-              ['Continue with Apple', <AppleIcon key="apple" />],
-            ].map(([label, icon]) => (
-              <button key={label as string} type="button" className="flex h-11 w-full items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:border-blue-500 hover:text-[#063b70]">
-                {icon}
-                {label}
+              { label: 'Continue with Line', icon: <LineIcon key="line" /> },
+              { label: 'Continue with Google', icon: <GoogleIcon key="google" /> },
+              { label: 'Continue with Facebook', icon: <FacebookIcon key="facebook" />, onClick: startFacebookLogin },
+              { label: 'Continue with Apple', icon: <AppleIcon key="apple" /> },
+            ].map((item) => (
+              <button key={item.label} type="button" onClick={item.onClick} className="flex h-11 w-full items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:border-blue-500 hover:text-[#063b70]">
+                {item.icon}
+                {item.label}
               </button>
             ))}
           </div>

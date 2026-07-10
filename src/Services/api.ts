@@ -28,6 +28,10 @@ export interface LoginCredentials {
   password: string;
 }
 
+export interface ResendVerificationEmailRequest {
+  email_address: string;
+}
+
 export interface ProfileResponse {
   id: string;
   email: string;
@@ -310,6 +314,18 @@ export const api = {
    */
   register: (userData: RegisterData): Promise<AuthResponse> =>
     axiosInstance.post('/auth/register', userData),
+
+  /**
+   * Verify a newly registered user's email with a link token
+   */
+  verifyEmailToken: (token: string): Promise<{ message: string }> =>
+    axiosInstance.get('/auth/verify-email', { params: { token } }),
+
+  /**
+   * Resend registration verification email
+   */
+  resendVerificationEmail: (data: ResendVerificationEmailRequest): Promise<{ message: string }> =>
+    axiosInstance.post('/auth/resend-verification-email', data),
 
   /**
    * Login with email and password
@@ -655,6 +671,10 @@ export interface CreateDuffelOrderRequest {
   payment_id: string;
 }
 
+export interface ValidateDuffelOfferRequest {
+  booking_id: string;
+}
+
 export interface CreateDuffelOrderResponse {
   message: string;
   order: {
@@ -684,6 +704,31 @@ export interface AddonRequest {
   quantity: number;
   addon_price: number;
   currency_code: string;
+  addon_status?: 'PENDING_PAYMENT' | 'PAID';
+}
+
+export interface BookingAddon {
+  addon_id: string;
+  booking_id: string;
+  passenger_id: string;
+  selected_flight_id?: string;
+  addon_type: string;
+  addon_code: string;
+  addon_detail: string;
+  quantity?: number;
+  addon_price: string | number;
+  currency_code: string;
+  addon_status?: string;
+  payment_id?: string;
+  paid_at?: string;
+  created_at?: string;
+}
+
+export interface MarkAddonsPaidRequest {
+  booking_id: string;
+  passenger_id?: string;
+  addon_ids: string[];
+  payment_id: string;
 }
 
 export interface SelectBaggageRequest {
@@ -740,6 +785,7 @@ export interface ManageBookingDetails {
     from?: string;
     to?: string;
   }>;
+  addons?: BookingAddon[];
 }
 
 export interface ManageBookingResponse {
@@ -887,6 +933,12 @@ export const paymentApi = {
 
 export const duffelOrderApi = {
   /**
+   * Validate the selected Duffel offer before charging payment.
+   */
+  validateOffer: (data: ValidateDuffelOfferRequest): Promise<ApiMessageDataResponse<any>> =>
+    axiosInstance.post('/duffel/orders/validate-offer', data),
+
+  /**
    * Create Duffel order after payment is completed (PAID)
    */
   createOrder: (data: CreateDuffelOrderRequest): Promise<CreateDuffelOrderResponse> =>
@@ -903,6 +955,9 @@ export const ticketApi = {
     });
     return response as unknown as Blob;
   },
+
+  sendETicketEmail: (bookingId: string): Promise<ApiMessageDataResponse<{ recipient_email: string; pnr_reference: string }>> =>
+    axiosInstance.post(`/tickets/${bookingId}/email`),
 };
 
 export const addonApi = {
@@ -917,6 +972,9 @@ export const addonApi = {
    */
   getBookingAddons: (bookingId: string): Promise<ApiMessageDataResponse<any[]>> =>
     axiosInstance.get(`/addons/${bookingId}`),
+
+  markAddonsPaid: (data: MarkAddonsPaidRequest): Promise<ApiMessageDataResponse<BookingAddon[]>> =>
+    axiosInstance.post('/addons/mark-paid', data),
 
   /**
    * Get baggage options.

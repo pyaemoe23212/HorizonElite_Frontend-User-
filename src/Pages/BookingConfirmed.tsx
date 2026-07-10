@@ -19,6 +19,7 @@ interface BookingConfirmedState {
   passengerIds?: string[];
   ticketingStatus?: string;
   ticketingIssue?: string;
+  postBookingAddonPayment?: boolean;
 }
 
 const formatPassengerName = (passenger: any) => {
@@ -69,6 +70,7 @@ function BookingConfirmed(): React.JSX.Element {
   const paymentStatus = bookingState.paymentStatus || bookingState.payment?.payment_status_code || 'PENDING';
   const ticketingStatus = bookingState.ticketingStatus || (bookingState.duffelOrderId ? 'ORDER_CREATED' : 'ORDER_PENDING');
   const ticketingIssue = bookingState.ticketingIssue;
+  const isPostBookingAddonPayment = Boolean(bookingState.postBookingAddonPayment);
   const bookingId = bookingState.booking_id || bookingState.booking?.booking_id;
   const duffelOrderId = bookingState.duffelOrderId || bookingState.duffelOrder?.duffel_order?.data?.id || 'Not created';
   const passengers = bookingState.passengers || bookingState.booking?.passengers || [];
@@ -91,22 +93,30 @@ function BookingConfirmed(): React.JSX.Element {
             </span>
           </div>
 
-          <h1 className="mt-8 text-6xl font-black tracking-normal text-[#073b70]">Booking Confirmed!</h1>
-          <p className="mt-5 text-xl font-semibold text-slate-600">Thank you for choosing Horizon Elite. Your journey awaits.</p>
+          <h1 className="mt-8 text-6xl font-black tracking-normal text-[#073b70]">
+            {isPostBookingAddonPayment ? 'Add-ons Confirmed!' : 'Booking Confirmed!'}
+          </h1>
+          <p className="mt-5 text-xl font-semibold text-slate-600">
+            {isPostBookingAddonPayment ? 'Your additional services have been added to your booking.' : 'Thank you for choosing Horizon Elite. Your journey awaits.'}
+          </p>
 
           <div className="mt-5 inline-flex items-center rounded border border-slate-300 bg-slate-200 px-5 py-3">
             <span className="mr-4 text-sm font-black uppercase tracking-widest text-slate-600">Booking Ref:</span>
             <span className="text-3xl font-black tracking-widest text-[#073b70]">{pnrReference}</span>
           </div>
 
-          {paymentStatus === 'PAID' && ticketingStatus !== 'ORDER_CREATED' && (
-            <div className="mx-auto mt-6 max-w-3xl rounded-lg border border-amber-300 bg-amber-50 p-5 text-left">
-              <p className="text-sm font-black uppercase tracking-widest text-amber-700">Payment received, ticketing pending</p>
-              <p className="mt-2 text-sm font-semibold text-amber-800">
-                Your payment was successful, but the airline order could not be created automatically. Please contact support with booking reference {pnrReference}.
+          {paymentStatus === 'PAID' && !isPostBookingAddonPayment && ticketingStatus !== 'ORDER_CREATED' && (
+            <div className={`mx-auto mt-6 max-w-3xl rounded-lg border p-5 text-left ${ticketingStatus === 'ORDER_FAILED' ? 'border-red-300 bg-red-50' : 'border-amber-300 bg-amber-50'}`}>
+              <p className={`text-sm font-black uppercase tracking-widest ${ticketingStatus === 'ORDER_FAILED' ? 'text-red-700' : 'text-amber-700'}`}>
+                {ticketingStatus === 'ORDER_FAILED' ? 'Payment received, ticketing failed' : 'Payment received, ticketing pending'}
+              </p>
+              <p className={`mt-2 text-sm font-semibold ${ticketingStatus === 'ORDER_FAILED' ? 'text-red-800' : 'text-amber-800'}`}>
+                {ticketingStatus === 'ORDER_FAILED'
+                  ? `Your payment was successful, but this expired airline offer cannot be ticketed. Please contact support with booking reference ${pnrReference}.`
+                  : `Your payment was successful, but the airline order could not be created automatically. Please contact support with booking reference ${pnrReference}.`}
               </p>
               {ticketingIssue && (
-                <p className="mt-2 text-xs font-semibold text-amber-700">{ticketingIssue}</p>
+                <p className={`mt-2 text-xs font-semibold ${ticketingStatus === 'ORDER_FAILED' ? 'text-red-700' : 'text-amber-700'}`}>{ticketingIssue}</p>
               )}
             </div>
           )}

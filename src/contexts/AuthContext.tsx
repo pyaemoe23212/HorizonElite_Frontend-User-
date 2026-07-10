@@ -48,7 +48,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         if (!cancelled) {
-          console.error('Failed to load profile:', error);
+          const status = (error as { status?: number })?.status;
+          if (status !== 401) {
+            console.error('Failed to load profile:', error);
+          }
           logout();
         }
       } finally {

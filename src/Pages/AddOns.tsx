@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BadgeCheck, Plane } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { addonApi, bookingApi, mealApi, seatApi, type CreateBookingRequest } from '../Services/api';
+import { addonApi, bookingApi, mealApi, seatApi, type BookingAddon, type CreateBookingRequest } from '../Services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 type AddOnKey = 'seat' | 'meal' | 'baggage' | 'assistance' | 'lounge' | 'insurance';
@@ -13,6 +13,13 @@ interface AddOnItem {
   price: string;
   image?: string;
 }
+
+const PRIMARY_CURRENCY_CODE = 'USD';
+const PAYMENT_CHECKOUT_STATE_KEY = 'horizon_elite_checkout_state';
+
+const savePaymentCheckoutState = (state: AddOnsRouteState & Record<string, any>) => {
+  window.sessionStorage.setItem(PAYMENT_CHECKOUT_STATE_KEY, JSON.stringify(state));
+};
 
 const addOns: AddOnItem[] = [
   {
@@ -26,14 +33,14 @@ const addOns: AddOnItem[] = [
     key: 'meal',
     title: 'Meal Selection',
     subtitle: 'Pre-order your meals and get your preferred choice.',
-    price: 'Included',
+    price: 'From USD 12',
     image: 'https://images.unsplash.com/photo-1565895405227-31cffbe0cf86?q=80&w=500&auto=format&fit=crop',
   },
   {
     key: 'baggage',
     title: 'Extra Baggage',
     subtitle: '2 carry-on bag(s), 30kg checked bag(s) included.',
-    price: 'From THB 1,450',
+    price: 'From USD 40',
     image: 'https://images.unsplash.com/photo-1553531889-e6cf4d692b1b?q=80&w=500&auto=format&fit=crop',
   },
   {
@@ -46,36 +53,40 @@ const addOns: AddOnItem[] = [
     key: 'lounge',
     title: 'Elite Lounge Access',
     subtitle: 'Relax at our award-winning Skyview lounges.',
-    price: 'From THB 1,800',
+    price: 'From USD 60',
     image: 'https://images.unsplash.com/photo-1617104678098-de229db51175?q=80&w=500&auto=format&fit=crop',
   },
   {
     key: 'insurance',
     title: 'Travel Insurance',
     subtitle: 'Comprehensive coverage for a worry-free trip.',
-    price: 'From THB 850',
+    price: 'From USD 20',
   },
 ];
 
+const formatUsd = (amount: number) =>
+  `${PRIMARY_CURRENCY_CODE} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 const mealOptions = [
-  ['AVML: Asian Vegetarian', 'Indian style vegetarian, no meat/fish/egg.'],
-  ['BLML: Bland Meal', 'Less fiber, non-spicy preparation.'],
-  ['DBML: Diabetic Meal', 'Low sugar, low fat formulation.'],
-  ['GFML: Gluten-Free Meal', 'No gluten-containing ingredients used.'],
-  ['LFML: Low Fat Meal', 'Low fat / low cholesterol levels.'],
-  ['NLML: Non-Lactose Meal', 'Dairy-free alternatives only.'],
-  ['HNML: Hindu Meal', 'No beef or pork products used.'],
-  ['KSML: Kosher Meal', 'Prepared under rabbinical supervision.'],
-  ['MOML: Muslim Meal', 'Halal, no pork/alcohol used.'],
-  ['VLML: Vegetarian Lacto-Ovo', 'Contains dairy/eggs, no meat.'],
-  ['VGML: Vegetarian Vegan', 'Strict plant-based ingredients.'],
-  ['RVML: Raw Vegetarian', 'Uncooked fruit and vegetables.'],
+  { code: 'AVML', name: 'AVML: Asian Vegetarian', desc: 'Indian style vegetarian, no meat/fish/egg.', price: 12 },
+  { code: 'BLML', name: 'BLML: Bland Meal', desc: 'Less fiber, non-spicy preparation.', price: 12 },
+  { code: 'DBML', name: 'DBML: Diabetic Meal', desc: 'Low sugar, low fat formulation.', price: 12 },
+  { code: 'GFML', name: 'GFML: Gluten-Free Meal', desc: 'No gluten-containing ingredients used.', price: 14 },
+  { code: 'LFML', name: 'LFML: Low Fat Meal', desc: 'Low fat / low cholesterol levels.', price: 12 },
+  { code: 'NLML', name: 'NLML: Non-Lactose Meal', desc: 'Dairy-free alternatives only.', price: 14 },
+  { code: 'HNML', name: 'HNML: Hindu Meal', desc: 'No beef or pork products used.', price: 12 },
+  { code: 'KSML', name: 'KSML: Kosher Meal', desc: 'Prepared under rabbinical supervision.', price: 18 },
+  { code: 'MOML', name: 'MOML: Muslim Meal', desc: 'Halal, no pork/alcohol used.', price: 12 },
+  { code: 'VLML', name: 'VLML: Vegetarian Lacto-Ovo', desc: 'Contains dairy/eggs, no meat.', price: 12 },
+  { code: 'VGML', name: 'VGML: Vegetarian Vegan', desc: 'Strict plant-based ingredients.', price: 14 },
+  { code: 'RVML', name: 'RVML: Raw Vegetarian', desc: 'Uncooked fruit and vegetables.', price: 14 },
 ];
 
 const baggageOptions = [
-  { code: 'BG20', name: 'Extra Baggage 20 kg', weight: '20 kg', desc: 'Medium stays', price: 1450 },
-  { code: 'BG25', name: 'Extra Baggage 25 kg', weight: '25 kg', desc: 'Long trips', price: 1850 },
-  { code: 'BG30', name: 'Extra Baggage 30 kg', weight: '30 kg', desc: 'Comprehensive', price: 2200 },
+  { code: 'BAG10', name: 'Extra Baggage 10 kg', weight: '10 kg', desc: 'Small top-up', price: 20 },
+  { code: 'BAG20', name: 'Extra Baggage 20 kg', weight: '20 kg', desc: 'Medium stays', price: 40 },
+  { code: 'BAG25', name: 'Extra Baggage 25 kg', weight: '25 kg', desc: 'Long trips', price: 50 },
+  { code: 'BAG30', name: 'Extra Baggage 30 kg', weight: '30 kg', desc: 'Comprehensive', price: 60 },
 ];
 
 const assistanceOptions = [
@@ -86,14 +97,14 @@ const assistanceOptions = [
 ];
 
 const loungeOptions = [
-  { code: 'SLV-WING', name: 'The Silver Wing', meta: 'Flagship lounge - BKK', price: 2800, image: 'https://images.unsplash.com/photo-1617104678098-de229db51175?q=80&w=900&auto=format&fit=crop' },
-  { code: 'ZENITH', name: 'Zenith Club', meta: 'Boutique lounge - BKK', price: 1800, image: 'https://images.unsplash.com/photo-1600566753151-384129cf4e3e?q=80&w=900&auto=format&fit=crop' },
+  { code: 'SLV-WING', name: 'The Silver Wing', meta: 'Flagship lounge - BKK', price: 95, image: 'https://images.unsplash.com/photo-1617104678098-de229db51175?q=80&w=900&auto=format&fit=crop' },
+  { code: 'ZENITH', name: 'Zenith Club', meta: 'Boutique lounge - BKK', price: 60, image: 'https://images.unsplash.com/photo-1600566753151-384129cf4e3e?q=80&w=900&auto=format&fit=crop' },
 ];
 
 const insuranceOptions = [
-  { code: 'INS-BASIC', name: 'Basic', desc: 'Essential medical and luggage coverage for your journey.', price: 850 },
-  { code: 'INS-PREMIUM', name: 'Premium', desc: 'Comprehensive protection including flight delay and trip cancellation.', price: 1420 },
-  { code: 'INS-ULTIMATE', name: 'Ultimate', desc: 'Maximum peace of mind with 24/7 global concierge and unlimited medical.', price: 2450 },
+  { code: 'INS-BASIC', name: 'Basic', desc: 'Essential medical and luggage coverage for your journey.', price: 20 },
+  { code: 'INS-PREMIUM', name: 'Premium', desc: 'Comprehensive protection including flight delay and trip cancellation.', price: 35 },
+  { code: 'INS-ULTIMATE', name: 'Ultimate', desc: 'Maximum peace of mind with 24/7 global concierge and unlimited medical.', price: 55 },
 ];
 
 interface SelectedAddon {
@@ -158,12 +169,27 @@ interface AddOnsRouteState {
   passengerIds?: string[];
   outboundFlight?: any;
   inboundFlight?: any | null;
+  existingAddons?: BookingAddon[];
 }
+
+const getBaggageWeightFromCode = (code?: string): number => {
+  const match = String(code || '').match(/\d+/);
+  return match ? Number(match[0]) : 0;
+};
+
+const getBaggageWeightFromAddon = (addon: Pick<BookingAddon, 'addon_code' | 'addon_detail'>): number => {
+  const fromCode = getBaggageWeightFromCode(addon.addon_code);
+  if (fromCode > 0) return fromCode;
+
+  const match = String(addon.addon_detail || '').match(/(\d+)\s*kg/i);
+  return match ? Number(match[1]) : 0;
+};
 
 const BookingSummary = ({ 
   compact = false,
   routeState,
   selectedAddons,
+  existingAddons = [],
   fareTotal,
   addOnsTotal,
   currencyCode,
@@ -174,6 +200,7 @@ const BookingSummary = ({
   compact?: boolean;
   routeState?: AddOnsRouteState;
   selectedAddons: SelectedAddon[];
+  existingAddons?: BookingAddon[];
   fareTotal: number;
   addOnsTotal: number;
   currencyCode: string;
@@ -183,6 +210,13 @@ const BookingSummary = ({
 }) => {
   const outboundFlight = routeState?.selectedFlight || routeState?.outboundFlight;
   const passengers = routeState?.passengers || [];
+  const paidMeals = existingAddons.filter((addon) => addon.addon_type === 'MEAL');
+  const paidBaggageWeight = existingAddons
+    .filter((addon) => addon.addon_type === 'BAGGAGE')
+    .reduce((total, addon) => total + getBaggageWeightFromAddon(addon), 0);
+  const newBaggageWeight = selectedAddons
+    .filter((addon) => addon.type === 'BAGGAGE')
+    .reduce((total, addon) => total + getBaggageWeightFromCode(addon.code), 0);
   const passengerSummary = passengers.length
     ? passengers.map((passenger) => {
         const name = [passenger.pi_title, passenger.pi_first_name, passenger.pi_last_name].filter(Boolean).join(' ');
@@ -217,6 +251,13 @@ const BookingSummary = ({
       <div>
         <p className="mb-3 text-xs font-black uppercase tracking-wide text-slate-500">Selected Add-ons</p>
         <div className="space-y-2 text-sm font-semibold text-slate-700">
+          {existingAddons.length > 0 && (
+            <div className="rounded border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-600">
+              Current paid add-ons: {paidMeals.length} meal(s)
+              {paidBaggageWeight > 0 ? `, ${paidBaggageWeight}kg baggage` : ''}
+              {newBaggageWeight > 0 ? ` -> ${paidBaggageWeight + newBaggageWeight}kg after payment` : ''}
+            </div>
+          )}
           {selectedAddons.length === 0 ? (
             <div className="text-slate-500">No add-ons selected</div>
           ) : selectedAddons.map((addon) => (
@@ -296,7 +337,7 @@ const MealContent = ({
             {option.price > 0 ? `${option.currencyCode || currencyCode} ${option.price.toLocaleString()}` : 'Free of charge'}
           </span>
         </button>
-      )})}
+      ))}
     </div>
   </div>
 );
@@ -373,7 +414,7 @@ const LoungeContent = ({
             <h3 className="text-3xl font-black text-[#073b70]">{option.name}</h3>
             <p className="mt-2 text-xs font-black uppercase tracking-widest text-slate-500">{option.meta}</p>
             <p className="mt-4 min-h-20 text-base font-semibold leading-7 text-slate-600">A quiet sanctuary with premium dining, work spaces, and calm pre-flight service.</p>
-            <button type="button" onClick={() => onSelect({ type: 'LOUNGE', code: option.code, name: option.name, price: option.price })} className="mt-5 h-12 w-full border border-[#073b70] bg-[#073b70] text-sm font-black tracking-widest text-white">THB {option.price.toLocaleString()}</button>
+            <button type="button" onClick={() => onSelect({ type: 'LOUNGE', code: option.code, name: option.name, price: option.price })} className="mt-5 h-12 w-full border border-[#073b70] bg-[#073b70] text-sm font-black tracking-widest text-white">{formatUsd(option.price)}</button>
           </div>
         </article>
       ))}
@@ -395,7 +436,7 @@ const InsuranceContent = ({
           {index === 1 && <span className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 bg-amber-300 px-4 py-1 text-[10px] font-black uppercase text-white">Recommended</span>}
           <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">{option.name}</h3>
           <p className="mt-5 min-h-20 text-base font-semibold text-slate-600">{option.desc}</p>
-          <p className="mt-4 text-sm text-slate-500">THB <span className="text-4xl font-black text-[#073b70]">{option.price.toLocaleString()}</span></p>
+          <p className="mt-4 text-sm text-slate-500">USD <span className="text-4xl font-black text-[#073b70]">{option.price.toLocaleString()}</span></p>
           <button type="button" onClick={() => onSelect({ type: 'INSURANCE', code: option.code, name: `${option.name} Insurance`, price: option.price })} className={`mt-5 h-11 w-full border border-[#073b70] text-sm font-black ${selectedCode === option.code || index === 1 ? 'bg-[#073b70] text-white' : 'text-[#073b70]'}`}>Select</button>
         </article>
       ))}
@@ -441,7 +482,10 @@ function AddOns(): React.JSX.Element {
   const inboundFlight = routeState.returnFlight || routeState.inboundFlight;
   const fareTotal = useMemo(() => getFlightPrice(outboundFlight) + getFlightPrice(inboundFlight), [outboundFlight, inboundFlight]);
   const addOnsTotal = useMemo(() => selectedAddons.reduce((total, addon) => total + addon.price * (addon.quantity || 1), 0), [selectedAddons]);
-  const currencyCode = routeState.selectedFlight?.currency_code || routeState.outboundFlight?.currency_code || 'USD';
+  const currencyCode = PRIMARY_CURRENCY_CODE;
+  const contactEmail = routeState.passengers?.find(passenger => passenger.pi_contact_email)?.pi_contact_email;
+  const existingAddons = routeState.existingAddons || [];
+  const summaryFareTotal = routeState.managedBooking ? 0 : fareTotal;
 
   const getBackendPrice = (item: any): number => (
     toNumberOrZero(item?.price ?? item?.addon_price ?? item?.meal_price ?? item?.amount ?? item?.extra_price)
@@ -463,6 +507,14 @@ function AddOns(): React.JSX.Element {
     : baggageOptions.map((option) => ({ ...option, currencyCode: 'THB' }));
 
   const selectAddon = (addon: SelectedAddon) => {
+    if (routeState.managedBooking && addon.type === 'MEAL') {
+      setSelectedAddons((current) => {
+        if (current.some((item) => item.type === 'MEAL' && item.code === addon.code)) return current;
+        return [...current, addon];
+      });
+      return;
+    }
+
     setSelectedAddons((current) => [...current.filter((item) => item.type !== addon.type), addon]);
   };
 
@@ -591,13 +643,19 @@ function AddOns(): React.JSX.Element {
       console.log('   - Inbound (returnFlight):', inboundPrice);
       console.log('   - Total:', totalPrice);
 
-      // Get user email from authenticated user context
-      const userEmail = user?.email_address || 'user@example.com';
+      const userEmail = user?.email_address || contactEmail;
 
-      console.log('👤 Using authenticated email for booking:', userEmail);
+      if (!userEmail) {
+        setErrorMessage('Passenger contact email is required for guest booking.');
+        setIsCreatingBooking(false);
+        return;
+      }
+
+      console.log('👤 Using booking contact email:', userEmail);
 
       if (routeState.managedBooking && existingBookingId) {
         let currentAddonWarning = '';
+        const pendingAddonIds: string[] = [];
 
         if (selectedAddons.length > 0) {
           const firstPassengerId = routeState.passengerIds[0];
@@ -605,16 +663,7 @@ function AddOns(): React.JSX.Element {
 
           try {
             await Promise.all(selectedAddons.map(async (addon) => {
-              if (addon.type === 'BAGGAGE') {
-                await addonApi.selectBaggage({
-                  booking_id: existingBookingId,
-                  passenger_id: firstPassengerId,
-                  selected_flight_id: selectedFlightId,
-                  baggage_code: addon.code,
-                });
-              }
-
-              await addonApi.addAddon({
+              const response = await addonApi.addAddon({
                 booking_id: existingBookingId,
                 passenger_id: firstPassengerId,
                 selected_flight_id: selectedFlightId,
@@ -624,7 +673,12 @@ function AddOns(): React.JSX.Element {
                 quantity: addon.quantity || 1,
                 addon_price: addon.price,
                 currency_code: addon.currencyCode || currencyCode,
+                addon_status: 'PENDING_PAYMENT',
               });
+
+              if (response.data?.addon_id) {
+                pendingAddonIds.push(response.data.addon_id);
+              }
             }));
           } catch (addonError) {
             console.warn('Could not save add-ons for managed booking:', addonError);
@@ -633,19 +687,26 @@ function AddOns(): React.JSX.Element {
           }
         }
 
+        const paymentState = {
+          ...routeState,
+          booking_id: existingBookingId,
+          selectedAddons,
+          pendingAddonIds,
+          postBookingAddonPayment: true,
+          fareTotal: 0,
+          addOnsTotal,
+          totalPaymentAmount: addOnsTotal,
+          currency_code: currencyCode,
+          outboundFlight,
+          inboundFlight,
+          user_email_address: userEmail,
+          addonWarning: currentAddonWarning,
+        };
+
+        savePaymentCheckoutState(paymentState);
+
         navigate(addOnsTotal > 0 ? '/payment' : '/booking-confirmed', {
-          state: {
-            ...routeState,
-            booking_id: existingBookingId,
-            selectedAddons,
-            fareTotal: 0,
-            addOnsTotal,
-            totalPaymentAmount: addOnsTotal,
-            currency_code: currencyCode,
-            outboundFlight,
-            inboundFlight,
-            addonWarning: currentAddonWarning,
-          },
+          state: paymentState,
         });
         return;
       }
@@ -706,23 +767,27 @@ function AddOns(): React.JSX.Element {
         }
       }
 
-      // Navigate to payment with booking data
+      const paymentState = {
+        ...routeState,
+        booking: response.booking,
+        booking_id: bookingId,
+        pnrReference: response.booking.pnr_reference,
+        bookingStatus: response.booking.booking_status,
+        totalPaymentAmount: totalPrice,
+        currency_code: currencyCode,
+        outboundFlight,
+        inboundFlight,
+        selectedAddons,
+        fareTotal,
+        addOnsTotal,
+        user_email_address: userEmail,
+        addonWarning: currentAddonWarning,
+      };
+
+      savePaymentCheckoutState(paymentState);
+
       navigate('/payment', {
-        state: {
-          ...routeState,
-          booking: response.booking,
-          booking_id: bookingId,
-          pnrReference: response.booking.pnr_reference,
-          bookingStatus: response.booking.booking_status,
-          totalPaymentAmount: totalPrice,  // Use calculated total, not backend response
-          currency_code: currencyCode,
-          outboundFlight,
-          inboundFlight,
-          selectedAddons,
-          fareTotal,
-          addOnsTotal,
-          addonWarning: currentAddonWarning,
-        },
+        state: paymentState,
       });
     } catch (error) {
       console.error('❌ Failed to create booking:', error);
@@ -777,7 +842,8 @@ function AddOns(): React.JSX.Element {
           compact={personalized} 
           routeState={routeState}
           selectedAddons={selectedAddons}
-          fareTotal={fareTotal}
+          existingAddons={existingAddons}
+          fareTotal={summaryFareTotal}
           addOnsTotal={addOnsTotal}
           currencyCode={currencyCode}
           isCreatingBooking={isCreatingBooking}

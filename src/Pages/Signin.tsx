@@ -31,6 +31,12 @@ const AppleIcon = () => (
   </svg>
 );
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+
+const startFacebookLogin = () => {
+  window.location.href = `${API_BASE_URL.replace(/\/$/, '')}/auth/facebook`;
+};
+
 function Signin(): React.JSX.Element {
   const [emailAddress, setEmailAddress] = useState('');
   const [password, setPassword] = useState('');
@@ -149,14 +155,14 @@ function Signin(): React.JSX.Element {
 
           <div className="space-y-4">
             {[
-              ['Continue with Line', <LineIcon key="line" />],
-              ['Continue with Google', <GoogleIcon key="google" />],
-              ['Continue with Facebook', <FacebookIcon key="facebook" />],
-              ['Continue with Apple', <AppleIcon key="apple" />],
-            ].map(([label, icon]) => (
-              <button key={label as string} type="button" className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white text-base font-semibold text-slate-700 transition hover:border-blue-500 hover:text-[#063b70]">
-                {icon}
-                {label}
+              { label: 'Continue with Line', icon: <LineIcon key="line" /> },
+              { label: 'Continue with Google', icon: <GoogleIcon key="google" /> },
+              { label: 'Continue with Facebook', icon: <FacebookIcon key="facebook" />, onClick: startFacebookLogin },
+              { label: 'Continue with Apple', icon: <AppleIcon key="apple" /> },
+            ].map((item) => (
+              <button key={item.label} type="button" onClick={item.onClick} className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white text-base font-semibold text-slate-700 transition hover:border-blue-500 hover:text-[#063b70]">
+                {item.icon}
+                {item.label}
               </button>
             ))}
           </div>
