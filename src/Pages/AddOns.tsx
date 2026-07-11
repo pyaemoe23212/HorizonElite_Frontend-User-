@@ -325,19 +325,20 @@ const MealContent = ({
     <div className="grid gap-4 md:grid-cols-3">
       {options.map((option) => {
         return (
-        <button
-          key={option.code}
-          type="button"
-          onClick={() => onSelect({ type: 'MEAL', code: option.code, name: option.name, price: option.price, currencyCode: option.currencyCode })}
-          className={`min-h-24 rounded border p-4 text-left ${selectedCode === option.code ? 'border-[#073b70] bg-blue-50' : 'border-slate-300 bg-white'}`}
-        >
-          <span className="block text-sm font-black text-[#073b70]">{option.name}</span>
-          <span className="mt-1 block text-xs font-semibold text-slate-500">{option.desc}</span>
-          <span className="mt-3 block text-xs font-black uppercase text-cyan-600">
-            {option.price > 0 ? `${option.currencyCode || currencyCode} ${option.price.toLocaleString()}` : 'Free of charge'}
-          </span>
-        </button>
-      ))}
+          <button
+            key={option.code}
+            type="button"
+            onClick={() => onSelect({ type: 'MEAL', code: option.code, name: option.name, price: option.price, currencyCode: option.currencyCode })}
+            className={`min-h-24 rounded border p-4 text-left ${selectedCode === option.code ? 'border-[#073b70] bg-blue-50' : 'border-slate-300 bg-white'}`}
+          >
+            <span className="block text-sm font-black text-[#073b70]">{option.name}</span>
+            <span className="mt-1 block text-xs font-semibold text-slate-500">{option.desc}</span>
+            <span className="mt-3 block text-xs font-black uppercase text-cyan-600">
+              {option.price > 0 ? `${option.currencyCode || currencyCode} ${option.price.toLocaleString()}` : 'Free of charge'}
+            </span>
+          </button>
+        );
+      })}
     </div>
   </div>
 );
@@ -497,9 +498,9 @@ function AddOns(): React.JSX.Element {
 
   const mealDisplayOptions: PricedMealOption[] = backendMeals.length > 0
     ? backendMeals
-    : mealOptions.map(([name, desc]) => {
-        const [code] = name.split(':');
-        return { code, name, desc, price: 0, currencyCode };
+    : mealOptions.map((option) => {
+        const [code] = option.code.split(':');
+        return { code, name: option.name, desc: option.desc, price: 0, currencyCode };
       });
 
   const baggageDisplayOptions: PricedBaggageOption[] = backendBaggage.length > 0
