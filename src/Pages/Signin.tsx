@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { useAuth } from '../contexts/AuthContext';
-import type { User } from '../contexts/AuthContext';
+import { useAuth, type User } from '../contexts/useAuth';
 import { api } from '../Services/api';
 
 const ArrowLeftIcon = () => (

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { useAuth, type User } from '../contexts/AuthContext';
+import { useAuth, type User } from '../contexts/useAuth';
 
 const decodeRedirectUser = (value: string): User => {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');

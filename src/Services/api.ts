@@ -960,6 +960,35 @@ export const ticketApi = {
     axiosInstance.post(`/tickets/${bookingId}/email`),
 };
 
+export const boardingPassApi = {
+  download: async (bookingId: string): Promise<Blob> => {
+    const response = await axiosInstance.get(`/boarding-passes/${bookingId}`, { responseType: 'blob' });
+    return response as unknown as Blob;
+  },
+  sendEmail: (bookingId: string): Promise<ApiMessageDataResponse<{ recipient_email: string; pnr_reference: string }>> =>
+    axiosInstance.post(`/boarding-passes/${bookingId}/email`),
+};
+
+export interface CheckInEligibility {
+  eligible: boolean;
+  already_checked_in?: boolean;
+  reason: string;
+  opens_at?: string;
+}
+
+export interface CheckInResult {
+  details: ManageBookingDetails;
+  eligibility: CheckInEligibility;
+  checked_in_at: string | null;
+}
+
+export const checkInApi = {
+  lookup: (pnr_reference: string, passenger_last_name: string): Promise<ApiMessageDataResponse<CheckInResult>> =>
+    axiosInstance.post('/check-in/lookup', { pnr_reference, passenger_last_name }),
+  confirm: (pnr_reference: string, passenger_last_name: string): Promise<ApiMessageDataResponse<CheckInResult>> =>
+    axiosInstance.post('/check-in/confirm', { pnr_reference, passenger_last_name }),
+};
+
 export const addonApi = {
   /**
    * Save a selected add-on for a booking passenger.

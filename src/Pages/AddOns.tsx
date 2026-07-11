@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BadgeCheck, Plane } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { addonApi, bookingApi, mealApi, seatApi, type BookingAddon, type CreateBookingRequest } from '../Services/api';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 
 type AddOnKey = 'seat' | 'meal' | 'baggage' | 'assistance' | 'lounge' | 'insurance';
 

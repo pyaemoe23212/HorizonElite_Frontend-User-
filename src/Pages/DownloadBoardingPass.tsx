@@ -1,14 +1,52 @@
 import React from "react";
 import { BadgeCheck, Download, Luggage as Suitcase, Mail, Plane, Printer } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
+import { boardingPassApi } from "../Services/api";
 
 function DownloadBoardingPass(): React.JSX.Element {
+  const { state } = useLocation();
+  const bookingState = (state ?? {}) as any;
+  const bookingId = bookingState.bookingId || bookingState.booking_id || bookingState.booking?.booking_id;
+  const pnr = bookingState.pnrReference || bookingState.booking?.pnr_reference || "Not available";
+  const passengers = bookingState.passengers || bookingState.booking?.passengers || [];
+  const passenger = passengers[0] || {};
+  const flight = bookingState.outboundFlight || bookingState.selectedFlight || {};
+  const passengerName = [passenger.pi_title, passenger.pi_first_name, passenger.pi_last_name].filter(Boolean).join(" ") || "Not available";
+  const [isDownloading, setIsDownloading] = React.useState(false);
+  const [isSending, setIsSending] = React.useState(false);
+  const [message, setMessage] = React.useState("");
+  const [error, setError] = React.useState("");
+
+  const handleDownload = async () => {
+    if (!bookingId) return setError("Missing booking ID. Please open this page from your confirmed booking.");
+    try {
+      setIsDownloading(true); setError(""); setMessage("");
+      const blob = await boardingPassApi.download(bookingId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url; link.download = `Horizon-Elite-Boarding-Pass-${pnr}.pdf`;
+      document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+      setMessage("Boarding pass PDF downloaded successfully.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Failed to download boarding pass."); }
+    finally { setIsDownloading(false); }
+  };
+
+  const handleEmail = async () => {
+    if (!bookingId) return setError("Missing booking ID. Please open this page from your confirmed booking.");
+    try {
+      setIsSending(true); setError(""); setMessage("");
+      const response = await boardingPassApi.sendEmail(bookingId);
+      setMessage(`Boarding pass sent to ${response.data.recipient_email}.`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Failed to email boarding pass."); }
+    finally { setIsSending(false); }
+  };
   return (
     <main className="min-h-screen bg-slate-100 px-6 py-14">
       <div className="mx-auto max-w-7xl">
         {/* Back */}
         <Link
-          to="/services"
+          to="/additional-services?flow=booking"
+          state={bookingState}
           className="mb-8 inline-flex items-center gap-2 text-[#073b70] hover:underline"
         >
           ← Back
@@ -32,7 +70,7 @@ function DownloadBoardingPass(): React.JSX.Element {
               <div className="border-r border-dashed border-slate-300 p-6">
                 <Info label="Passenger">
                   <p className="font-bold text-[#073b70]">
-                    Mr. TunBhone PyaeMoe
+                    {passengerName}
                   </p>
                   <p>Adult</p>
                 </Info>
@@ -40,7 +78,7 @@ function DownloadBoardingPass(): React.JSX.Element {
                 <div className="mt-8">
                   <Info
                     label="Booking Ref (PNR)"
-                    value="HZN7XL"
+                    value={pnr}
                   />
                 </div>
 
@@ -65,7 +103,7 @@ function DownloadBoardingPass(): React.JSX.Element {
                       </p>
 
                       <p className="font-bold text-[#073b70]">
-                        HE 742
+                        {flight.flight_number || "Not available"}
                       </p>
                     </div>
 
@@ -75,7 +113,7 @@ function DownloadBoardingPass(): React.JSX.Element {
                       </p>
 
                       <p className="font-bold text-[#073b70]">
-                        June 18, 2026
+                        {flight.departure_datetime ? new Date(flight.departure_datetime).toLocaleDateString() : "Not available"}
                       </p>
                     </div>
                   </div>
@@ -83,13 +121,13 @@ function DownloadBoardingPass(): React.JSX.Element {
                   <div className="my-8 flex items-center justify-between">
                     <div>
                       <p className="text-3xl font-black text-[#073b70]">
-                        RGN
+                        {flight.origin_airport_code || flight.departure_airport || "--"}
                       </p>
 
                       <p>Yangon</p>
 
                       <p className="mt-2 font-bold">
-                        09:30 AM
+                        {flight.departure_datetime ? new Date(flight.departure_datetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--"}
                       </p>
                     </div>
 
@@ -103,13 +141,13 @@ function DownloadBoardingPass(): React.JSX.Element {
 
                     <div className="text-right">
                       <p className="text-3xl font-black text-[#073b70]">
-                        BKK
+                        {flight.destination_airport_code || flight.arrival_airport || "--"}
                       </p>
 
                       <p>Bangkok</p>
 
                       <p className="mt-2 font-bold">
-                        11:15 AM
+                        {flight.arrival_datetime ? new Date(flight.arrival_datetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--"}
                       </p>
                     </div>
                   </div>
@@ -168,17 +206,20 @@ function DownloadBoardingPass(): React.JSX.Element {
 
             {/* Buttons */}
             <div className="mt-8 flex flex-wrap gap-4">
-              <button className="inline-flex items-center gap-2 rounded bg-[#073b70] px-8 py-4 font-bold text-white hover:bg-[#052b52]">
+              {message && <p className="w-full rounded border border-green-300 bg-green-50 p-3 font-semibold text-green-700">{message}</p>}
+              {error && <p className="w-full rounded border border-red-300 bg-red-50 p-3 font-semibold text-red-700">{error}</p>}
+              {!bookingId && <p className="w-full rounded border border-amber-300 bg-amber-50 p-3 font-semibold text-amber-800">Open Boarding Pass from your confirmed booking to enable download and email.</p>}
+              <button type="button" onClick={handleDownload} disabled={!bookingId || isDownloading} className="inline-flex items-center gap-2 rounded bg-[#073b70] px-8 py-4 font-bold text-white hover:bg-[#052b52] disabled:cursor-not-allowed disabled:opacity-60">
                 <Download size={18} />
-                Download Boarding Pass PDF
+                {isDownloading ? "Downloading..." : "Download Boarding Pass PDF"}
               </button>
 
-              <button className="inline-flex items-center gap-2 rounded border border-amber-300 bg-white px-8 py-4 font-bold text-amber-700 hover:bg-amber-50">
+              <button type="button" onClick={handleEmail} disabled={!bookingId || isSending} className="inline-flex items-center gap-2 rounded border border-amber-300 bg-white px-8 py-4 font-bold text-amber-700 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60">
                 <Mail size={18} />
-                Send Boarding Pass to Email
+                {isSending ? "Sending..." : "Send Boarding Pass to Email"}
               </button>
 
-              <button className="inline-flex items-center gap-2 font-bold text-[#073b70] hover:underline">
+              <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-2 font-bold text-[#073b70] hover:underline">
                 <Printer size={18} />
                 Print Boarding Pass
               </button>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { useNavigate } from 'react-router';
-import { useTranslation } from '../contexts/TranslationContext';
+import { useTranslation } from '../contexts/useTranslation';
 import type { SearchFlightRequest, FlightSegment } from '../Services/api';
 import { api } from '../Services/api';
 

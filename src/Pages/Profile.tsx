@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import { api, type ProfileResponse } from '../Services/api';
 
 const menuItems = [

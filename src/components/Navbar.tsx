@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { useAuth } from '../contexts/AuthContext';
-import { useTranslation } from '../contexts/TranslationContext';  // ← NEW
+import { useAuth } from '../contexts/useAuth';
+import { useTranslation } from '../contexts/useTranslation';
 import { api } from '../Services/api';
 import type { Language } from '../Services/api';
 

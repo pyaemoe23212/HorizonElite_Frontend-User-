@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router';
-import { useTranslation } from '../contexts/TranslationContext';
+import { useTranslation } from '../contexts/useTranslation';
 
 const originalTextNodes = new WeakMap<Text, string>();
 const TRANSLATABLE_ATTRIBUTES = ['placeholder', 'title', 'aria-label'];

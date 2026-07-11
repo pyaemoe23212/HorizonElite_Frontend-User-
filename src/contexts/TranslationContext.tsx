@@ -1,17 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../Services/api';
 import type { BulkTranslateRequest, TranslateRequest } from '../Services/api';
-
-interface TranslationContextType {
-  currentLanguage: string;  // Always lowercase: 'en', 'th', 'es', etc.
-  setLanguage: (lang: string) => Promise<void>;
-  translate: (text: string) => Promise<string>;
-  translateMany: (texts: string[]) => Promise<Map<string, string>>;
-  isTranslating: boolean;
-  setIsTranslating: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-const TranslationContext = createContext<TranslationContextType | undefined>(undefined);
+import { TranslationContext } from './translationContextValue';
 
 // Normalize language code to lowercase for consistency
 const normalizeLanguage = (lang: string): string => lang.toLowerCase();
@@ -116,12 +106,4 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
       {children}
     </TranslationContext.Provider>
   );
-}
-
-export function useTranslation() {
-  const context = useContext(TranslationContext);
-  if (!context) {
-    throw new Error('useTranslation must be used within TranslationProvider');
-  }
-  return context;
 }

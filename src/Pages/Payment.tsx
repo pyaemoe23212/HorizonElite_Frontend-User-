@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { BadgeCheck, Plane } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import { addonApi, duffelOrderApi, paymentApi, type CreatePaymentRequest } from '../Services/api';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 
 type PaymentMethod = 'card' | 'qr' | 'banking' | 'wallet';
 
