@@ -10,6 +10,7 @@ import Signin from "../Pages/Signin";
 import Signup from "../Pages/Signup";
 import SocialAuthCallback from "../Pages/SocialAuthCallback";
 import VerifyEmail from "../Pages/VerifyEmail";
+import Services from "../Pages/Services";
 import AdditionalServices from "../Pages/AdditionalServices";
 import ManageBooking from "../Pages/ManageBooking";
 import FlightStatus from "../Pages/FlightStatus";
@@ -75,6 +76,10 @@ const router = createBrowserRouter([
       {
         path: "/booking-confirmed",
         Component: BookingConfirmed
+      },
+      {
+        path: "/services",
+        Component: Services
       },
       {
         path: "/additional-services",

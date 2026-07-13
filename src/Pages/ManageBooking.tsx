@@ -111,6 +111,11 @@ function ManageBooking(): React.JSX.Element {
     navigate("/download-e-ticket", { state: routeState });
   };
 
+  const goToBoardingPass = () => {
+    if (!routeState) return;
+    navigate("/download-boarding-pass", { state: routeState });
+  };
+
   return (
     <main className="min-h-screen bg-slate-100 px-6 py-14">
       <div className="mx-auto max-w-7xl">
@@ -208,11 +213,11 @@ function ManageBooking(): React.JSX.Element {
                     Continue with add-ons or download your travel documents.
                   </p>
 
-                  <div className="flex flex-wrap gap-4">
+                  <div className="grid gap-4 md:grid-cols-3">
                     <button
                       type="button"
                       onClick={goToAddOns}
-                      className="flex-1 rounded border border-[#073b70] py-3 font-semibold text-[#073b70] hover:bg-slate-50"
+                      className="rounded border border-[#073b70] px-4 py-3 font-semibold text-[#073b70] hover:bg-slate-50"
                     >
                       <span className="inline-flex items-center justify-center gap-2">
                         <Suitcase size={18} />
@@ -223,11 +228,22 @@ function ManageBooking(): React.JSX.Element {
                     <button
                       type="button"
                       onClick={goToETicket}
-                      className="flex-1 rounded border border-[#073b70] py-3 font-semibold text-[#073b70] hover:bg-slate-50"
+                      className="rounded border border-[#073b70] px-4 py-3 font-semibold text-[#073b70] hover:bg-slate-50"
                     >
                       <span className="inline-flex items-center justify-center gap-2">
                         <Download size={18} />
                         Download E-ticket
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={goToBoardingPass}
+                      className="rounded border border-[#073b70] px-4 py-3 font-semibold text-[#073b70] hover:bg-slate-50"
+                    >
+                      <span className="inline-flex items-center justify-center gap-2">
+                        <Download size={18} />
+                        Boarding Pass
                       </span>
                     </button>
                   </div>

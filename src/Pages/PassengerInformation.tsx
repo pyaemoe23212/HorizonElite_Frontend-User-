@@ -150,15 +150,15 @@ const getBirthDateRangeForType = (typeCode: string) => {
 
   if (typeCode === 'ADT') {
     return {
-      maxDate: getYearsAgoDate(18),
+      maxDate: getYearsAgoDate(12),
       minDate: addYears(todayAtStart(), -120),
     };
   }
 
   if (typeCode === 'CHD') {
     return {
-      maxDate: yesterday,
-      minDate: getDateAfterYearsAgo(18),
+      maxDate: getYearsAgoDate(2),
+      minDate: getDateAfterYearsAgo(12),
     };
   }
 
@@ -420,14 +420,14 @@ function PassengerInformation(): React.JSX.Element {
       setErrorMessage('Date of birth must be a past date');
       return false;
     }
-    if (formData.pi_passenger_type_code === 'ADT' && (age === null || age < 18)) {
-      console.warn('⚠️ Validation failed: Adult passenger is under 18');
-      setErrorMessage('Adult passengers must be at least 18 years old');
+    if (formData.pi_passenger_type_code === 'ADT' && (age === null || age < 12)) {
+      console.warn('⚠️ Validation failed: Adult passenger is under 12');
+      setErrorMessage('Adult passengers must be at least 12 years old');
       return false;
     }
-    if (formData.pi_passenger_type_code === 'CHD' && (age === null || age >= 18)) {
-      console.warn('⚠️ Validation failed: Child passenger is 18 or older');
-      setErrorMessage('Child passengers must be under 18 years old');
+    if (formData.pi_passenger_type_code === 'CHD' && (age === null || age < 2 || age >= 12)) {
+      console.warn('⚠️ Validation failed: Child passenger age is outside 2-11');
+      setErrorMessage('Child passengers must be between 2 and 11 years old');
       return false;
     }
     if (formData.pi_passenger_type_code === 'INF' && (age === null || age >= 2)) {

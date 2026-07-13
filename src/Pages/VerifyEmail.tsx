@@ -2,6 +2,8 @@ import React from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { api } from '../Services/api';
 
+const verificationRequests = new Map<string, Promise<{ message: string }>>();
+
 function VerifyEmail(): React.JSX.Element {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
@@ -9,7 +11,7 @@ function VerifyEmail(): React.JSX.Element {
   const [message, setMessage] = React.useState('Verifying your email...');
 
   React.useEffect(() => {
-    let isMounted = true;
+    let isActive = true;
 
     const verify = async () => {
       if (!token) {
@@ -19,14 +21,17 @@ function VerifyEmail(): React.JSX.Element {
       }
 
       try {
-        const response = await api.verifyEmailToken(token);
+        const request = verificationRequests.get(token) || api.verifyEmailToken(token);
+        verificationRequests.set(token, request);
 
-        if (!isMounted) return;
+        const response = await request;
+
+        if (!isActive) return;
 
         setStatus('success');
         setMessage(response.message || 'Email verified successfully. You can now sign in.');
       } catch (error: unknown) {
-        if (!isMounted) return;
+        if (!isActive) return;
 
         setStatus('error');
         setMessage(error instanceof Error ? error.message : 'Email verification failed.');
@@ -36,7 +41,7 @@ function VerifyEmail(): React.JSX.Element {
     void verify();
 
     return () => {
-      isMounted = false;
+      isActive = false;
     };
   }, [token]);
 
