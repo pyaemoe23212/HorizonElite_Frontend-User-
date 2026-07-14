@@ -3,8 +3,8 @@ import { BadgeCheck, Mail, Plane, X } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { Link, useLocation, useNavigate } from 'react-router';
-import type { SelectedFlightResponse, CreatePassengerRequest, Passenger } from '../Services/api';
-import { passengerApi } from '../Services/api';
+import type { SelectedFlightResponse, CreatePassengerRequest, Passenger, SavedPassenger } from '../Services/api';
+import { passengerApi, profileApi } from '../Services/api';
 import {
   isValidPhoneNumber,
   parsePhoneNumber,
@@ -99,7 +99,12 @@ const toDateString = (date: Date | null) => {
   return `${year}-${month}-${day}`;
 };
 
-const fromDateString = (value: string) => value ? new Date(`${value}T00:00:00`) : null;
+const fromDateString = (value?: string | null) => {
+  if (!value) return null;
+  const normalizedValue = String(value).slice(0, 10);
+  const parsed = new Date(`${normalizedValue}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
 
 const todayAtStart = () => {
   const today = new Date();
@@ -124,6 +129,15 @@ const getPassengerTypeLabel = (typeCode: string) => {
   if (typeCode === 'CHD') return 'Child';
   if (typeCode === 'INF') return 'Infant';
   return 'Adult';
+};
+
+const getPassengerAgeValidationMessage = (typeCode: string, birthDateValue: string) => {
+  const age = calculateAge(birthDateValue);
+  if (age === null) return 'date of birth missing';
+  if (typeCode === 'ADT' && age < 12) return 'not old enough for Adult';
+  if (typeCode === 'CHD' && (age < 2 || age >= 12)) return 'not in Child age range';
+  if (typeCode === 'INF' && age >= 2) return 'not in Infant age range';
+  return '';
 };
 
 const addYears = (date: Date, years: number) => {
@@ -263,6 +277,9 @@ function PassengerInformation(): React.JSX.Element {
   const [isContinuing, setIsContinuing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [savedPassengers, setSavedPassengers] = useState<SavedPassenger[]>([]);
+  const [savedPassengerId, setSavedPassengerId] = useState('');
+  const [savedPassengersLoading, setSavedPassengersLoading] = useState(false);
   const [phoneCountry, setPhoneCountry] = useState('TH');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -324,6 +341,15 @@ function PassengerInformation(): React.JSX.Element {
     () => getBirthDateRangeForType(formData.pi_passenger_type_code),
     [formData.pi_passenger_type_code]
   );
+  const compatibleSavedPassengers = React.useMemo(
+    () => savedPassengers.filter(savedPassenger => (
+      !getPassengerAgeValidationMessage(
+        formData.pi_passenger_type_code,
+        toDateString(fromDateString(savedPassenger.date_of_birth))
+      )
+    )),
+    [formData.pi_passenger_type_code, savedPassengers]
+  );
 
   // ✈️ LOG: Page initialization
   useEffect(() => {
@@ -351,6 +377,36 @@ function PassengerInformation(): React.JSX.Element {
   useEffect(() => {
     setFormData(prev => ({ ...prev, pi_passenger_type_code: nextPassengerType }));
   }, [nextPassengerType]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSavedPassengers = async () => {
+      if (!localStorage.getItem('jwt_token')) return;
+
+      try {
+        setSavedPassengersLoading(true);
+        const response = await profileApi.getSavedPassengers();
+        if (!cancelled) {
+          setSavedPassengers(response);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('Could not load saved passengers:', error);
+        }
+      } finally {
+        if (!cancelled) {
+          setSavedPassengersLoading(false);
+        }
+      }
+    };
+
+    loadSavedPassengers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const validatePhone = (number: string, iso: string): boolean => {
     if (!number.trim()) {
@@ -391,6 +447,80 @@ function PassengerInformation(): React.JSX.Element {
     setParsedPhone(null);
     setIsCountryListOpen(false);
     setFormData(prev => ({ ...prev, pi_contact_phone: '' }));
+  };
+
+  const applySavedPassenger = (passengerId: string) => {
+    setSavedPassengerId(passengerId);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if (!passengerId) {
+      setFormData(prev => ({
+        ...prev,
+        pi_title: 'Mr',
+        pi_first_name: '',
+        pi_middle_name: '',
+        pi_last_name: '',
+        pi_gender: 'M',
+        pi_date_of_birth: '',
+        pi_nationality: 'Thailand',
+        pi_passport_number: '',
+        pi_passport_issuing_country: 'Thailand',
+        pi_passport_expiry_date: '',
+        pi_contact_email: '',
+        pi_contact_phone: '',
+      }));
+      setPhoneCountry('TH');
+      setPhoneNumber('');
+      setParsedPhone(null);
+      setPhoneError('');
+      return;
+    }
+
+    const savedPassenger = savedPassengers.find(passenger => passenger.saved_passenger_id === passengerId);
+    if (!savedPassenger) return;
+
+    const typeMismatchMessage = getPassengerAgeValidationMessage(
+      formData.pi_passenger_type_code,
+      toDateString(fromDateString(savedPassenger.date_of_birth))
+    );
+    if (typeMismatchMessage) {
+      setSavedPassengerId('');
+      setErrorMessage(`Please choose a saved ${getPassengerTypeLabel(formData.pi_passenger_type_code)} passenger or enter details manually.`);
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      pi_title: savedPassenger.title || 'Mr',
+      pi_first_name: savedPassenger.first_name || '',
+      pi_middle_name: savedPassenger.middle_name || '',
+      pi_last_name: savedPassenger.last_name || '',
+      pi_gender: savedPassenger.gender || 'M',
+      pi_date_of_birth: toDateString(fromDateString(savedPassenger.date_of_birth)),
+      pi_nationality: savedPassenger.nationality || 'Thailand',
+      pi_passenger_type_code: prev.pi_passenger_type_code,
+      pi_passport_number: savedPassenger.passport_number || '',
+      pi_passport_issuing_country: savedPassenger.passport_issuing_country || 'Thailand',
+      pi_passport_expiry_date: toDateString(fromDateString(savedPassenger.passport_expiry_date || '')),
+      pi_contact_email: savedPassenger.contact_email || '',
+      pi_contact_phone: savedPassenger.contact_phone || '',
+    }));
+
+    if (savedPassenger.contact_phone) {
+      try {
+        const parsed = parsePhoneNumber(savedPassenger.contact_phone);
+        setPhoneCountry((parsed.country || 'TH') as string);
+        setPhoneNumber(parsed.nationalNumber);
+        setParsedPhone(parsed);
+        setPhoneError('');
+      } catch {
+        setPhoneNumber(savedPassenger.contact_phone);
+        setParsedPhone(null);
+      }
+    }
+
+    setSuccessMessage(`${savedPassenger.first_name} ${savedPassenger.last_name} loaded from your profile. You can edit the details before adding.`);
   };
 
   const validateForm = (): boolean => {
@@ -548,6 +678,7 @@ function PassengerInformation(): React.JSX.Element {
       setPhoneNumber('');
       setPhoneError('');
       setParsedPhone(null);
+      setSavedPassengerId('');
 
       // ✈️ LOG: Form reset
       console.log('🔄 [PassengerInformation] Form reset for next passenger');
@@ -729,6 +860,41 @@ function PassengerInformation(): React.JSX.Element {
                 </p>
               </div>
 
+              <div className="rounded-lg border border-slate-300 bg-white p-6 shadow-sm">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                  <div className="flex-1">
+                    <p className="mb-2 text-sm font-black uppercase tracking-wide text-[#073b70]">Passenger Source</p>
+                    <p className="mb-4 text-xs font-semibold text-slate-500">
+                      Select a saved passenger to auto-fill the form, or leave manual entry selected.
+                    </p>
+                    <select
+                      value={savedPassengerId}
+                      onChange={(event) => applySavedPassenger(event.target.value)}
+                      className={inputClass}
+                      disabled={savedPassengersLoading}
+                    >
+                      <option value="">{savedPassengersLoading ? 'Loading saved passengers...' : 'Enter manually'}</option>
+                      {compatibleSavedPassengers.map(savedPassenger => (
+                        <option key={savedPassenger.saved_passenger_id} value={savedPassenger.saved_passenger_id}>
+                          {savedPassenger.first_name} {savedPassenger.last_name} - {savedPassenger.relationship} ({getPassengerTypeLabel(savedPassenger.passenger_type_code)})
+                        </option>
+                      ))}
+                    </select>
+                    {!savedPassengersLoading && savedPassengers.length > 0 && compatibleSavedPassengers.length === 0 && (
+                      <p className="mt-2 text-xs font-semibold text-amber-700">
+                        No saved {getPassengerTypeLabel(formData.pi_passenger_type_code).toLowerCase()} passengers match this slot. Enter manually or update Passenger Management.
+                      </p>
+                    )}
+                  </div>
+                  <Link
+                    to="/profile#passenger-management"
+                    className="flex h-12 items-center justify-center rounded border border-[#073b70] px-5 text-xs font-black uppercase tracking-wide text-[#073b70]"
+                  >
+                    Manage Saved Passengers
+                  </Link>
+                </div>
+              </div>
+
               <Panel title="Personal Information" icon={<BadgeCheck size={20} />}>
                 <div className="grid gap-5 md:grid-cols-3">
                   <Label label="Title*">
@@ -837,45 +1003,6 @@ function PassengerInformation(): React.JSX.Element {
                 </div>
               </Panel>
 
-              <Panel title="Passport Information" icon={<BadgeCheck size={20} />}>
-                <div className="grid gap-5 md:grid-cols-3">
-                  <Label label="Passport Number*">
-                    <input
-                      value={formData.pi_passport_number}
-                      onChange={(e) => setFormData({ ...formData, pi_passport_number: e.target.value })}
-                      className={inputClass}
-                      placeholder="Enter number"
-                    />
-                  </Label>
-                  <Label label="Issuing Country*">
-                    <select
-                      value={formData.pi_passport_issuing_country}
-                      onChange={(e) => setFormData({ ...formData, pi_passport_issuing_country: e.target.value })}
-                      className={inputClass}
-                    >
-                      <option>Thailand</option>
-                      <option>United Kingdom</option>
-                      <option>United States</option>
-                      <option>Singapore</option>
-                      <option>Vietnam</option>
-                    </select>
-                  </Label>
-                  <Label label="Expiry Date*">
-                    <DatePicker
-                      selected={fromDateString(formData.pi_passport_expiry_date)}
-                      onChange={(date: Date | null) => setFormData({ ...formData, pi_passport_expiry_date: toDateString(date) })}
-                      className={inputClass}
-                      placeholderText="Select expiry date"
-                      dateFormat="dd MMM yyyy"
-                      minDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
-                      showMonthDropdown
-                      showYearDropdown
-                      dropdownMode="select"
-                    />
-                  </Label>
-                </div>
-              </Panel>
-
               <Panel title="Contact Information" icon={<Mail size={20} />}>
                 <div className="grid gap-5 md:grid-cols-2">
                   <Label label="Email Address*">
@@ -957,6 +1084,45 @@ function PassengerInformation(): React.JSX.Element {
                     {parsedPhone && !phoneError && (
                       <p className="mt-1 text-xs font-semibold text-green-600">{parsedPhone.formatInternational()}</p>
                     )}
+                  </Label>
+                </div>
+              </Panel>
+
+              <Panel title="Passport Information" icon={<BadgeCheck size={20} />}>
+                <div className="grid gap-5 md:grid-cols-3">
+                  <Label label="Passport Number*">
+                    <input
+                      value={formData.pi_passport_number}
+                      onChange={(e) => setFormData({ ...formData, pi_passport_number: e.target.value })}
+                      className={inputClass}
+                      placeholder="Enter number"
+                    />
+                  </Label>
+                  <Label label="Issuing Country*">
+                    <select
+                      value={formData.pi_passport_issuing_country}
+                      onChange={(e) => setFormData({ ...formData, pi_passport_issuing_country: e.target.value })}
+                      className={inputClass}
+                    >
+                      <option>Thailand</option>
+                      <option>United Kingdom</option>
+                      <option>United States</option>
+                      <option>Singapore</option>
+                      <option>Vietnam</option>
+                    </select>
+                  </Label>
+                  <Label label="Expiry Date*">
+                    <DatePicker
+                      selected={fromDateString(formData.pi_passport_expiry_date)}
+                      onChange={(date: Date | null) => setFormData({ ...formData, pi_passport_expiry_date: toDateString(date) })}
+                      className={inputClass}
+                      placeholderText="Select expiry date"
+                      dateFormat="dd MMM yyyy"
+                      minDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
+                      showMonthDropdown
+                      showYearDropdown
+                      dropdownMode="select"
+                    />
                   </Label>
                 </div>
               </Panel>

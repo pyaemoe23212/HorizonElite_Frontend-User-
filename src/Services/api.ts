@@ -35,11 +35,22 @@ export interface ResendVerificationEmailRequest {
 export interface ProfileResponse {
   id: string;
   email: string;
+  email_address?: string;
+  title?: string;
   first_name: string;
+  middle_name?: string;
   last_name: string;
   phone_number?: string;
-  title?: string;
+  alternate_phone_number?: string;
+  country_code?: string;
+  nationality?: string;
+  date_of_birth?: string;
+  gender?: 'M' | 'F' | 'X';
+  address?: string;
+  preferred_language?: string;
+  preferred_currency?: string;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface ApiResponse<T = any> {
@@ -838,6 +849,70 @@ export interface CreatePassengerResponse {
   passenger: Passenger;
 }
 
+export interface SavedPassenger {
+  saved_passenger_id: string;
+  user_email_address?: string;
+  relationship: string;
+  title: string;
+  first_name: string;
+  middle_name?: string | null;
+  last_name: string;
+  gender: 'M' | 'F' | 'X';
+  date_of_birth: string;
+  nationality: string;
+  passenger_type_code: 'ADT' | 'CHD' | 'INF';
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  passport_number?: string | null;
+  passport_issuing_country?: string | null;
+  passport_expiry_date?: string | null;
+  visa_number?: string | null;
+  visa_country?: string | null;
+  visa_expiry_date?: string | null;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type SavedPassengerPayload = Omit<SavedPassenger, 'saved_passenger_id' | 'user_email_address' | 'created_at' | 'updated_at'>;
+
+export interface EmergencyContact {
+  emergency_contact_id: string;
+  contact_name: string;
+  relationship?: string | null;
+  phone_number: string;
+  email_address?: string | null;
+  priority: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type EmergencyContactPayload = Omit<EmergencyContact, 'emergency_contact_id' | 'created_at' | 'updated_at'>;
+
+export interface SavedPaymentMethod {
+  payment_method_id: string;
+  payment_type: string;
+  card_brand?: string | null;
+  cardholder_name: string;
+  last_four: string;
+  expiry_month: number;
+  expiry_year: number;
+  gateway_payment_method_id?: string | null;
+  billing_address?: string | null;
+  is_default: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type SavedPaymentMethodPayload = Omit<SavedPaymentMethod, 'payment_method_id' | 'created_at' | 'updated_at'>;
+
+export interface ProfileSummaryResponse {
+  profile: ProfileResponse;
+  passengers: SavedPassenger[];
+  emergencyContacts: EmergencyContact[];
+  paymentMethods: SavedPaymentMethod[];
+}
+
 // ─── API Export ──────────────────────────────────────────────────────────────
 
 // Extended API object with passenger endpoint
@@ -859,6 +934,44 @@ export const passengerApi = {
    */
   deletePassenger: (passengerId: string): Promise<{ message: string }> =>
     axiosInstance.delete(`/passengers/${passengerId}`),
+};
+
+export const profileApi = {
+  getSummary: (): Promise<ProfileSummaryResponse> =>
+    axiosInstance.get('/profile'),
+
+  updateProfile: (data: Partial<ProfileResponse>): Promise<{ message: string; profile: ProfileResponse }> =>
+    axiosInstance.put('/profile', data),
+
+  getSavedPassengers: (): Promise<SavedPassenger[]> =>
+    axiosInstance.get('/profile/passengers'),
+
+  createSavedPassenger: (data: SavedPassengerPayload): Promise<{ message: string; passenger: SavedPassenger }> =>
+    axiosInstance.post('/profile/passengers', data),
+
+  updateSavedPassenger: (id: string, data: Partial<SavedPassengerPayload>): Promise<{ message: string; passenger: SavedPassenger }> =>
+    axiosInstance.put(`/profile/passengers/${id}`, data),
+
+  deleteSavedPassenger: (id: string): Promise<{ message: string; passenger: SavedPassenger }> =>
+    axiosInstance.delete(`/profile/passengers/${id}`),
+
+  createEmergencyContact: (data: EmergencyContactPayload): Promise<{ message: string; contact: EmergencyContact }> =>
+    axiosInstance.post('/profile/emergency-contacts', data),
+
+  updateEmergencyContact: (id: string, data: Partial<EmergencyContactPayload>): Promise<{ message: string; contact: EmergencyContact }> =>
+    axiosInstance.put(`/profile/emergency-contacts/${id}`, data),
+
+  deleteEmergencyContact: (id: string): Promise<{ message: string; contact: EmergencyContact }> =>
+    axiosInstance.delete(`/profile/emergency-contacts/${id}`),
+
+  createPaymentMethod: (data: SavedPaymentMethodPayload): Promise<{ message: string; paymentMethod: SavedPaymentMethod }> =>
+    axiosInstance.post('/profile/payment-methods', data),
+
+  updatePaymentMethod: (id: string, data: Partial<SavedPaymentMethodPayload>): Promise<{ message: string; paymentMethod: SavedPaymentMethod }> =>
+    axiosInstance.put(`/profile/payment-methods/${id}`, data),
+
+  deletePaymentMethod: (id: string): Promise<{ message: string; paymentMethod: SavedPaymentMethod }> =>
+    axiosInstance.delete(`/profile/payment-methods/${id}`),
 };
 
 // Extended API object with booking endpoint
