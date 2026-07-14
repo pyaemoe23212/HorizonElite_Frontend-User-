@@ -59,6 +59,57 @@ export interface ApiResponse<T = any> {
   message?: string;
 }
 
+export interface FlightStatusAirport {
+  iata?: string;
+  icao?: string;
+  name?: string;
+  municipalityName?: string;
+}
+
+export interface FlightStatusTime {
+  local?: string;
+  utc?: string;
+}
+
+export interface FlightStatusEndpoint {
+  airport?: FlightStatusAirport;
+  scheduledTime?: FlightStatusTime;
+  revisedTime?: FlightStatusTime;
+  predictedTime?: FlightStatusTime;
+  runwayTime?: FlightStatusTime;
+  terminal?: string;
+  gate?: string;
+}
+
+export interface FlightStatusRecord {
+  number?: string;
+  callSign?: string;
+  status?: string;
+  departure?: FlightStatusEndpoint;
+  arrival?: FlightStatusEndpoint;
+  aircraft?: {
+    model?: string;
+    reg?: string;
+    modeS?: string;
+  };
+  airline?: {
+    name?: string;
+    iata?: string;
+    icao?: string;
+  };
+  greatCircleDistance?: {
+    km?: number;
+    mile?: number;
+    nm?: number;
+  };
+  [key: string]: unknown;
+}
+
+export interface FlightStatusResponse {
+  message: string;
+  data: FlightStatusRecord[] | FlightStatusRecord;
+}
+
 // ─── Translation Types ───────────────────────────────────────────────────────
 export interface Language {
   code: string;
@@ -934,6 +985,16 @@ export const passengerApi = {
    */
   deletePassenger: (passengerId: string): Promise<{ message: string }> =>
     axiosInstance.delete(`/passengers/${passengerId}`),
+};
+
+export const flightStatusApi = {
+  getStatus: (flightNumber: string, departureDate: string): Promise<FlightStatusResponse> =>
+    axiosInstance.get('/flight-status', {
+      params: {
+        flight_number: flightNumber,
+        departure_date: departureDate,
+      },
+    }),
 };
 
 export const profileApi = {
