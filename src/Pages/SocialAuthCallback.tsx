@@ -25,7 +25,7 @@ function SocialAuthCallback(): React.JSX.Element {
     }
 
     if (!token || !userParam) {
-      setError('Facebook login did not return a valid session.');
+      setError('Social login did not return a valid session.');
       return;
     }
 
@@ -34,7 +34,7 @@ function SocialAuthCallback(): React.JSX.Element {
       login(token, user);
       navigate('/', { replace: true });
     } catch {
-      setError('Could not complete Facebook login.');
+      setError('Could not complete social login.');
     }
   }, [login, navigate, searchParams]);
 
@@ -42,10 +42,10 @@ function SocialAuthCallback(): React.JSX.Element {
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-6">
       <section className="w-full max-w-md rounded border border-slate-300 bg-white p-8 text-center shadow-sm">
         <h1 className="text-3xl font-black text-[#063b70]">
-          {error ? 'Facebook Login Failed' : 'Signing you in...'}
+          {error ? 'Social Login Failed' : 'Signing you in...'}
         </h1>
         <p className="mt-4 text-sm font-semibold text-slate-600">
-          {error || 'Please wait while we complete your Facebook login.'}
+          {error || 'Please wait while we complete your social login.'}
         </p>
         {error && (
           <Link to="/signin" className="mt-6 inline-flex h-11 items-center justify-center rounded bg-[#063b70] px-6 text-sm font-black text-white">

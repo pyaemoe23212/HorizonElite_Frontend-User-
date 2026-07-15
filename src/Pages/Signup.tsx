@@ -61,6 +61,10 @@ const startFacebookLogin = () => {
   window.location.href = `${API_BASE_URL.replace(/\/$/, '')}/auth/facebook`;
 };
 
+const startGoogleLogin = () => {
+  window.location.href = `${API_BASE_URL.replace(/\/$/, '')}/auth/google`;
+};
+
 function Signup(): React.JSX.Element {
   const [formData, setFormData] = React.useState({
     title: '',
@@ -491,7 +495,7 @@ function Signup(): React.JSX.Element {
           <div className="space-y-3">
             {[
               { label: 'Continue with Line', icon: <LineIcon key="line" /> },
-              { label: 'Continue with Google', icon: <GoogleIcon key="google" /> },
+              { label: 'Continue with Google', icon: <GoogleIcon key="google" />, onClick: startGoogleLogin },
               { label: 'Continue with Facebook', icon: <FacebookIcon key="facebook" />, onClick: startFacebookLogin },
               { label: 'Continue with Apple', icon: <AppleIcon key="apple" /> },
             ].map((item) => (
