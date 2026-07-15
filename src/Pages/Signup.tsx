@@ -55,6 +55,72 @@ const FieldLabel = ({ children }: { children: React.ReactNode }) => (
 const isEmailStructureValid = (email: string): boolean =>
   /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 
+const emailDomains = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com'];
+const passwordSymbolPattern = /^[A-Za-z0-9!@#$%^&*()_\-+=[\]{};':"\\|,.<>/?`~]+$/;
+
+const getEmailSuggestions = (email: string): string[] => {
+  const trimmedEmail = email.trim().toLowerCase();
+
+  if (!trimmedEmail || trimmedEmail.includes(' ') || !trimmedEmail.includes('@')) {
+    return [];
+  }
+
+  const [localPart, typedDomain = ''] = trimmedEmail.split('@');
+
+  if (!localPart || trimmedEmail.includes('@@')) {
+    return [];
+  }
+
+  return emailDomains
+    .filter(domain => domain.startsWith(typedDomain) && domain !== typedDomain)
+    .map(domain => `@${domain}`);
+};
+
+const getPasswordChecks = (password: string) => {
+  return [
+    {
+      label: '12 to 16 characters',
+      isValid: password.length >= 12 && password.length <= 16,
+    },
+    {
+      label: 'Contains only letters, numbers, and symbols',
+      isValid: password.length > 0 && passwordSymbolPattern.test(password),
+    },
+    {
+      label: 'At least one uppercase letter',
+      isValid: /[A-Z]/.test(password),
+    },
+    {
+      label: 'At least one lowercase letter',
+      isValid: /[a-z]/.test(password),
+    },
+    {
+      label: 'At least one number',
+      isValid: /[0-9]/.test(password),
+    },
+    {
+      label: 'At least one symbol',
+      isValid: /[^A-Za-z0-9]/.test(password),
+    },
+  ];
+};
+
+const getPasswordStrength = (validCount: number, password: string) => {
+  if (!password) {
+    return { label: 'Weak', color: 'bg-slate-200', textColor: 'text-slate-500', activeBars: 0 };
+  }
+  if (validCount >= 6) {
+    return { label: 'Strong', color: 'bg-green-500', textColor: 'text-green-600', activeBars: 4 };
+  }
+  if (validCount >= 4) {
+    return { label: 'Good', color: 'bg-blue-500', textColor: 'text-blue-600', activeBars: 3 };
+  }
+  if (validCount >= 2) {
+    return { label: 'Fair', color: 'bg-amber-500', textColor: 'text-amber-600', activeBars: 2 };
+  }
+  return { label: 'Weak', color: 'bg-red-500', textColor: 'text-red-600', activeBars: 1 };
+};
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 const startFacebookLogin = () => {
@@ -73,6 +139,7 @@ function Signup(): React.JSX.Element {
   const [formData, setFormData] = React.useState({
     title: '',
     first_name: '',
+    middle_name: '',
     last_name: '',
     email_address: '',
     phone_number: '',
@@ -116,6 +183,18 @@ function Signup(): React.JSX.Element {
   const selectedCountry = React.useMemo(
     () => countryOptions.find(country => country.iso === phoneCountry) ?? null,
     [countryOptions, phoneCountry]
+  );
+  const emailSuggestions = React.useMemo(
+    () => getEmailSuggestions(formData.email_address),
+    [formData.email_address]
+  );
+  const passwordChecks = React.useMemo(
+    () => getPasswordChecks(formData.password),
+    [formData.password]
+  );
+  const passwordStrength = React.useMemo(
+    () => getPasswordStrength(passwordChecks.filter(check => check.isValid).length, formData.password),
+    [passwordChecks, formData.password]
   );
 
   const validatePhone = (number: string, iso: string): boolean => {
@@ -165,6 +244,14 @@ function Signup(): React.JSX.Element {
     }
   };
 
+  const handleEmailSuggestionClick = (email: string) => {
+    const localPart = formData.email_address.split('@')[0] ?? '';
+    setFormData(prev => ({ ...prev, email_address: `${localPart}${email}` }));
+    setEmailError('');
+    setError('');
+    setInfo('');
+  };
+
   const validateEmail = (): boolean => {
     const email = formData.email_address.trim();
 
@@ -209,6 +296,10 @@ function Signup(): React.JSX.Element {
     }
     if (!formData.password) {
       setError('Password is required');
+      return;
+    }
+    if (passwordChecks.some(check => !check.isValid)) {
+      setError('Password must meet all password requirements.');
       return;
     }
     if (formData.password !== formData.confirm_password) {
@@ -343,6 +434,13 @@ function Signup(): React.JSX.Element {
                 <input required type="text" name="first_name" value={formData.first_name} onChange={handleChange} placeholder="Jane" className="h-11 w-full rounded border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600" />
               </label>
               <label className="block">
+                <FieldLabel>Middle Name <span className="text-slate-400">(Optional)</span></FieldLabel>
+                <input type="text" name="middle_name" value={formData.middle_name} onChange={handleChange} placeholder="Marie" className="h-11 w-full rounded border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600" />
+              </label>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block">
                 <FieldLabel>Last Name <span className="text-red-500">*</span></FieldLabel>
                 <input required type="text" name="last_name" value={formData.last_name} onChange={handleChange} placeholder="Doe" className="h-11 w-full rounded border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600" />
               </label>
@@ -353,6 +451,21 @@ function Signup(): React.JSX.Element {
               <input required type="email" name="email_address" value={formData.email_address} onChange={handleChange} onBlur={validateEmail} placeholder="jane.doe@example.com" className={`h-11 w-full rounded border bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 ${
                 emailError ? 'border-red-500 focus:border-red-600' : 'border-slate-300 focus:border-blue-600'
               }`} />
+              {emailSuggestions.length > 0 && (
+                <div className="mt-2 w-full overflow-hidden rounded border border-slate-200 bg-white shadow-lg">
+                  {emailSuggestions.map(email => (
+                    <button
+                      key={email}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => handleEmailSuggestionClick(email)}
+                      className="block w-full px-4 py-2 text-left text-sm font-semibold text-[#063b70] transition hover:bg-blue-50"
+                    >
+                      {email}
+                    </button>
+                  ))}
+                </div>
+              )}
               {emailError && (
                 <p className="mt-1 text-xs text-red-500">{emailError}</p>
               )}
@@ -449,16 +562,25 @@ function Signup(): React.JSX.Element {
 
             <div className="rounded border border-slate-300 p-5">
               <div className="mb-4 flex items-center gap-1">
-                <span className="h-1 flex-1 rounded bg-slate-200" />
-                <span className="h-1 flex-1 rounded bg-slate-200" />
-                <span className="h-1 flex-1 rounded bg-slate-200" />
-                <span className="h-1 flex-1 rounded bg-slate-200" />
-                <span className="ml-6 text-[10px] font-black uppercase text-slate-500">Weak</span>
+                {[0, 1, 2, 3].map(index => (
+                  <span
+                    key={index}
+                    className={`h-1 flex-1 rounded ${index < passwordStrength.activeBars ? passwordStrength.color : 'bg-slate-200'}`}
+                  />
+                ))}
+                <span className={`ml-6 text-[10px] font-black uppercase ${passwordStrength.textColor}`}>{passwordStrength.label}</span>
               </div>
               <div className="space-y-2 text-xs font-medium text-slate-600">
-                <label className="flex items-center gap-3"><input type="radio" name="password-rule" className="accent-[#063b70]" />12 to 16 characters</label>
-                <label className="flex items-center gap-3"><input type="radio" name="password-rule" className="accent-[#063b70]" />Contains only letters, numbers, and symbols</label>
-                <label className="flex items-center gap-3"><input type="radio" name="password-rule" className="accent-[#063b70]" />At least three: uppercase, lowercase, numbers, symbols</label>
+                {passwordChecks.map(check => (
+                  <div key={check.label} className={`flex items-center gap-3 ${check.isValid ? 'text-green-700' : 'text-slate-600'}`}>
+                    <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] font-black ${
+                      check.isValid ? 'border-green-600 bg-green-600 text-white' : 'border-slate-400 text-transparent'
+                    }`}>
+                      ✓
+                    </span>
+                    <span>{check.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
 

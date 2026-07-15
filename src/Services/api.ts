@@ -16,6 +16,7 @@ export interface AuthResponse {
 export interface RegisterData {
   title: string;
   first_name: string;
+  middle_name?: string;
   last_name: string;
   email_address: string;
   phone_number: string;
