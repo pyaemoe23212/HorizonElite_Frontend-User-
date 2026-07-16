@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Plane } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import type { FlightResultItem, SelectedFlightResponse, SelectFlightRequest } from '../Services/api';
@@ -11,6 +11,7 @@ import { ModifySearch } from '../components/ModifySearch';
 type FlightPhase = 'outbound' | 'inbound';
 type TripType = 'ONE_WAY' | 'ROUND_TRIP';
 type SelectedFlight = SelectedFlightResponse['selectedFlight'];
+type SortOption = 'recommended' | 'cheapest' | 'fastest' | 'earliest';
 
 interface SearchData {
   tripType?: string;
@@ -49,6 +50,13 @@ const normalizeCabinClass = (value?: string) => {
   return cabinClassMap[normalized || ''] || 'ECONOMY';
 };
 
+const getFlightDurationMinutes = (flight: FlightResultItem) => {
+  const departure = new Date(flight.departure_datetime).getTime();
+  const arrival = new Date(flight.arrival_datetime).getTime();
+  if (Number.isNaN(departure) || Number.isNaN(arrival)) return Number.MAX_SAFE_INTEGER;
+  return Math.max(0, Math.round((arrival - departure) / 60000));
+};
+
 function FlightResults(): React.JSX.Element {
   const { state } = useLocation();
   const navigate = useNavigate();
@@ -65,6 +73,9 @@ function FlightResults(): React.JSX.Element {
   const [isSavingSelection, setIsSavingSelection] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showModify, setShowModify] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('recommended');
+  const [stopsFilter, setStopsFilter] = useState<'all' | 'direct'>('all');
+  const [refundableOnly, setRefundableOnly] = useState(false);
 
   const isRoundTrip = searchData.tripType === 'Return';
   const tripType: TripType = isRoundTrip ? 'ROUND_TRIP' : 'ONE_WAY';
@@ -72,6 +83,20 @@ function FlightResults(): React.JSX.Element {
   const totalPrice =
     (selectedOutboundFlight ? Number(selectedOutboundFlight.total_price) : 0) +
     (selectedInboundFlight ? Number(selectedInboundFlight.total_price) : 0);
+  const visibleFlights = useMemo(() => {
+    const filtered = flightResults.filter((flight) => {
+      if (stopsFilter === 'direct' && flight.total_stop_count !== 0) return false;
+      if (refundableOnly && !flight.refundable_status) return false;
+      return true;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'cheapest') return Number(a.total_price || 0) - Number(b.total_price || 0);
+      if (sortBy === 'fastest') return getFlightDurationMinutes(a) - getFlightDurationMinutes(b);
+      if (sortBy === 'earliest') return new Date(a.departure_datetime).getTime() - new Date(b.departure_datetime).getTime();
+      return 0;
+    });
+  }, [flightResults, refundableOnly, sortBy, stopsFilter]);
 
   const selectFlight = (flight: FlightResultItem) => {
     setErrorMessage('');
@@ -258,14 +283,45 @@ function FlightResults(): React.JSX.Element {
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-slate-600">
               Select your {phase === 'outbound' ? 'departure' : 'return'} flight. Prices include taxes and fees.
             </div>
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-2 flex flex-col gap-4 rounded-lg border border-slate-300 bg-white p-4 md:flex-row md:items-center md:justify-between">
               <h1 className="flex items-center gap-2 text-2xl font-black text-[#073b70]">
                 <Plane size={24} /> Select your {phase === 'outbound' ? 'departure' : 'return'} flight
               </h1>
+              <div className="flex flex-wrap gap-3">
+                <select
+                  value={sortBy}
+                  onChange={(event) => setSortBy(event.target.value as SortOption)}
+                  className="h-10 rounded border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700"
+                >
+                  <option value="recommended">Recommended</option>
+                  <option value="cheapest">Cheapest</option>
+                  <option value="fastest">Fastest</option>
+                  <option value="earliest">Earliest departure</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setStopsFilter(current => current === 'direct' ? 'all' : 'direct')}
+                  className={`h-10 rounded border px-4 text-sm font-bold ${stopsFilter === 'direct' ? 'border-[#073b70] bg-blue-50 text-[#073b70]' : 'border-slate-300 text-slate-600'}`}
+                >
+                  Direct only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRefundableOnly(current => !current)}
+                  className={`h-10 rounded border px-4 text-sm font-bold ${refundableOnly ? 'border-[#073b70] bg-blue-50 text-[#073b70]' : 'border-slate-300 text-slate-600'}`}
+                >
+                  Refundable
+                </button>
+              </div>
             </div>
 
             <div className="space-y-4">
-              {flightResults.map((flight) => {
+              {visibleFlights.length === 0 && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-6 text-sm font-semibold text-amber-800">
+                  No flights match the selected filters. Clear a filter to see more options.
+                </div>
+              )}
+              {visibleFlights.map((flight) => {
                 const selected = currentFlight?.flight_result_id === flight.flight_result_id;
 
                 return (

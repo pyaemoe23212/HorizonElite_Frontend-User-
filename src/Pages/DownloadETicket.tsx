@@ -2,6 +2,7 @@ import React from "react";
 import { BadgeCheck, Download, Luggage as Suitcase, Mail, Plane, Printer } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import { ticketApi } from "../Services/api";
+import PageHeader from "../components/PageHeader";
 
 function DownloadETicket(): React.JSX.Element {
   const { state } = useLocation();
@@ -63,16 +64,9 @@ function DownloadETicket(): React.JSX.Element {
   };
 
   return (
-    <main className="min-h-screen bg-slate-100 px-6 py-14">
-      <div className="mx-auto max-w-7xl">
-        {/* Back */}
-        <Link
-          to="/manage-booking"
-          className="mb-8 inline-flex items-center gap-2 text-sm font-semibold uppercase text-[#073b70] hover:underline"
-        >
-          ← Back
-        </Link>
-
+    <main className="min-h-screen bg-slate-100">
+      <PageHeader rightLink={{ label: "Manage Booking", to: "/manage-booking" }} />
+      <div className="mx-auto max-w-7xl px-6 py-14">
         {/* Heading */}
         <h1 className="text-5xl font-black text-[#073b70]">
           Download E-ticket
@@ -136,7 +130,7 @@ function DownloadETicket(): React.JSX.Element {
             {/* Flight Card */}
             <div className="rounded bg-slate-100 p-6">
               <p className="mb-5 text-xs font-bold uppercase text-slate-500">
-                <span className="inline-flex items-center gap-2"><Plane size={16} /> Flight HE 742</span>
+                <span className="inline-flex items-center gap-2"><Plane size={16} /> Flight {outbound?.flight_number || "Not available"}</span>
               </p>
 
               <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
@@ -172,7 +166,7 @@ function DownloadETicket(): React.JSX.Element {
 
                 <Info
                   label="Seat"
-                  value="12A"
+                  value={outbound?.seat_number || ticketState.seat_number || "Not assigned"}
                   valueColor="text-[#073b70]"
                 />
 

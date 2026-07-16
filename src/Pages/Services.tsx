@@ -1,6 +1,7 @@
 import React from "react";
 import { BadgeCheck, CircleHelp, Luggage, Plane } from "lucide-react";
 import { Link } from "react-router";
+import PageHeader from "../components/PageHeader";
 
 const services = [
   {
@@ -31,14 +32,15 @@ const services = [
 
 function Services(): React.JSX.Element {
   return (
-    <main className="min-h-screen bg-slate-100 px-6 py-14 text-slate-800">
-      <section className="mx-auto max-w-7xl">
+    <main className="min-h-screen bg-slate-100 text-slate-800">
+      <PageHeader />
+      <section className="mx-auto max-w-7xl px-6 py-14">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-cyan-700">Horizon Elite</p>
-            <h1 className="mt-2 text-5xl font-black text-[#073b70]">Services</h1>
+            <h1 className="mt-2 text-5xl font-black text-[#073b70]">Additional Services</h1>
             <p className="mt-4 max-w-2xl text-lg font-semibold text-slate-600">
-              Manage your trip, check flight updates, and get support from one place.
+              Access post-booking services from the home page: manage a trip, check flight updates, check in, or get support.
             </p>
           </div>
 

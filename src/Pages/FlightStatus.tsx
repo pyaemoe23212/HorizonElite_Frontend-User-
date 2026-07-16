@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { CircleHelp, LoaderCircle, Plane, Search } from "lucide-react";
+import { CalendarDays, CircleHelp, Clock, Home, LoaderCircle, MapPin, Plane, Search } from "lucide-react";
 import { Link } from "react-router";
 import {
   flightStatusApi,
@@ -23,10 +23,7 @@ const displayTime = (endpoint?: FlightStatusEndpoint) => {
   if (!value) return "--:--";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value.slice(11, 16) || value;
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+  return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(date);
 };
 
 const displayDate = (endpoint?: FlightStatusEndpoint) => {
@@ -34,26 +31,28 @@ const displayDate = (endpoint?: FlightStatusEndpoint) => {
   if (!value) return "Date unavailable";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value.slice(0, 10);
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
+  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(date);
 };
 
-const statusStyle = (status?: string) => {
+const statusClasses = (status?: string) => {
   const normalized = status?.toLowerCase() ?? "";
   if (["landed", "arrived", "active", "en route"].some((item) => normalized.includes(item))) {
-    return "bg-emerald-600";
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
   if (["cancelled", "canceled", "diverted"].some((item) => normalized.includes(item))) {
-    return "bg-red-600";
+    return "border-red-200 bg-red-50 text-red-700";
   }
   if (["delayed", "unknown"].some((item) => normalized.includes(item))) {
-    return "bg-amber-600";
+    return "border-amber-200 bg-amber-50 text-amber-700";
   }
-  return "bg-cyan-700";
+  return "border-cyan-200 bg-cyan-50 text-cyan-700";
 };
+
+const airportCode = (endpoint?: FlightStatusEndpoint) => endpoint?.airport?.iata || endpoint?.airport?.icao || "---";
+const airportName = (endpoint: FlightStatusEndpoint | undefined, fallback: string) =>
+  endpoint?.airport?.name || endpoint?.airport?.municipalityName || fallback;
+const terminalGate = (endpoint?: FlightStatusEndpoint) =>
+  [endpoint?.terminal && `Terminal ${endpoint.terminal}`, endpoint?.gate && `Gate ${endpoint.gate}`].filter(Boolean).join(" - ") || "Terminal and gate pending";
 
 function FlightStatus(): React.JSX.Element {
   const [flightNumber, setFlightNumber] = useState("");
@@ -90,144 +89,223 @@ function FlightStatus(): React.JSX.Element {
   };
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-10 sm:px-6 sm:py-14">
-      <div className="mx-auto max-w-7xl">
-        <Link to="/services" className="mb-8 inline-flex items-center text-slate-600 hover:text-[#073b70]">
-          <span aria-hidden="true">&larr;</span><span className="sr-only">Back to services</span>
-        </Link>
+    <main className="min-h-screen bg-slate-100 text-slate-800">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
+          <Link to="/" className="text-2xl font-black tracking-wide text-[#073b70]">
+            HORIZON<span className="text-amber-500">ELITE</span>
+          </Link>
+          <div className="flex items-center gap-3">
+            <Link to="/services" className="hidden h-11 items-center rounded border border-slate-300 px-4 text-sm font-black text-slate-600 hover:bg-slate-50 sm:inline-flex">
+              Services
+            </Link>
+            <Link to="/" className="inline-flex h-11 items-center gap-2 rounded border border-[#073b70] px-4 text-sm font-black text-[#073b70] hover:bg-slate-50">
+              <Home size={18} />
+              Home
+            </Link>
+          </div>
+        </div>
+      </header>
 
-        <h1 className="text-4xl font-black text-[#073b70] sm:text-5xl">Track Your Journey</h1>
-        <p className="mt-4 max-w-3xl text-lg text-slate-600">
-          Stay informed with the latest available updates for your flight.
-        </p>
-
-        <div className="mt-12 grid gap-8 lg:grid-cols-[300px_1fr]">
-          <form onSubmit={checkStatus} className="h-fit rounded-lg border border-slate-300 bg-white p-6 shadow-sm">
-            <div className="border-b">
-              <p className="inline-block border-b-2 border-[#073b70] pb-3 text-xs font-bold uppercase text-[#073b70]">
-                By Flight Number
+      <section className="bg-[#073b70] px-6 py-14 text-white">
+        <div className="mx-auto max-w-7xl">
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-200">Flight Status</p>
+          <div className="mt-5 grid gap-8 lg:grid-cols-[1fr_360px] lg:items-end">
+            <div>
+              <h1 className="text-4xl font-black tracking-normal sm:text-6xl">Track Your Journey</h1>
+              <p className="mt-5 max-w-2xl text-lg font-semibold leading-8 text-blue-100">
+                Check departure, arrival, gate, terminal, and aircraft updates before you leave for the airport.
               </p>
             </div>
+            <div className="rounded-lg border border-white/15 bg-white/10 p-5">
+              <p className="text-xs font-black uppercase tracking-widest text-cyan-100">Latest check</p>
+              <p className="mt-2 text-2xl font-black">{lastUpdated ? lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Waiting for search"}</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-            <div className="mt-6">
-              <label htmlFor="flight-number" className="text-xs font-bold uppercase text-slate-500">Flight Number</label>
+      <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[360px_1fr]">
+        <aside>
+          <form onSubmit={checkStatus} className="rounded-lg border border-slate-300 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-3 border-b border-slate-200 pb-5">
+              <span className="flex h-11 w-11 items-center justify-center rounded bg-blue-50 text-[#073b70]">
+                <Search size={21} />
+              </span>
+              <div>
+                <p className="text-sm font-black uppercase tracking-widest text-[#073b70]">Search Flight</p>
+                <p className="text-sm font-semibold text-slate-500">Use your flight number and date.</p>
+              </div>
+            </div>
+
+            {error && <div role="alert" className="mt-5 rounded border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
+
+            <label htmlFor="flight-number" className="mt-6 block text-xs font-black uppercase tracking-widest text-slate-500">
+              Flight Number
               <input
                 id="flight-number"
                 value={flightNumber}
-                onChange={(event) => setFlightNumber(event.target.value)}
+                onChange={(event) => setFlightNumber(event.target.value.toUpperCase())}
                 type="text"
-                placeholder="SQ12"
+                placeholder="HE742"
                 autoComplete="off"
-                className="mt-2 h-11 w-full rounded border border-slate-300 px-4 uppercase outline-none focus:border-[#073b70] focus:ring-1 focus:ring-[#073b70]"
+                className="mt-2 h-12 w-full rounded border border-slate-300 px-4 text-base font-bold uppercase text-slate-800 outline-none focus:border-[#073b70] focus:ring-1 focus:ring-[#073b70]"
               />
-            </div>
+            </label>
 
-            <div className="mt-5">
-              <label htmlFor="departure-date" className="text-xs font-bold uppercase text-slate-500">Departure Date</label>
+            <label htmlFor="departure-date" className="mt-5 block text-xs font-black uppercase tracking-widest text-slate-500">
+              Departure Date
               <input
                 id="departure-date"
                 value={departureDate}
                 onChange={(event) => setDepartureDate(event.target.value)}
                 type="date"
-                className="mt-2 h-11 w-full rounded border border-slate-300 px-4 outline-none focus:border-[#073b70] focus:ring-1 focus:ring-[#073b70]"
+                className="mt-2 h-12 w-full rounded border border-slate-300 px-4 text-base font-semibold text-slate-800 outline-none focus:border-[#073b70] focus:ring-1 focus:ring-[#073b70]"
               />
-            </div>
+            </label>
 
             <button
               type="submit"
               disabled={loading}
-              className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded bg-[#073b70] font-bold text-white transition hover:bg-[#052b52] disabled:cursor-not-allowed disabled:opacity-70"
+              className="mt-6 flex h-13 min-h-13 w-full items-center justify-center gap-2 rounded bg-[#073b70] px-5 py-4 font-black text-white transition hover:bg-[#052b52] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loading ? <LoaderCircle className="animate-spin" size={19} /> : <Search size={19} />}
               {loading ? "Checking..." : "Check Status"}
             </button>
           </form>
 
-          <section aria-live="polite">
-            <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-              <h2 className="text-3xl font-black text-[#073b70]">Latest Update</h2>
-              {lastUpdated && <p className="text-sm text-slate-500">Last checked: {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>}
+          <div className="mt-6 rounded-lg border border-slate-300 bg-white p-6 shadow-sm">
+            <div className="flex gap-3">
+              <CircleHelp className="mt-1 shrink-0 text-cyan-700" size={20} />
+              <div>
+                <h2 className="font-black uppercase tracking-wide text-[#073b70]">Travel Advisory</h2>
+                <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                  Gate assignments can change. Verify your boarding gate at the airport using official signage before boarding.
+                </p>
+              </div>
             </div>
+          </div>
+        </aside>
 
-            {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-5 text-red-700">{error}</div>}
+        <section aria-live="polite">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-slate-500">Live Information</p>
+              <h2 className="mt-1 text-3xl font-black text-[#073b70]">Latest Update</h2>
+            </div>
+            {lastUpdated && <p className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-500">Last checked {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>}
+          </div>
 
-            {!error && loading && (
-              <div className="flex min-h-64 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-500 shadow-sm">
-                <LoaderCircle className="mr-3 animate-spin" /> Retrieving flight status...
-              </div>
-            )}
+          {!error && loading && (
+            <div className="flex min-h-96 flex-col items-center justify-center rounded-lg border border-slate-300 bg-white p-8 text-center text-slate-500 shadow-sm">
+              <LoaderCircle className="mb-4 animate-spin text-[#073b70]" size={38} />
+              <p className="text-xl font-black text-[#073b70]">Retrieving flight status</p>
+              <p className="mt-2 text-sm font-semibold">Checking airline updates, gate details, and schedule changes.</p>
+            </div>
+          )}
 
-            {!error && !loading && !hasSearched && (
-              <div className="flex min-h-64 flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
-                <Plane className="mb-4 text-[#073b70]" size={36} />
-                Enter a flight number and departure date to see its status.
-              </div>
-            )}
+          {!error && !loading && !hasSearched && (
+            <div className="flex min-h-96 flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500 shadow-sm">
+              <Plane className="mb-4 text-[#073b70]" size={44} />
+              <p className="text-2xl font-black text-[#073b70]">Search a flight to begin</p>
+              <p className="mt-2 max-w-md text-sm font-semibold leading-6">
+                Enter a flight number and departure date to view route, timing, aircraft, terminal, and gate information.
+              </p>
+            </div>
+          )}
 
-            {!error && !loading && hasSearched && results.length === 0 && (
-              <div className="rounded-lg border border-slate-300 bg-white p-8 text-center text-slate-600 shadow-sm">
-                No matching flight was found. Check the flight number and date, then try again.
-              </div>
-            )}
+          {!error && !loading && hasSearched && results.length === 0 && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-8 text-center text-amber-800 shadow-sm">
+              <p className="text-xl font-black">No matching flight found</p>
+              <p className="mt-2 text-sm font-semibold">Check the flight number and date, then try again.</p>
+            </div>
+          )}
 
-            {!error && !loading && results.map((flight, index) => {
-              const departure = flight.departure;
-              const arrival = flight.arrival;
-              const flightLabel = flight.number || flightNumber.trim().toUpperCase();
-              const aircraft = flight.aircraft?.model || "Aircraft unavailable";
-              return (
-                <article key={`${flightLabel}-${index}`} className="mb-6 overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-3 bg-[#073b70] px-6 py-4 text-white">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="text-2xl font-black">Flight {flightLabel}</h3>
-                      <span className={`rounded px-3 py-1 text-xs font-bold uppercase ${statusStyle(flight.status)}`}>
-                        {flight.status || "Status unavailable"}
+          {!error && !loading && results.map((flight, index) => {
+            const departure = flight.departure;
+            const arrival = flight.arrival;
+            const flightLabel = flight.number || flightNumber.trim().toUpperCase();
+            const aircraft = flight.aircraft?.model || "Aircraft unavailable";
+
+            return (
+              <article key={`${flightLabel}-${index}`} className="mb-6 overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-7 py-6">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-500">{flight.airline?.name || "Airline unavailable"}</p>
+                    <h3 className="mt-1 text-3xl font-black text-[#073b70]">Flight {flightLabel}</h3>
+                  </div>
+                  <span className={`rounded-full border px-4 py-2 text-xs font-black uppercase tracking-widest ${statusClasses(flight.status)}`}>
+                    {flight.status || "Status unavailable"}
+                  </span>
+                </div>
+
+                <div className="grid gap-8 p-7 lg:grid-cols-[1fr_220px_1fr] lg:items-center">
+                  <FlightEndpoint title="Departure" endpoint={departure} fallbackName="Departure airport unavailable" align="left" />
+
+                  <div className="text-center">
+                    <div className="flex items-center">
+                      <span className="h-px flex-1 bg-slate-300" />
+                      <span className="mx-4 flex h-14 w-14 items-center justify-center rounded-full border border-slate-300 bg-slate-50 text-[#073b70]">
+                        <Plane size={26} />
                       </span>
+                      <span className="h-px flex-1 bg-slate-300" />
                     </div>
-                    <span className="text-sm font-semibold">{flight.airline?.name || aircraft}</span>
+                    <p className="mt-4 inline-flex items-center gap-2 rounded bg-slate-100 px-3 py-2 text-xs font-black uppercase tracking-wide text-slate-500">
+                      <CalendarDays size={15} />
+                      {displayDate(departure)}
+                    </p>
                   </div>
 
-                  <div className="grid gap-8 p-6 sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:p-8">
-                    <div>
-                      <p className="text-4xl font-light text-[#073b70] sm:text-5xl">{displayTime(departure)}</p>
-                      <p className="text-3xl font-black text-[#073b70]">{departure?.airport?.iata || departure?.airport?.icao || "---"}</p>
-                      <p className="mt-2 text-slate-500">{departure?.airport?.name || departure?.airport?.municipalityName || "Departure airport unavailable"}</p>
-                      <p className="mt-2 text-sm font-bold uppercase text-[#073b70]">
-                        {[departure?.terminal && `Terminal ${departure.terminal}`, departure?.gate && `Gate ${departure.gate}`].filter(Boolean).join(", ") || "Terminal and gate pending"}
-                      </p>
-                    </div>
+                  <FlightEndpoint title="Arrival" endpoint={arrival} fallbackName="Arrival airport unavailable" align="right" />
+                </div>
 
-                    <div className="min-w-32 text-center">
-                      <div className="flex items-center"><div className="h-px flex-1 bg-slate-300" /><Plane className="mx-4 text-[#073b70]" size={28} /><div className="h-px flex-1 bg-slate-300" /></div>
-                      <p className="mt-3 text-xs font-semibold uppercase text-slate-500">{displayDate(departure)}</p>
-                    </div>
-
-                    <div className="sm:text-right">
-                      <p className="text-4xl font-light text-[#073b70] sm:text-5xl">{displayTime(arrival)}</p>
-                      <p className="text-3xl font-black text-[#073b70]">{arrival?.airport?.iata || arrival?.airport?.icao || "---"}</p>
-                      <p className="mt-2 text-slate-500">{arrival?.airport?.name || arrival?.airport?.municipalityName || "Arrival airport unavailable"}</p>
-                      <p className="mt-2 text-sm font-semibold uppercase text-slate-500">
-                        {[arrival?.terminal && `Terminal ${arrival.terminal}`, arrival?.gate && `Gate ${arrival.gate}`].filter(Boolean).join(", ") || "Terminal and gate pending"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-5 border-t p-6 sm:grid-cols-3">
-                    <div><p className="text-xs font-bold uppercase text-slate-500">Aircraft</p><p className="mt-1 font-bold text-[#073b70]">{aircraft}</p></div>
-                    <div><p className="text-xs font-bold uppercase text-slate-500">Registration</p><p className="mt-1 font-bold text-[#073b70]">{flight.aircraft?.reg || "Unavailable"}</p></div>
-                    <div><p className="text-xs font-bold uppercase text-slate-500">Distance</p><p className="mt-1 font-bold text-[#073b70]">{flight.greatCircleDistance?.km != null ? `${Math.round(flight.greatCircleDistance.km).toLocaleString()} km` : "Unavailable"}</p></div>
-                  </div>
-                </article>
-              );
-            })}
-
-            <div className="mt-6 rounded-lg bg-slate-50 p-6">
-              <div className="flex gap-3"><CircleHelp className="shrink-0 text-cyan-700" size={20} /><div><h3 className="font-bold uppercase text-[#073b70]">Travel Advisory</h3><p className="mt-2 text-slate-600">Gate assignments can change. Verify your boarding gate at the airport using official signage or your airline&apos;s latest notification.</p></div></div>
-            </div>
-          </section>
-        </div>
+                <div className="grid gap-4 border-t border-slate-200 bg-slate-50 p-6 sm:grid-cols-3">
+                  <Detail icon={<Plane size={18} />} label="Aircraft" value={aircraft} />
+                  <Detail icon={<MapPin size={18} />} label="Registration" value={flight.aircraft?.reg || "Unavailable"} />
+                  <Detail icon={<Clock size={18} />} label="Distance" value={flight.greatCircleDistance?.km != null ? `${Math.round(flight.greatCircleDistance.km).toLocaleString()} km` : "Unavailable"} />
+                </div>
+              </article>
+            );
+          })}
+        </section>
       </div>
     </main>
+  );
+}
+
+function FlightEndpoint({
+  title,
+  endpoint,
+  fallbackName,
+  align,
+}: {
+  title: string;
+  endpoint?: FlightStatusEndpoint;
+  fallbackName: string;
+  align: "left" | "right";
+}) {
+  return (
+    <div className={align === "right" ? "lg:text-right" : ""}>
+      <p className="text-xs font-black uppercase tracking-widest text-slate-500">{title}</p>
+      <p className="mt-3 text-5xl font-light text-[#073b70]">{displayTime(endpoint)}</p>
+      <p className="mt-2 text-4xl font-black text-[#073b70]">{airportCode(endpoint)}</p>
+      <p className="mt-2 text-sm font-semibold text-slate-500">{airportName(endpoint, fallbackName)}</p>
+      <p className="mt-4 inline-flex rounded bg-blue-50 px-3 py-2 text-xs font-black uppercase tracking-wide text-[#073b70]">
+        {terminalGate(endpoint)}
+      </p>
+    </div>
+  );
+}
+
+function Detail({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex gap-3 rounded border border-slate-200 bg-white p-4">
+      <span className="text-[#073b70]">{icon}</span>
+      <div>
+        <p className="text-xs font-black uppercase tracking-wide text-slate-500">{label}</p>
+        <p className="mt-1 font-black text-[#073b70]">{value}</p>
+      </div>
+    </div>
   );
 }
 

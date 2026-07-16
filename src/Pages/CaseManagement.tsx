@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BookOpen, BriefcaseBusiness, CalendarClock, ChevronRight, CloudUpload, Filter, Headphones, Luggage, Plus, ShieldCheck, Star, TicketCheck } from 'lucide-react';
 import { Link } from 'react-router';
+import PageHeader from '../components/PageHeader';
 
 const cases = [
   { title: 'Misplaced Baggage Recovery - Flight HE204', id: '#E-99281', status: 'In Progress', icon: Luggage, accent: 'bg-amber-100 text-amber-700' },
@@ -14,9 +15,7 @@ function CaseManagement(): React.JSX.Element {
   if (openForm) {
     return (
       <main className="min-h-screen bg-slate-100 text-slate-800">
-        <header className="bg-white py-7 text-center">
-          <Link to="/" className="text-3xl font-black tracking-wide text-[#073b70]">HORIZON<span className="text-amber-500">ELITE</span></Link>
-        </header>
+        <PageHeader rightLink={{ label: 'Help Desk', to: '/case-management' }} />
 
         <section className="mx-auto max-w-3xl px-6 py-24">
           <form className="border border-slate-300 bg-white p-12 shadow-xl shadow-slate-200/70">
@@ -59,9 +58,7 @@ function CaseManagement(): React.JSX.Element {
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-800">
-      <header className="bg-white py-7 text-center">
-        <Link to="/" className="text-3xl font-black tracking-wide text-[#073b70]">HORIZON<span className="text-amber-500">ELITE</span></Link>
-      </header>
+      <PageHeader rightLink={{ label: 'Services', to: '/services' }} />
 
       <section className="mx-auto max-w-6xl px-6 py-20">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">

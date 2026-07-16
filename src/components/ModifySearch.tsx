@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router';
 
 interface ModifySearchProps {
   onClose?: () => void;
@@ -8,60 +9,52 @@ interface ModifySearchProps {
   returnDate?: string;
 }
 
-const inputClass = 'h-11 w-full rounded border border-slate-300 bg-white px-3 text-sm font-bold text-[#073b70] outline-none focus:border-blue-600';
-
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <label className="block">
-    <span className="mb-2 block text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</span>
-    {children}
-  </label>
+const Info = ({ label, value }: { label: string; value?: string }) => (
+  <div className="rounded border border-slate-200 bg-slate-50 p-4">
+    <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</p>
+    <p className="mt-1 text-sm font-black text-[#073b70]">{value || 'Not selected'}</p>
+  </div>
 );
 
 export const ModifySearch: React.FC<ModifySearchProps> = ({
   onClose,
-  from = 'New York, John F. Kennedy Int...',
-  to = 'London, Heathrow Airport (LHR)',
-  departDate = '12 Oct 2024',
-  returnDate = '24 Oct 2024',
+  from = 'Not selected',
+  to = 'Not selected',
+  departDate = 'Not selected',
+  returnDate = 'Not selected',
 }) => (
   <section className="mx-auto mb-8 max-w-5xl rounded-lg border border-slate-300 bg-white p-6 shadow-sm">
-    <div className="mb-5 flex items-start justify-between">
+    <div className="mb-5 flex items-start justify-between gap-4">
       <div>
-        <h2 className="text-xl font-black text-[#073b70]">Modify Search</h2>
+        <h2 className="text-xl font-black text-[#073b70]">Search Summary</h2>
         <p className="mt-1 text-xs font-bold text-slate-500">
-          {from} &nbsp; | &nbsp; {to} &nbsp; | &nbsp; {departDate} - {returnDate}
+          Review your current search. Start a new search to change route, dates, passengers, or cabin class.
         </p>
       </div>
-      <button onClick={onClose} className="text-xl text-slate-400">
-        ×
+      <button
+        type="button"
+        onClick={onClose}
+        className="text-xl text-slate-400 transition hover:text-slate-700"
+        aria-label="Close search summary"
+      >
+        x
       </button>
     </div>
-    <div className="mb-4 flex gap-2">
-      <button className="rounded bg-slate-100 px-5 py-2 text-xs font-black text-slate-500">One way</button>
-      <button className="rounded bg-blue-100 px-5 py-2 text-xs font-black text-blue-700">Round trip</button>
+
+    <div className="grid gap-4 md:grid-cols-4">
+      <Info label="From" value={from} />
+      <Info label="To" value={to} />
+      <Info label="Depart" value={departDate} />
+      <Info label="Return" value={returnDate} />
     </div>
-    <div className="grid gap-4 lg:grid-cols-[1.2fr_1.2fr_1fr_1fr_140px]">
-      <Field label="From">
-        <input className={inputClass} defaultValue={from} />
-      </Field>
-      <Field label="To">
-        <input className={inputClass} defaultValue={to} />
-      </Field>
-      <Field label="Depart">
-        <input className={inputClass} defaultValue={departDate} />
-      </Field>
-      <Field label="Return">
-        <input className={inputClass} defaultValue={returnDate} />
-      </Field>
-      <button className="mt-6 h-11 rounded-lg bg-[#073b70] text-sm font-black text-white">Search</button>
-    </div>
-    <div className="mt-4 max-w-md">
-      <Field label="Passengers and Class">
-        <select className={inputClass} defaultValue="2 Adults, 1 Child, Business Class">
-          <option>2 Adults, 1 Child, Business Class</option>
-          <option>1 Passenger, Economy</option>
-        </select>
-      </Field>
+
+    <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-xs font-semibold text-slate-500">
+        This panel is read-only so selected fare results stay consistent.
+      </p>
+      <Link to="/" className="inline-flex h-11 items-center justify-center rounded bg-[#073b70] px-5 text-sm font-black text-white">
+        Start New Search
+      </Link>
     </div>
   </section>
 );

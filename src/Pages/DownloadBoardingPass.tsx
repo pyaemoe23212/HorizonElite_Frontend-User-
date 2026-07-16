@@ -1,7 +1,8 @@
 import React from "react";
 import { BadgeCheck, Download, Luggage as Suitcase, Mail, Plane, Printer } from "lucide-react";
-import { Link, useLocation } from "react-router";
+import { useLocation } from "react-router";
 import { boardingPassApi } from "../Services/api";
+import PageHeader from "../components/PageHeader";
 
 function DownloadBoardingPass(): React.JSX.Element {
   const { state } = useLocation();
@@ -12,6 +13,10 @@ function DownloadBoardingPass(): React.JSX.Element {
   const passenger = passengers[0] || {};
   const flight = bookingState.outboundFlight || bookingState.selectedFlight || {};
   const passengerName = [passenger.pi_title, passenger.pi_first_name, passenger.pi_last_name].filter(Boolean).join(" ") || "Not available";
+  const passengerType = passenger.pi_passenger_type_code === "CHD" ? "Child" : passenger.pi_passenger_type_code === "INF" ? "Infant" : passenger.pi_passenger_type_code === "ADT" ? "Adult" : "Passenger";
+  const boardingTime = flight.boarding_time || flight.boardingTime || "Not assigned";
+  const gate = flight.gate || flight.departure_gate || "Not assigned";
+  const seat = flight.seat_number || bookingState.seat_number || "Not assigned";
   const [isDownloading, setIsDownloading] = React.useState(false);
   const [isSending, setIsSending] = React.useState(false);
   const [message, setMessage] = React.useState("");
@@ -41,17 +46,9 @@ function DownloadBoardingPass(): React.JSX.Element {
     finally { setIsSending(false); }
   };
   return (
-    <main className="min-h-screen bg-slate-100 px-6 py-14">
-      <div className="mx-auto max-w-7xl">
-        {/* Back */}
-        <Link
-          to="/additional-services?flow=booking"
-          state={bookingState}
-          className="mb-8 inline-flex items-center gap-2 text-[#073b70] hover:underline"
-        >
-          ← Back
-        </Link>
-
+    <main className="min-h-screen bg-slate-100">
+      <PageHeader rightLink={{ label: "Services", to: "/additional-services" }} />
+      <div className="mx-auto max-w-7xl px-6 py-14">
         {/* Heading */}
         <h1 className="text-5xl font-black text-[#073b70]">
           Download Boarding Pass
@@ -72,7 +69,7 @@ function DownloadBoardingPass(): React.JSX.Element {
                   <p className="font-bold text-[#073b70]">
                     {passengerName}
                   </p>
-                  <p>Adult</p>
+                  <p>{passengerType}</p>
                 </Info>
 
                 <div className="mt-8">
@@ -124,7 +121,7 @@ function DownloadBoardingPass(): React.JSX.Element {
                         {flight.origin_airport_code || flight.departure_airport || "--"}
                       </p>
 
-                      <p>Yangon</p>
+                      <p>{flight.departure_airport_name || flight.origin_airport_name || "Origin airport"}</p>
 
                       <p className="mt-2 font-bold">
                         {flight.departure_datetime ? new Date(flight.departure_datetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--"}
@@ -144,7 +141,7 @@ function DownloadBoardingPass(): React.JSX.Element {
                         {flight.destination_airport_code || flight.arrival_airport || "--"}
                       </p>
 
-                      <p>Bangkok</p>
+                      <p>{flight.arrival_airport_name || flight.destination_airport_name || "Destination airport"}</p>
 
                       <p className="mt-2 font-bold">
                         {flight.arrival_datetime ? new Date(flight.arrival_datetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--"}
@@ -155,20 +152,18 @@ function DownloadBoardingPass(): React.JSX.Element {
                   <hr />
 
                   <div className="mt-6 grid grid-cols-3 gap-4">
-                    <Info label="Gate" value="B12" />
+                    <Info label="Gate" value={gate} />
 
                     <Info
                       label="Boarding"
                       value={
                         <>
-                          08:45
-                          <br />
-                          AM
+                          {boardingTime}
                         </>
                       }
                     />
 
-                    <Info label="Seat" value="12A" />
+                    <Info label="Seat" value={seat} />
                   </div>
 
                   <div className="mt-8 flex gap-8">
@@ -246,7 +241,7 @@ function DownloadBoardingPass(): React.JSX.Element {
 
                 <li>
                   Baggage drop closes 60 minutes prior to departure for
-                  flight HE 742.
+                  your scheduled departure.
                 </li>
               </ul>
 

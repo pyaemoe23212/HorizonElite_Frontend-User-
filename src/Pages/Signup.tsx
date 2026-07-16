@@ -136,6 +136,8 @@ const startLineLogin = () => {
 };
 
 function Signup(): React.JSX.Element {
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   const [formData, setFormData] = React.useState({
     title: '',
     first_name: '',
@@ -428,7 +430,7 @@ function Signup(): React.JSX.Element {
               </select>
             </label>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <label className="block">
                 <FieldLabel>First Name <span className="text-red-500">*</span></FieldLabel>
                 <input required type="text" name="first_name" value={formData.first_name} onChange={handleChange} placeholder="Jane" className="h-11 w-full rounded border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600" />
@@ -437,9 +439,6 @@ function Signup(): React.JSX.Element {
                 <FieldLabel>Middle Name <span className="text-slate-400">(Optional)</span></FieldLabel>
                 <input type="text" name="middle_name" value={formData.middle_name} onChange={handleChange} placeholder="Marie" className="h-11 w-full rounded border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600" />
               </label>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <FieldLabel>Last Name <span className="text-red-500">*</span></FieldLabel>
                 <input required type="text" name="last_name" value={formData.last_name} onChange={handleChange} placeholder="Doe" className="h-11 w-full rounded border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600" />
@@ -555,8 +554,10 @@ function Signup(): React.JSX.Element {
             <label className="block">
               <FieldLabel>Password <span className="text-red-500">*</span></FieldLabel>
               <span className="flex h-11 items-center rounded border border-slate-300 bg-white px-4 transition focus-within:border-blue-600">
-                <input required type="password" name="password" value={formData.password} onChange={handleChange} placeholder="********" className="min-w-0 flex-1 text-sm outline-none" />
-                <EyeIcon />
+                <input required type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} placeholder="********" className="min-w-0 flex-1 text-sm outline-none" />
+                <button type="button" onClick={() => setShowPassword(current => !current)} className="rounded p-1 outline-none transition hover:bg-slate-100 focus:bg-slate-100" aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                  <EyeIcon />
+                </button>
               </span>
             </label>
 
@@ -587,8 +588,10 @@ function Signup(): React.JSX.Element {
             <label className="block">
               <FieldLabel>Confirm Password <span className="text-red-500">*</span></FieldLabel>
               <span className="flex h-11 items-center rounded border border-slate-300 bg-white px-4 transition focus-within:border-blue-600">
-                <input required type="password" name="confirm_password" value={formData.confirm_password} onChange={handleChange} placeholder="********" className="min-w-0 flex-1 text-sm outline-none" />
-                <EyeIcon />
+                <input required type={showConfirmPassword ? 'text' : 'password'} name="confirm_password" value={formData.confirm_password} onChange={handleChange} placeholder="********" className="min-w-0 flex-1 text-sm outline-none" />
+                <button type="button" onClick={() => setShowConfirmPassword(current => !current)} className="rounded p-1 outline-none transition hover:bg-slate-100 focus:bg-slate-100" aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}>
+                  <EyeIcon />
+                </button>
               </span>
             </label>
 

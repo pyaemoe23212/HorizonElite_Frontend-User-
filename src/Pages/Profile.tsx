@@ -23,6 +23,7 @@ import {
   type SavedPaymentMethod,
   type SavedPaymentMethodPayload,
 } from '../Services/api';
+import CountrySelect from '../components/CountrySelect';
 
 const inputClass = 'h-11 w-full border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#073b70]';
 const textAreaClass = 'min-h-24 w-full border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#073b70]';
@@ -840,7 +841,7 @@ function Profile(): React.JSX.Element {
                     </select>
                   </Label>
                   <Label label="Nationality">
-                    <input value={profile.nationality || ''} onChange={event => updateProfileField('nationality', event.target.value)} className={inputClass} />
+                    <CountrySelect value={profile.nationality || ''} onChange={country => updateProfileField('nationality', country)} className={inputClass} placeholder="Select nationality" />
                   </Label>
                   <Label label="Preferred Currency">
                     <input value={profile.preferred_currency || ''} onChange={event => updateProfileField('preferred_currency', event.target.value.toUpperCase())} maxLength={3} className={inputClass} />
@@ -954,7 +955,7 @@ function Profile(): React.JSX.Element {
                       dropdownMode="select"
                     />
                   </Label>
-                  <Label label="Nationality"><input value={passengerForm.nationality} onChange={event => updatePassengerField('nationality', event.target.value)} className={inputClass} /></Label>
+                  <Label label="Nationality"><CountrySelect value={passengerForm.nationality} onChange={country => updatePassengerField('nationality', country)} className={inputClass} placeholder="Select nationality" /></Label>
                   <Label label="Contact Email"><input type="email" value={passengerForm.contact_email || ''} onChange={event => updatePassengerField('contact_email', event.target.value)} className={inputClass} /></Label>
                   <Label label="Contact Phone"><PhoneInput value={passengerForm.contact_phone || ''} onChange={value => updatePassengerField('contact_phone', value)} /></Label>
                 </div>
@@ -963,7 +964,7 @@ function Profile(): React.JSX.Element {
               <Section id="passport-details" title="Passport Details">
                 <div className="grid gap-5 md:grid-cols-3">
                   <Label label="Passport Number"><input value={passengerForm.passport_number || ''} onChange={event => updatePassengerField('passport_number', event.target.value)} className={inputClass} /></Label>
-                  <Label label="Issuing Country"><input value={passengerForm.passport_issuing_country || ''} onChange={event => updatePassengerField('passport_issuing_country', event.target.value)} className={inputClass} /></Label>
+                  <Label label="Issuing Country"><CountrySelect value={passengerForm.passport_issuing_country || ''} onChange={country => updatePassengerField('passport_issuing_country', country)} className={inputClass} placeholder="Select issuing country" /></Label>
                   <Label label="Expiry Date">
                     <DatePicker
                       selected={fromDateString(passengerForm.passport_expiry_date)}
@@ -983,7 +984,7 @@ function Profile(): React.JSX.Element {
               <Section id="visa-information" title="Visa Information">
                 <div className="grid gap-5 md:grid-cols-3">
                   <Label label="Visa Number"><input value={passengerForm.visa_number || ''} onChange={event => updatePassengerField('visa_number', event.target.value)} className={inputClass} /></Label>
-                  <Label label="Visa Country"><input value={passengerForm.visa_country || ''} onChange={event => updatePassengerField('visa_country', event.target.value)} className={inputClass} /></Label>
+                  <Label label="Visa Country"><CountrySelect value={passengerForm.visa_country || ''} onChange={country => updatePassengerField('visa_country', country)} className={inputClass} placeholder="Select visa country" /></Label>
                   <Label label="Visa Expiry Date">
                     <DatePicker
                       selected={fromDateString(passengerForm.visa_expiry_date)}

@@ -1,7 +1,8 @@
 import React from "react";
 import { BadgeCheck, CircleHelp, Plane } from "lucide-react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { checkInApi, type CheckInResult, type ManageBookingDetails } from "../Services/api";
+import PageHeader from "../components/PageHeader";
 
 const toRouteState = (details: ManageBookingDetails) => {
   const outboundFlight = {
@@ -66,9 +67,9 @@ function CheckIn(): React.JSX.Element {
   const complete = Boolean(result?.eligibility.already_checked_in);
 
   return (
-    <main className="min-h-screen bg-slate-100 px-6 py-14">
-      <div className="mx-auto max-w-4xl">
-        <Link to="/additional-services" className="mb-10 inline-flex items-center text-slate-600 hover:text-[#073b70]">← Back</Link>
+    <main className="min-h-screen bg-slate-100">
+      <PageHeader rightLink={{ label: "Services", to: "/services" }} />
+      <div className="mx-auto max-w-4xl px-6 py-14">
         <h1 className="text-center text-5xl font-black text-[#073b70]">Online Check-in</h1>
         <p className="mx-auto mt-5 max-w-xl text-center text-lg text-slate-600">Enter your booking reference and passenger last name to check in.</p>
 

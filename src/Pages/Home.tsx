@@ -30,6 +30,7 @@ interface SearchData {
 }
 
 const AIRPORT_CACHE_KEY = 'horizon_elite_airports_v1';
+const MAX_PASSENGERS = 9;
 
 const fallbackAirports: Airport[] = [
   { city: 'Bangkok', country: 'Thailand', name: 'Suvarnabhumi Airport', IATA: 'BKK', ICAO: 'VTBS', lat: '13.6900', lon: '100.7501', timezone: 'Asia/Bangkok' },
@@ -144,10 +145,11 @@ function Home(): React.JSX.Element {
   const [showToDropdown, setShowToDropdown] = useState(false);
   const [activeFromIndex, setActiveFromIndex] = useState(-1);
   const [activeToIndex, setActiveToIndex] = useState(-1);
-  const [childrenAges, setChildrenAges] = useState<number[]>([]);
-
   const fromRef = useRef<HTMLInputElement>(null);
   const toRef = useRef<HTMLInputElement>(null);
+  const departDateRef = useRef<DatePicker | null>(null);
+  const returnDateRef = useRef<DatePicker | null>(null);
+  const passengerBoxRef = useRef<HTMLButtonElement>(null);
 
   const getValidAirports = (data: Airport[]) =>
     data.filter(a => a.IATA && a.IATA.length === 3 && a.IATA !== '\\N');
@@ -209,6 +211,36 @@ function Home(): React.JSX.Element {
     setSearchError('');
   };
 
+  const handleTripTypeChange = (tripType: SearchData['tripType']) => {
+    setSearchData(prev => ({
+      ...prev,
+      tripType,
+      returnDate: tripType === 'One-way' ? null : prev.returnDate,
+    }));
+    setSearchError('');
+  };
+
+  const changePassengerCount = (name: 'adultCount' | 'childCount' | 'infantCount', value: number) => {
+    setSearchData(prev => {
+      const nextValue = Math.max(name === 'adultCount' ? 1 : 0, value);
+      const next = { ...prev, [name]: nextValue };
+      const total = next.adultCount + next.childCount + next.infantCount;
+
+      if (name === 'infantCount' && next.infantCount > next.adultCount) {
+        setSearchError('Infants cannot be more than adults.');
+        return prev;
+      }
+
+      if (total > MAX_PASSENGERS) {
+        setSearchError(`A maximum of ${MAX_PASSENGERS} passengers can be searched at once.`);
+        return prev;
+      }
+
+      setSearchError('');
+      return next;
+    });
+  };
+
   const handleSwapDestinations = () => {
     setSearchData(prev => ({ ...prev, from: prev.to, to: prev.from }));
     setFromSuggestions([]);
@@ -227,6 +259,15 @@ function Home(): React.JSX.Element {
   const formatAirportDisplay = (a: Airport) => `${a.city}, ${a.country} (${a.IATA})`;
 
   const focusNext = (ref: any) => setTimeout(() => ref.current?.focus(), 80);
+  const openDatePicker = (ref: React.RefObject<DatePicker | null>) => {
+    window.setTimeout(() => ref.current?.setOpen(true), 120);
+  };
+  const openPassengers = () => {
+    window.setTimeout(() => {
+      passengerBoxRef.current?.focus();
+      setShowPassengerModal(true);
+    }, 120);
+  };
 
   // From Handlers
   const handleFromInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -265,6 +306,7 @@ function Home(): React.JSX.Element {
     handleChange('to', formatAirportDisplay(airport));
     setToSuggestions([]);
     setShowToDropdown(false);
+    openDatePicker(departDateRef);
   };
 
   const handleToKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -296,6 +338,14 @@ function Home(): React.JSX.Element {
       setSearchError('Please select a return date');
       return;
     }
+    if (searchData.tripType === 'Return' && searchData.returnDate && searchData.departDate && searchData.returnDate < searchData.departDate) {
+      setSearchError('Return date cannot be before departure date');
+      return;
+    }
+    if (searchData.infantCount > searchData.adultCount) {
+      setSearchError('Infants cannot be more than adults');
+      return;
+    }
 
     setIsSearching(true);
 
@@ -305,6 +355,11 @@ function Home(): React.JSX.Element {
 
       if (!originCode || !destinationCode) {
         setSearchError('Please select valid airports from the dropdown');
+        setIsSearching(false);
+        return;
+      }
+      if (originCode === destinationCode) {
+        setSearchError('From and To airports must be different.');
         setIsSearching(false);
         return;
       }
@@ -351,7 +406,6 @@ function Home(): React.JSX.Element {
         ...searchData,
         departDate: searchData.departDate?.toISOString().split('T')[0] || null,
         returnDate: searchData.returnDate?.toISOString().split('T')[0] || null,
-        childrenAges,
         passengers: `${totalPassengers} Passenger${totalPassengers !== 1 ? 's' : ''}`,
       };
 
@@ -390,15 +444,21 @@ function Home(): React.JSX.Element {
           )}
 
           <div className="flex gap-8 mb-8 border-b pb-6 text-sm font-medium">
-            <button type="button" onClick={() => handleChange('tripType', 'Return')} className={`flex items-center gap-2 pb-1 transition ${searchData.tripType === 'Return' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}>
+            <button type="button" onClick={() => handleTripTypeChange('Return')} className={`flex items-center gap-2 pb-1 transition ${searchData.tripType === 'Return' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}>
               <PlaneIcon /> {labels.roundTrip}
             </button>
-            <button type="button" onClick={() => handleChange('tripType', 'One-way')} className={`pb-1 transition ${searchData.tripType === 'One-way' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}>
+            <button type="button" onClick={() => handleTripTypeChange('One-way')} className={`pb-1 transition ${searchData.tripType === 'One-way' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}>
               {labels.oneWay}
             </button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+            {isLoadingAirports && (
+              <div className="lg:col-span-12 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm font-semibold text-blue-800">
+                Loading airport list...
+              </div>
+            )}
+
             {/* FROM */}
             <div className="lg:col-span-5 relative">
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">{labels.from}</label>
@@ -463,13 +523,26 @@ function Home(): React.JSX.Element {
             </div>
 
             {/* DEPART DATE */}
-            <div className="lg:col-span-3">
+            <div className={searchData.tripType === 'One-way' ? 'lg:col-span-6' : 'lg:col-span-3'}>
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">{labels.departDate}</label>
               <div className="flex h-16 items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 focus-within:border-blue-500 transition-all">
                 <CalendarIcon />
                 <DatePicker
+                  ref={departDateRef}
                   selected={searchData.departDate}
-                  onChange={(date: Date | null) => handleChange('departDate', date)}
+                  onChange={(date: Date | null) => {
+                    handleChange('departDate', date);
+                    if (date && searchData.returnDate && searchData.returnDate < date) {
+                      handleChange('returnDate', null);
+                    }
+                    if (date) {
+                      if (searchData.tripType === 'Return') {
+                        openDatePicker(returnDateRef);
+                      } else {
+                        openPassengers();
+                      }
+                    }
+                  }}
                   className="bg-transparent text-lg font-medium text-slate-800 outline-none w-full cursor-pointer"
                   placeholderText="Select departure date"
                   dateFormat="dd MMM yyyy"
@@ -479,45 +552,78 @@ function Home(): React.JSX.Element {
             </div>
 
             {/* RETURN DATE */}
-            <div className="lg:col-span-3">
-              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">{labels.returnDate}</label>
-              <div className="flex h-16 items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 focus-within:border-blue-500 transition-all">
-                <CalendarIcon />
-                <DatePicker
-                  selected={searchData.returnDate}
-                  onChange={(date: Date | null) => handleChange('returnDate', date)}
-                  className="bg-transparent text-lg font-medium text-slate-800 outline-none w-full cursor-pointer"
-                  placeholderText="Select return date"
-                  dateFormat="dd MMM yyyy"
-                  minDate={searchData.departDate || new Date()}
-                  disabled={searchData.tripType === 'One-way'}
-                />
+            {searchData.tripType === 'Return' && (
+              <div className="lg:col-span-3">
+                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">{labels.returnDate}</label>
+                <div className="flex h-16 items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 focus-within:border-blue-500 transition-all">
+                  <CalendarIcon />
+                  <DatePicker
+                    ref={returnDateRef}
+                    selected={searchData.returnDate}
+                    onChange={(date: Date | null) => {
+                      handleChange('returnDate', date);
+                      if (date) {
+                        openPassengers();
+                      }
+                    }}
+                    className="bg-transparent text-lg font-medium text-slate-800 outline-none w-full cursor-pointer"
+                    placeholderText="Select return date"
+                    dateFormat="dd MMM yyyy"
+                    minDate={searchData.departDate || new Date()}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* PASSENGERS */}
             <div className="lg:col-span-4">
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">PASSENGERS</label>
-              <div onClick={() => setShowPassengerModal(true)} className="flex h-16 items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 cursor-pointer hover:border-blue-500 transition-all">
+              <button ref={passengerBoxRef} type="button" onClick={() => setShowPassengerModal(true)} className="flex h-16 w-full items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 cursor-pointer text-left hover:border-blue-500 transition-all focus:border-blue-500 focus:outline-none">
                 <UserIcon />
                 <div>
                   <div className="text-lg font-medium text-slate-800">{totalPassengers} Passenger{totalPassengers !== 1 ? 's' : ''}</div>
                   <div className="text-xs text-slate-500">{searchData.cabinClass}</div>
                 </div>
-              </div>
+              </button>
             </div>
 
             {/* SEARCH BUTTON */}
             <button
               type="submit"
               disabled={isSearching || !searchData.from || !searchData.to || !searchData.departDate || (searchData.tripType === 'Return' && !searchData.returnDate)}
-              className="lg:col-span-2 h-16 rounded-2xl bg-blue-600 text-white font-semibold flex items-center justify-center hover:bg-blue-700 transition disabled:opacity-60 shadow-lg mt-8 lg:mt-0"
+              className="lg:col-span-2 h-16 rounded-2xl bg-blue-600 text-white font-semibold flex items-center justify-center gap-3 hover:bg-blue-700 transition disabled:opacity-60 shadow-lg mt-8 lg:mt-0"
             >
-              {isSearching ? 'Searching...' : <SearchIcon />}
+              {isSearching ? (
+                <>
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  Searching
+                </>
+              ) : (
+                <>
+                  <SearchIcon />
+                  <span>{labels.searchFlights}</span>
+                </>
+              )}
             </button>
           </div>
+
+          {isSearching && (
+            <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-800">
+              Searching available flights for your selected route and dates...
+            </div>
+          )}
         </form>
       </div>
+
+      {isSearching && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/40 px-6 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-7 text-center shadow-2xl">
+            <div className="mx-auto mb-5 h-12 w-12 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+            <p className="text-lg font-black text-[#073b70]">Searching Flights</p>
+            <p className="mt-2 text-sm font-semibold text-slate-500">Comparing fares and schedules. This may take a moment.</p>
+          </div>
+        </div>
+      )}
 
       {/* Passenger Modal */}
       {showPassengerModal && (
@@ -532,9 +638,9 @@ function Home(): React.JSX.Element {
                 <div className="text-sm text-slate-500">18+</div>
               </div>
               <div className="flex items-center gap-4">
-                <button onClick={() => handleChange('adultCount', Math.max(1, searchData.adultCount - 1))} className="w-9 h-9 rounded-full border flex items-center justify-center text-xl">-</button>
+                <button type="button" onClick={() => changePassengerCount('adultCount', searchData.adultCount - 1)} className="w-9 h-9 rounded-full border flex items-center justify-center text-xl">-</button>
                 <span className="w-8 text-center text-xl font-medium">{searchData.adultCount}</span>
-                <button onClick={() => handleChange('adultCount', searchData.adultCount + 1)} className="w-9 h-9 rounded-full border flex items-center justify-center text-xl">+</button>
+                <button type="button" onClick={() => changePassengerCount('adultCount', searchData.adultCount + 1)} className="w-9 h-9 rounded-full border flex items-center justify-center text-xl">+</button>
               </div>
             </div>
 
@@ -543,15 +649,14 @@ function Home(): React.JSX.Element {
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <div className="font-medium">Children</div>
-                  <div className="text-sm text-slate-500">0–17</div>
+                  <div className="text-sm text-slate-500">2-11</div>
                 </div>
                 <div className="flex items-center gap-4">
                   <button
                     type="button"
                     onClick={() => {
                       if (searchData.childCount > 0) {
-                        handleChange('childCount', searchData.childCount - 1);
-                        setChildrenAges(prev => prev.slice(0, -1));
+                        changePassengerCount('childCount', searchData.childCount - 1);
                       }
                     }}
                     className="w-9 h-9 rounded-full border flex items-center justify-center text-xl"
@@ -562,8 +667,7 @@ function Home(): React.JSX.Element {
                   <button
                     type="button"
                     onClick={() => {
-                      handleChange('childCount', searchData.childCount + 1);
-                      setChildrenAges(prev => [...prev, 12]);
+                      changePassengerCount('childCount', searchData.childCount + 1);
                     }}
                     className="w-9 h-9 rounded-full border flex items-center justify-center text-xl"
                   >
@@ -572,30 +676,6 @@ function Home(): React.JSX.Element {
                 </div>
               </div>
 
-              {/* Children Ages */}
-              {searchData.childCount > 0 && (
-                <div className="ml-2 space-y-3 mt-4 pt-4 border-t">
-                  <p className="text-xs font-semibold text-slate-600">Child Age</p>
-                  {Array.from({ length: searchData.childCount }).map((_, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <label className="text-xs text-slate-600">Child {index + 1}:</label>
-                      <select
-                        value={childrenAges[index] || 12}
-                        onChange={(e) => {
-                          const newAges = [...childrenAges];
-                          newAges[index] = parseInt(e.target.value);
-                          setChildrenAges(newAges);
-                        }}
-                        className="px-3 py-1 rounded border border-slate-300 bg-white text-sm"
-                      >
-                        {Array.from({ length: 18 }, (_, i) => i).map(age => (
-                          <option key={age} value={age}>{age} years</option>
-                        ))}
-                      </select>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Cabin Class */}
@@ -605,9 +685,9 @@ function Home(): React.JSX.Element {
                 <div className="text-sm text-slate-500">Under 2</div>
               </div>
               <div className="flex items-center gap-4">
-                <button onClick={() => handleChange('infantCount', Math.max(0, searchData.infantCount - 1))} className="w-9 h-9 rounded-full border flex items-center justify-center text-xl">-</button>
+                <button type="button" onClick={() => changePassengerCount('infantCount', searchData.infantCount - 1)} className="w-9 h-9 rounded-full border flex items-center justify-center text-xl">-</button>
                 <span className="w-8 text-center text-xl font-medium">{searchData.infantCount}</span>
-                <button onClick={() => handleChange('infantCount', searchData.infantCount + 1)} className="w-9 h-9 rounded-full border flex items-center justify-center text-xl">+</button>
+                <button type="button" onClick={() => changePassengerCount('infantCount', searchData.infantCount + 1)} className="w-9 h-9 rounded-full border flex items-center justify-center text-xl">+</button>
               </div>
             </div>
 

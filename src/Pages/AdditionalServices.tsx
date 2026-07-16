@@ -1,8 +1,9 @@
 import React, { useEffect } from "react";
-import { BadgeCheck, CircleHelp, Luggage, Plane, Sparkles } from "lucide-react";
+import { BadgeCheck, CircleHelp, Download, Luggage, Plane, Sparkles, TicketCheck } from "lucide-react";
 import { Link, useLocation } from "react-router";
+import PageHeader from "../components/PageHeader";
 
-const services = [
+const postBookingServices = [
   {
     title: "Manage Add-ons",
     description: "Add baggage, meals, assistance, lounge access, or insurance.",
@@ -28,16 +29,22 @@ const services = [
     icon: BadgeCheck,
   },
   {
+    title: "Download E-ticket",
+    description: "Download or email your confirmed e-ticket.",
+    action: "/download-e-ticket",
+    icon: TicketCheck,
+  },
+  {
+    title: "Download Boarding Pass",
+    description: "Access your digital boarding pass after check-in.",
+    action: "/download-boarding-pass",
+    icon: Download,
+  },
+  {
     title: "Case Management",
     description: "Create or track support cases for this booking.",
     action: "/case-management",
     icon: CircleHelp,
-  },
-  {
-    title: "Personalized Services",
-    description: "Choose travel reminders and recommendations.",
-    action: "/personalized-services",
-    icon: Sparkles,
   },
 ];
 
@@ -51,6 +58,7 @@ function AdditionalServices(): React.JSX.Element {
   const pnr = routeState.pnrReference || booking.pnr_reference || "Not available";
   const origin = outbound.origin_airport_code || outbound.departure_airport || "--";
   const destination = outbound.destination_airport_code || outbound.arrival_airport || "--";
+  const hasBookingContext = Boolean(routeState.pnrReference || booking.pnr_reference || routeState.booking_id || routeState.bookingId || booking.booking_id);
 
   useEffect(() => {
     if (!hash) return;
@@ -59,14 +67,15 @@ function AdditionalServices(): React.JSX.Element {
   }, [hash]);
 
   return (
-    <main className="min-h-screen bg-slate-100 px-6 py-14 text-slate-800">
-      <section className="mx-auto max-w-7xl">
+    <main className="min-h-screen bg-slate-100 text-slate-800">
+      <PageHeader rightLink={{ label: "Manage Booking", to: "/manage-booking" }} />
+      <section className="mx-auto max-w-7xl px-6 py-14">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-cyan-700">Booking Services</p>
+            <p className="text-xs font-black uppercase tracking-widest text-cyan-700">Post-booking services</p>
             <h1 className="mt-2 text-5xl font-black text-[#073b70]">Additional Services</h1>
             <p className="mt-4 max-w-2xl text-lg font-semibold text-slate-600">
-              Choose what you need for this trip.
+              Continue after payment with trip management, check-in, travel documents, and support.
             </p>
           </div>
 
@@ -79,9 +88,15 @@ function AdditionalServices(): React.JSX.Element {
           </Link>
         </div>
 
+        {!hasBookingContext && (
+          <div className="mt-8 rounded-lg border border-amber-300 bg-amber-50 p-5 text-sm font-semibold text-amber-800">
+            This post-booking page works best from a confirmed booking. Use Manage Booking if you need to find a trip by PNR first.
+          </div>
+        )}
+
         <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_360px]">
           <div className="grid gap-5 md:grid-cols-2">
-            {services.map((service) => {
+            {postBookingServices.map((service) => {
               const Icon = service.icon;
 
               return (
@@ -97,10 +112,25 @@ function AdditionalServices(): React.JSX.Element {
                   </div>
                   <h2 className="mt-6 text-2xl font-black text-[#073b70]">{service.title}</h2>
                   <p className="mt-3 min-h-12 text-sm font-semibold leading-6 text-slate-600">{service.description}</p>
-                  <span className="mt-6 inline-block text-xs font-black uppercase tracking-widest text-cyan-700">Continue</span>
+                  <span className="mt-6 inline-block text-xs font-black uppercase tracking-widest text-cyan-700">Open</span>
                 </Link>
               );
             })}
+
+            <Link
+              to="/personalized-services"
+              state={routeState}
+              className="rounded-lg border border-purple-300 bg-purple-50 p-6 shadow-sm transition hover:-translate-y-1 hover:border-purple-700 hover:shadow-lg md:col-span-2"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded bg-white text-purple-700">
+                <Sparkles size={25} strokeWidth={2.2} />
+              </div>
+              <h2 className="mt-6 text-2xl font-black text-purple-800">Continue to Personalized Services</h2>
+              <p className="mt-3 text-sm font-semibold leading-6 text-purple-900/75">
+                Finish with travel reminders, flight updates, check-in notifications, and personalized recommendations for this booking.
+              </p>
+              <span className="mt-6 inline-block text-xs font-black uppercase tracking-widest text-purple-700">Final step</span>
+            </Link>
           </div>
 
           <aside className="space-y-6">
@@ -136,6 +166,16 @@ function AdditionalServices(): React.JSX.Element {
                   Manage With PNR
                 </Link>
               </div>
+            </section>
+
+            <section className="rounded-lg border border-purple-200 bg-purple-50 p-6 shadow-sm">
+              <h2 className="text-lg font-black text-purple-800">Next Step</h2>
+              <p className="mt-3 text-sm font-semibold leading-6 text-purple-900/75">
+                After choosing any needed post-booking services, continue to Personalized Services to set reminders and recommendations.
+              </p>
+              <Link to="/personalized-services" state={routeState} className="mt-5 flex h-12 w-full items-center justify-center rounded bg-purple-700 text-sm font-black text-white hover:bg-purple-800">
+                Continue to Personalized
+              </Link>
             </section>
 
             <section className="rounded-lg border border-slate-300 bg-white p-6 shadow-sm">

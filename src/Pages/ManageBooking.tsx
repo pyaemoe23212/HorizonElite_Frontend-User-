@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { CircleHelp, Download, Luggage as Suitcase, Mail, Plane } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { bookingApi, type ManageBookingDetails } from "../Services/api";
+import PageHeader from "../components/PageHeader";
 
 const onlineServices = [
   {
@@ -117,15 +118,9 @@ function ManageBooking(): React.JSX.Element {
   };
 
   return (
-    <main className="min-h-screen bg-slate-100 px-6 py-14">
-      <div className="mx-auto max-w-7xl">
-        <Link
-          to="/additional-services"
-          className="mb-8 inline-flex items-center gap-2 text-slate-500 hover:text-[#073b70]"
-        >
-          Back
-        </Link>
-
+    <main className="min-h-screen bg-slate-100">
+      <PageHeader rightLink={{ label: "Services", to: "/services" }} />
+      <div className="mx-auto max-w-7xl px-6 py-14">
         <div className="grid gap-12 lg:grid-cols-[1fr_340px]">
           <section>
             <h1 className="text-5xl font-black text-[#073b70]">Manage My Booking</h1>

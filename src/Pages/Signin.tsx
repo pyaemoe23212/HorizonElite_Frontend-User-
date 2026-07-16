@@ -121,7 +121,7 @@ function Signin(): React.JSX.Element {
                 required
                 value={emailAddress}
                 onChange={(e) => setEmailAddress(e.target.value)}
-                placeholder="e.g. 8123456789"
+                placeholder="jane.doe@example.com"
                 className="h-14 w-full rounded border border-slate-300 bg-slate-50 px-5 text-base text-slate-900 outline-none transition focus:border-blue-600 focus:bg-white"
               />
             </label>

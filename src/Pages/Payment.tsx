@@ -5,6 +5,7 @@ import { addonApi, duffelOrderApi, paymentApi, type CreatePaymentRequest } from 
 import { useAuth } from '../contexts/useAuth';
 
 type PaymentMethod = 'card' | 'qr' | 'banking' | 'wallet';
+type PaymentProvider = string;
 
 interface CardDetails {
   cardNumber: string;
@@ -153,7 +154,7 @@ const getTicketingIssueMessage = (error: any): string => {
 
 const OFFER_UNAVAILABLE_MESSAGE =
   'This flight price is no longer available. Please run a new flight search and choose another flight.';
-const steps = ['Flight', 'Passenger', 'Service', 'Payment', 'Additional Services', 'Personalized'];
+const steps = ['Flight', 'Passenger', 'Services', 'Payment', 'Confirm'];
 
 const methods: Array<{ id: PaymentMethod; title: string; subtitle: string; icon: string }> = [
   { id: 'card', title: 'Credit / Debit Card', subtitle: 'Mastercard / Visa', icon: 'CARD' },
@@ -296,7 +297,7 @@ const validateCardDetails = (cardDetails: CardDetails): CardErrors => {
 };
 
 const Stepper = () => (
-  <div className="mx-auto grid max-w-5xl grid-cols-6 items-start gap-2 px-4 py-10">
+  <div className="mx-auto grid max-w-5xl grid-cols-5 items-start gap-2 px-4 py-10">
     {steps.map((step, index) => {
       const complete = index < 3;
       const active = index === 3;
@@ -330,7 +331,7 @@ const TripSummary = ({
   offerUnavailable?: boolean;
   isMissingCheckoutState?: boolean;
 }) => {
-  const pnrReference = routeState?.pnrReference || 'HE7429BL';
+  const pnrReference = routeState?.pnrReference || 'Not available';
   const outboundFlight = routeState?.outboundFlight || routeState?.selectedFlight;
   const inboundFlight = routeState?.inboundFlight || routeState?.returnFlight;
   
@@ -360,7 +361,7 @@ const TripSummary = ({
       {/* Flight Route */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
         <div>
-          <p className="text-xl font-black text-[#073b70]">{outboundFlight?.departure_airport || 'BKK'}</p>
+          <p className="text-xl font-black text-[#073b70]">{outboundFlight?.departure_airport || outboundFlight?.origin_airport_code || '--'}</p>
           <p className="text-[10px] font-black uppercase text-slate-500">Departure</p>
         </div>
         <div className="text-center text-amber-500">
@@ -371,14 +372,14 @@ const TripSummary = ({
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xl font-black text-[#073b70]">{outboundFlight?.arrival_airport || 'SIN'}</p>
+          <p className="text-xl font-black text-[#073b70]">{outboundFlight?.arrival_airport || outboundFlight?.destination_airport_code || '--'}</p>
           <p className="text-[10px] font-black uppercase text-slate-500">Arrival</p>
         </div>
       </div>
       {/* Price Breakdown */}
       <div className="mt-10 space-y-4 text-base font-semibold text-slate-600">
-        <div className="flex justify-between"><span>Total Amount</span><span className="font-black text-[#073b70]">{currencyCode} {totalAmount}</span></div>
-        <div className="flex justify-between pt-3 text-xl"><span>Amount Due</span><span className="text-[#073b70]">{currencyCode} {totalAmount}</span></div>
+        <div className="flex justify-between"><span>Total Amount</span><span className="font-black text-[#073b70]">{currencyCode} {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+        <div className="flex justify-between pt-3 text-xl"><span>Amount Due</span><span className="text-[#073b70]">{currencyCode} {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
       </div>
       {/* Error Message */}
       {errorMessage && (
@@ -393,7 +394,7 @@ const TripSummary = ({
         disabled={isProcessing}
         className="mt-9 flex h-16 w-full items-center justify-center rounded bg-[#073b70] text-base font-black text-white shadow-lg shadow-blue-950/20 transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-500"
       >
-        {offerUnavailable ? 'Search Again' : isMissingCheckoutState ? 'Return to Booking' : isProcessing ? 'Creating Payment...' : method === 'qr' ? 'Complete QR Payment' : `Pay ${currencyCode} ${totalAmount}`}
+        {offerUnavailable ? 'Search Again' : isMissingCheckoutState ? 'Return to Booking' : isProcessing ? 'Creating Payment...' : method === 'qr' ? 'Complete QR Payment' : `Pay ${currencyCode} ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
       </button>
       {isProcessing && <p className="mt-4 text-center text-xs font-black uppercase tracking-widest text-cyan-700">Processing...</p>}
       <div className="mt-7 text-center text-xs font-black uppercase tracking-widest text-slate-400">SSL 256-bit encrypted</div>
@@ -492,36 +493,59 @@ const CardPanel = ({
   );
 };
 
-const QrPanel = ({ amount, currencyCode }: { amount: number; currencyCode: string }) => (
-  <section>
-    <h1 className="text-3xl font-black text-[#073b70]">Thai QR / PromptPay</h1>
-    <p className="mt-3 text-base font-semibold text-slate-600">Scan this QR code using your Thai mobile banking app.</p>
-    <div className="mt-6 border border-dashed border-slate-500 bg-slate-50 p-10 text-center">
-      <div className="mx-auto w-64 bg-white p-8">
-        <p className="mb-4 inline-block border border-[#073b70] px-3 text-sm font-black text-[#073b70]">PromptPay</p>
-        <div className="grid grid-cols-7 gap-1">
-          {Array.from({ length: 49 }).map((_, index) => (
-            <span key={index} className={`h-5 w-5 ${index % 3 === 0 || index % 7 === 0 || index % 11 === 0 ? 'bg-black' : 'bg-white'}`} />
-          ))}
-        </div>
-      </div>
-      <p className="mt-8 text-3xl font-black text-slate-900">
-        {currencyCode} {amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      </p>
-      <p className="mt-4 text-base font-black text-red-600">QR code expires in 10:00</p>
-    </div>
-    <p className="mt-8 text-center text-sm font-semibold text-slate-600">Once scanned, the payment will be processed immediately. Do not close this page.</p>
-    <div className="mt-8 border border-slate-300 bg-white p-5 text-center text-sm font-semibold text-slate-600">Your transaction is encrypted and secured by Horizon Elite's enterprise-grade safety protocols.</div>
-  </section>
-);
+const QrPanel = ({ amount, currencyCode }: { amount: number; currencyCode: string }) => {
+  const [secondsRemaining, setSecondsRemaining] = React.useState(600);
 
-const BankingPanel = () => (
+  React.useEffect(() => {
+    const timer = window.setInterval(() => {
+      setSecondsRemaining(current => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const minutes = Math.floor(secondsRemaining / 60);
+  const seconds = String(secondsRemaining % 60).padStart(2, '0');
+
+  return (
+    <section>
+      <h1 className="text-3xl font-black text-[#073b70]">Thai QR / PromptPay</h1>
+      <p className="mt-3 text-base font-semibold text-slate-600">Scan this QR code using your Thai mobile banking app.</p>
+      <div className="mt-6 border border-dashed border-slate-500 bg-slate-50 p-10 text-center">
+        <div className="mx-auto w-64 bg-white p-8">
+          <p className="mb-4 inline-block border border-[#073b70] px-3 text-sm font-black text-[#073b70]">PromptPay</p>
+          <div className="grid grid-cols-7 gap-1">
+            {Array.from({ length: 49 }).map((_, index) => (
+              <span key={index} className={`h-5 w-5 ${index % 3 === 0 || index % 7 === 0 || index % 11 === 0 ? 'bg-black' : 'bg-white'}`} />
+            ))}
+          </div>
+        </div>
+        <p className="mt-8 text-3xl font-black text-slate-900">
+          {currencyCode} {amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </p>
+        <p className="mt-4 text-base font-black text-red-600">
+          {secondsRemaining > 0 ? `QR code expires in ${minutes}:${seconds}` : 'QR code expired. Please refresh this payment method.'}
+        </p>
+      </div>
+      <p className="mt-8 text-center text-sm font-semibold text-slate-600">Once scanned, the payment will be processed immediately. Do not close this page.</p>
+      <div className="mt-8 border border-slate-300 bg-white p-5 text-center text-sm font-semibold text-slate-600">Your transaction is encrypted and secured by Horizon Elite's enterprise-grade safety protocols.</div>
+    </section>
+  );
+};
+
+const BankingPanel = ({
+  selectedProvider,
+  onSelectProvider,
+}: {
+  selectedProvider: PaymentProvider;
+  onSelectProvider: (provider: PaymentProvider) => void;
+}) => (
   <section>
     <h1 className="text-3xl font-black text-[#073b70]">Mobile Banking</h1>
     <p className="mt-3 text-base font-semibold text-slate-600">Choose your bank</p>
     <div className="mt-8 grid gap-5 md:grid-cols-2">
       {['K PLUS', 'SCB Easy', 'Krungthai NEXT', 'Bangkok Bank'].map((bank, index) => (
-        <button key={bank} className={`flex h-24 items-center gap-5 rounded-lg border p-6 text-left ${index === 0 ? 'border-[#073b70] bg-blue-50' : 'border-slate-300 bg-white'}`}>
+        <button key={bank} type="button" onClick={() => onSelectProvider(bank)} className={`flex h-24 items-center gap-5 rounded-lg border p-6 text-left ${selectedProvider === bank ? 'border-[#073b70] bg-blue-50 ring-1 ring-[#073b70]' : 'border-slate-300 bg-white'}`}>
           <span className={`flex h-12 w-12 items-center justify-center text-lg font-black text-white ${index === 0 ? 'bg-emerald-600' : index === 1 ? 'bg-purple-700' : index === 2 ? 'bg-sky-500' : 'bg-blue-900'}`}>{bank.slice(0, 2)}</span>
           <span className="text-lg font-black text-[#073b70]">{bank}</span>
         </button>
@@ -533,13 +557,19 @@ const BankingPanel = () => (
   </section>
 );
 
-const WalletPanel = () => (
+const WalletPanel = ({
+  selectedProvider,
+  onSelectProvider,
+}: {
+  selectedProvider: PaymentProvider;
+  onSelectProvider: (provider: PaymentProvider) => void;
+}) => (
   <section>
     <h1 className="text-3xl font-black text-[#073b70]">eWallet</h1>
     <p className="mt-3 text-base font-semibold text-slate-600">Choose your wallet</p>
     <div className="mt-8 grid gap-6 md:grid-cols-2">
       {['TrueMoney Wallet', 'Line Pay'].map((wallet, index) => (
-        <button key={wallet} className={`flex h-36 flex-col items-center justify-center rounded border bg-white p-6 ${index === 0 ? 'border-[#073b70] ring-1 ring-[#073b70]' : 'border-slate-300'}`}>
+        <button key={wallet} type="button" onClick={() => onSelectProvider(wallet)} className={`flex h-36 flex-col items-center justify-center rounded border bg-white p-6 ${selectedProvider === wallet ? 'border-[#073b70] ring-1 ring-[#073b70]' : 'border-slate-300'}`}>
           <span className={`text-4xl font-black ${index === 0 ? 'text-orange-500' : 'text-green-600'}`}>{index === 0 ? 'W' : 'LINE'}</span>
           <span className="mt-4 text-sm font-black uppercase tracking-wide text-slate-700">{wallet}</span>
         </button>
@@ -550,11 +580,6 @@ const WalletPanel = () => (
     </div>
   </section>
 );
-
-const panels: Record<Exclude<PaymentMethod, 'card' | 'qr'>, React.ReactNode> = {
-  banking: <BankingPanel />,
-  wallet: <WalletPanel />,
-};
 
 function Payment(): React.JSX.Element {
   const { state } = useLocation();
@@ -570,6 +595,8 @@ function Payment(): React.JSX.Element {
   const isMissingCheckoutState = !hasUsablePaymentState(routeState);
   
   const [method, setMethod] = useState<PaymentMethod>('card');
+  const [selectedBank, setSelectedBank] = useState<PaymentProvider>('K PLUS');
+  const [selectedWallet, setSelectedWallet] = useState<PaymentProvider>('TrueMoney Wallet');
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [offerUnavailable, setOfferUnavailable] = useState(false);
@@ -629,6 +656,14 @@ function Payment(): React.JSX.Element {
 
       if (!userEmail) {
         throw new Error('Passenger contact email is required for guest payment.');
+      }
+      if (method === 'banking' && !selectedBank) {
+        setErrorMessage('Please choose a mobile banking provider.');
+        return;
+      }
+      if (method === 'wallet' && !selectedWallet) {
+        setErrorMessage('Please choose an eWallet provider.');
+        return;
       }
       
       console.log('📧 Using payment contact email:', userEmail);
@@ -853,8 +888,10 @@ function Payment(): React.JSX.Element {
             />
           ) : method === 'qr' ? (
             <QrPanel amount={paymentAmount} currencyCode={paymentCurrencyCode} />
+          ) : method === 'banking' ? (
+            <BankingPanel selectedProvider={selectedBank} onSelectProvider={setSelectedBank} />
           ) : (
-            panels[method]
+            <WalletPanel selectedProvider={selectedWallet} onSelectProvider={setSelectedWallet} />
           )}
         </section>
 

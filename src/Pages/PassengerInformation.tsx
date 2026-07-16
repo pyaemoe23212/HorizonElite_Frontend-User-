@@ -5,6 +5,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { Link, useLocation, useNavigate } from 'react-router';
 import type { SelectedFlightResponse, CreatePassengerRequest, Passenger, SavedPassenger } from '../Services/api';
 import { passengerApi, profileApi } from '../Services/api';
+import CountrySelect from '../components/CountrySelect';
 import {
   isValidPhoneNumber,
   parsePhoneNumber,
@@ -14,9 +15,13 @@ import {
   type PhoneNumber,
 } from 'libphonenumber-js';
 
-const steps = ['Flight', 'Passenger', 'Service', 'Payment', 'Additional Services', 'Personalized'];
+const steps = ['Flight', 'Passenger', 'Services', 'Payment', 'Confirm'];
 
 const inputClass = 'h-12 w-full rounded-md border border-slate-300 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#073b70] focus:bg-white';
+const isEmailStructureValid = (email: string): boolean =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
+const isPassportNumberValid = (passportNumber: string): boolean =>
+  /^[A-Za-z0-9]{6,12}$/.test(passportNumber.trim());
 
 const Label = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <label className="block">
@@ -43,7 +48,7 @@ const Panel = ({ title, icon, children }: { title: string; icon: React.ReactNode
 );
 
 const Stepper = () => (
-  <div className="mx-auto grid max-w-5xl grid-cols-6 items-start gap-2 px-4 py-8">
+  <div className="mx-auto grid max-w-5xl grid-cols-5 items-start gap-2 px-4 py-8">
     {steps.map((step, index) => {
       const complete = index === 0;
       const active = index === 1;
@@ -253,6 +258,31 @@ function PassengerInformation(): React.JSX.Element {
     tripType = 'ONE_WAY',
     searchData,
   } = (state ?? {}) as PassengerRouteState;
+
+  if (!selectedFlight) {
+    return (
+      <main className="min-h-screen bg-slate-100 text-slate-800">
+        <header className="bg-[#073b70] text-white">
+          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+            <Link to="/" className="text-2xl font-black tracking-wide">
+              HORIZON<span className="text-amber-400">ELITE</span>
+            </Link>
+          </div>
+        </header>
+        <div className="mx-auto max-w-4xl px-6 py-24">
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-8 text-center">
+            <p className="mb-3 text-lg font-black text-amber-800">No Flight Selection Found</p>
+            <p className="mb-6 text-sm font-semibold text-amber-700">
+              Please choose a flight before adding passenger information.
+            </p>
+            <Link to="/" className="inline-flex h-11 items-center justify-center rounded bg-[#073b70] px-6 text-sm font-black text-white">
+              Back to Flight Search
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   // Form state
   const [formData, setFormData] = useState({
@@ -570,6 +600,10 @@ function PassengerInformation(): React.JSX.Element {
       setErrorMessage('Passport number is required');
       return false;
     }
+    if (!isPassportNumberValid(formData.pi_passport_number)) {
+      setErrorMessage('Passport number must be 6 to 12 letters or numbers');
+      return false;
+    }
     if (!formData.pi_passport_expiry_date) {
       console.warn('⚠️ Validation failed: Passport expiry date is required');
       setErrorMessage('Passport expiry date is required');
@@ -580,9 +614,19 @@ function PassengerInformation(): React.JSX.Element {
       setErrorMessage('Passport expiry date must be a future date');
       return false;
     }
+    const minimumRecommendedPassportExpiry = new Date(today);
+    minimumRecommendedPassportExpiry.setMonth(minimumRecommendedPassportExpiry.getMonth() + 6);
+    if (passportExpiryDate < minimumRecommendedPassportExpiry) {
+      setErrorMessage('Passport should be valid for at least 6 months from today');
+      return false;
+    }
     if (!formData.pi_contact_email.trim()) {
       console.warn('⚠️ Validation failed: Email is required');
       setErrorMessage('Email is required');
+      return false;
+    }
+    if (!isEmailStructureValid(formData.pi_contact_email)) {
+      setErrorMessage('Please enter a valid passenger contact email');
       return false;
     }
     if (!phoneNumber.trim()) {
@@ -983,19 +1027,12 @@ function PassengerInformation(): React.JSX.Element {
                     />
                   </Label>
                   <Label label="Nationality*">
-                    <select
+                    <CountrySelect
                       value={formData.pi_nationality}
-                      onChange={(e) => setFormData({ ...formData, pi_nationality: e.target.value })}
+                      onChange={(country) => setFormData({ ...formData, pi_nationality: country })}
                       className={inputClass}
-                    >
-                      <option>Thailand</option>
-                      <option>United Kingdom</option>
-                      <option>United States</option>
-                      <option>Singapore</option>
-                      <option>Vietnam</option>
-                      <option>China</option>
-                      <option>Japan</option>
-                    </select>
+                      placeholder="Select nationality"
+                    />
                   </Label>
                   <Label label="Passenger Type">
                     <input className={inputClass} value={getPassengerTypeLabel(formData.pi_passenger_type_code)} readOnly />
@@ -1013,6 +1050,9 @@ function PassengerInformation(): React.JSX.Element {
                       className={inputClass}
                       placeholder="example@email.com"
                     />
+                    {formData.pi_contact_email && !isEmailStructureValid(formData.pi_contact_email) && (
+                      <p className="mt-1 text-xs font-semibold text-red-500">Enter a valid email address.</p>
+                    )}
                   </Label>
                   <Label label="Phone Number*">
                     <div className="flex gap-3">
@@ -1093,23 +1133,21 @@ function PassengerInformation(): React.JSX.Element {
                   <Label label="Passport Number*">
                     <input
                       value={formData.pi_passport_number}
-                      onChange={(e) => setFormData({ ...formData, pi_passport_number: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, pi_passport_number: e.target.value.toUpperCase() })}
                       className={inputClass}
                       placeholder="Enter number"
                     />
+                    {formData.pi_passport_number && !isPassportNumberValid(formData.pi_passport_number) && (
+                      <p className="mt-1 text-xs font-semibold text-red-500">Use 6 to 12 letters or numbers.</p>
+                    )}
                   </Label>
                   <Label label="Issuing Country*">
-                    <select
+                    <CountrySelect
                       value={formData.pi_passport_issuing_country}
-                      onChange={(e) => setFormData({ ...formData, pi_passport_issuing_country: e.target.value })}
+                      onChange={(country) => setFormData({ ...formData, pi_passport_issuing_country: country })}
                       className={inputClass}
-                    >
-                      <option>Thailand</option>
-                      <option>United Kingdom</option>
-                      <option>United States</option>
-                      <option>Singapore</option>
-                      <option>Vietnam</option>
-                    </select>
+                      placeholder="Select issuing country"
+                    />
                   </Label>
                   <Label label="Expiry Date*">
                     <DatePicker

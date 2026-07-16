@@ -133,10 +133,10 @@ interface PricedBaggageOption {
   currencyCode?: string;
 }
 
-const steps = ['Flight', 'Passenger', 'Service', 'Payment', 'Additional Services', 'Personalized'];
+const steps = ['Flight', 'Passenger', 'Services', 'Payment', 'Confirm'];
 
 const Stepper = () => (
-  <div className="mx-auto grid max-w-5xl grid-cols-6 items-start gap-2 px-4 py-8">
+  <div className="mx-auto grid max-w-5xl grid-cols-5 items-start gap-2 px-4 py-8">
     {steps.map((step, index) => {
       const complete = index < 2;
       const active = index === 2;
@@ -336,6 +336,7 @@ const MealContent = ({
             <span className="mt-3 block text-xs font-black uppercase text-cyan-600">
               {option.price > 0 ? `${option.currencyCode || currencyCode} ${option.price.toLocaleString()}` : 'Free of charge'}
             </span>
+            {selectedCode === option.code && <span className="mt-3 block text-xs font-black uppercase text-[#073b70]">Selected - click again to remove</span>}
           </button>
         );
       })}
@@ -366,6 +367,7 @@ const BaggageContent = ({
           <span className="block text-2xl font-black text-[#073b70]">{option.weight}</span>
           <span className="mt-2 block text-sm font-semibold text-slate-500">{option.desc}</span>
           <span className="mt-4 block text-sm font-black text-[#073b70]">{option.currencyCode || currencyCode} {option.price.toLocaleString()}</span>
+          {selectedCode === option.code && <span className="mt-2 block text-xs font-black uppercase text-[#073b70]">Selected</span>}
         </button>
       ))}
     </div>
@@ -392,6 +394,7 @@ const AssistanceContent = ({
           <span className="block text-lg font-black text-[#073b70]">{service.name}</span>
           <span className="mt-2 block text-sm font-semibold text-slate-500">Personalized care during your journey.</span>
           <span className="mt-4 block text-xs font-black uppercase text-cyan-600">Free of charge</span>
+          {selectedCode === service.code && <span className="mt-2 block text-xs font-black uppercase text-[#073b70]">Selected</span>}
         </button>
       ))}
     </div>
@@ -415,7 +418,7 @@ const LoungeContent = ({
             <h3 className="text-3xl font-black text-[#073b70]">{option.name}</h3>
             <p className="mt-2 text-xs font-black uppercase tracking-widest text-slate-500">{option.meta}</p>
             <p className="mt-4 min-h-20 text-base font-semibold leading-7 text-slate-600">A quiet sanctuary with premium dining, work spaces, and calm pre-flight service.</p>
-            <button type="button" onClick={() => onSelect({ type: 'LOUNGE', code: option.code, name: option.name, price: option.price })} className="mt-5 h-12 w-full border border-[#073b70] bg-[#073b70] text-sm font-black tracking-widest text-white">{formatUsd(option.price)}</button>
+            <button type="button" onClick={() => onSelect({ type: 'LOUNGE', code: option.code, name: option.name, price: option.price })} className="mt-5 h-12 w-full border border-[#073b70] bg-[#073b70] text-sm font-black tracking-widest text-white">{selectedCode === option.code ? 'Selected - Click to Remove' : formatUsd(option.price)}</button>
           </div>
         </article>
       ))}
@@ -438,7 +441,7 @@ const InsuranceContent = ({
           <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">{option.name}</h3>
           <p className="mt-5 min-h-20 text-base font-semibold text-slate-600">{option.desc}</p>
           <p className="mt-4 text-sm text-slate-500">USD <span className="text-4xl font-black text-[#073b70]">{option.price.toLocaleString()}</span></p>
-          <button type="button" onClick={() => onSelect({ type: 'INSURANCE', code: option.code, name: `${option.name} Insurance`, price: option.price })} className={`mt-5 h-11 w-full border border-[#073b70] text-sm font-black ${selectedCode === option.code || index === 1 ? 'bg-[#073b70] text-white' : 'text-[#073b70]'}`}>Select</button>
+          <button type="button" onClick={() => onSelect({ type: 'INSURANCE', code: option.code, name: `${option.name} Insurance`, price: option.price })} className={`mt-5 h-11 w-full border border-[#073b70] text-sm font-black ${selectedCode === option.code || index === 1 ? 'bg-[#073b70] text-white' : 'text-[#073b70]'}`}>{selectedCode === option.code ? 'Selected - Remove' : 'Select'}</button>
         </article>
       ))}
     </div>
@@ -505,18 +508,26 @@ function AddOns(): React.JSX.Element {
 
   const baggageDisplayOptions: PricedBaggageOption[] = backendBaggage.length > 0
     ? backendBaggage
-    : baggageOptions.map((option) => ({ ...option, currencyCode: 'THB' }));
+    : baggageOptions.map((option) => ({ ...option, currencyCode }));
 
   const selectAddon = (addon: SelectedAddon) => {
     if (routeState.managedBooking && addon.type === 'MEAL') {
       setSelectedAddons((current) => {
-        if (current.some((item) => item.type === 'MEAL' && item.code === addon.code)) return current;
+        if (current.some((item) => item.type === 'MEAL' && item.code === addon.code)) {
+          return current.filter((item) => !(item.type === 'MEAL' && item.code === addon.code));
+        }
         return [...current, addon];
       });
       return;
     }
 
-    setSelectedAddons((current) => [...current.filter((item) => item.type !== addon.type), addon]);
+    setSelectedAddons((current) => {
+      if (current.some((item) => item.type === addon.type && item.code === addon.code)) {
+        return current.filter((item) => !(item.type === addon.type && item.code === addon.code));
+      }
+
+      return [...current.filter((item) => item.type !== addon.type), addon];
+    });
   };
 
   const getSelectedCode = (type: SelectedAddon['type']) => selectedAddons.find((addon) => addon.type === type)?.code;
