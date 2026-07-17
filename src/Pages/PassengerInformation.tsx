@@ -259,31 +259,6 @@ function PassengerInformation(): React.JSX.Element {
     searchData,
   } = (state ?? {}) as PassengerRouteState;
 
-  if (!selectedFlight) {
-    return (
-      <main className="min-h-screen bg-slate-100 text-slate-800">
-        <header className="bg-[#073b70] text-white">
-          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-            <Link to="/" className="text-2xl font-black tracking-wide">
-              HORIZON<span className="text-amber-400">ELITE</span>
-            </Link>
-          </div>
-        </header>
-        <div className="mx-auto max-w-4xl px-6 py-24">
-          <div className="rounded-lg border border-amber-300 bg-amber-50 p-8 text-center">
-            <p className="mb-3 text-lg font-black text-amber-800">No Flight Selection Found</p>
-            <p className="mb-6 text-sm font-semibold text-amber-700">
-              Please choose a flight before adding passenger information.
-            </p>
-            <Link to="/" className="inline-flex h-11 items-center justify-center rounded bg-[#073b70] px-6 text-sm font-black text-white">
-              Back to Flight Search
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
   // Form state
   const [formData, setFormData] = useState({
     pi_title: 'Mr',
@@ -437,6 +412,31 @@ function PassengerInformation(): React.JSX.Element {
       cancelled = true;
     };
   }, []);
+
+  if (!selectedFlight) {
+    return (
+      <main className="min-h-screen bg-slate-100 text-slate-800">
+        <header className="bg-[#073b70] text-white">
+          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+            <Link to="/" className="text-2xl font-black tracking-wide">
+              HORIZON<span className="text-amber-400">ELITE</span>
+            </Link>
+          </div>
+        </header>
+        <div className="mx-auto max-w-4xl px-6 py-24">
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-8 text-center">
+            <p className="mb-3 text-lg font-black text-amber-800">No Flight Selection Found</p>
+            <p className="mb-6 text-sm font-semibold text-amber-700">
+              Please choose a flight before adding passenger information.
+            </p>
+            <Link to="/" className="inline-flex h-11 items-center justify-center rounded bg-[#073b70] px-6 text-sm font-black text-white">
+              Back to Flight Search
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   const validatePhone = (number: string, iso: string): boolean => {
     if (!number.trim()) {

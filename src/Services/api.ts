@@ -1164,6 +1164,36 @@ export const checkInApi = {
     axiosInstance.post('/check-in/confirm', { pnr_reference, passenger_last_name }),
 };
 
+export interface WhatsAppCheckInReminderRequest {
+  phoneNumber: string;
+  passengerName?: string;
+  pnrReference?: string;
+  flightNumber?: string;
+  origin?: string;
+  destination?: string;
+  departureDatetime?: string;
+}
+
+export const whatsappApi = {
+  getConfigStatus: (): Promise<ApiMessageDataResponse<{
+    api_version: string;
+    configured: boolean;
+    missing: string[];
+    phone_number_id_present: boolean;
+    business_account_id_present: boolean;
+    access_token_present: boolean;
+  }>> =>
+    axiosInstance.get('/whatsapp/config-status'),
+
+  sendCheckInReminder: (data: WhatsAppCheckInReminderRequest): Promise<ApiMessageDataResponse<{
+    recipient_phone: string;
+    message_type: string;
+    message_preview: string;
+    meta_response: any;
+  }>> =>
+    axiosInstance.post('/whatsapp/check-in-reminder', data),
+};
+
 export const addonApi = {
   /**
    * Save a selected add-on for a booking passenger.

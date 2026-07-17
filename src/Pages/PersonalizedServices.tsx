@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Bell, CalendarDays, CheckSquare, ClipboardList, Mail, MessageSquare } from 'lucide-react';
-import { Link, useLocation } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import PageHeader from '../components/PageHeader';
+import { whatsappApi, type SelectedFlightResponse } from '../Services/api';
 
 const services = [
   {
@@ -31,9 +32,202 @@ const services = [
   },
 ];
 
+type SelectedFlight = SelectedFlightResponse['selectedFlight'];
+
+interface PersonalizedServicesState {
+  selectedFlight?: SelectedFlight;
+  returnFlight?: SelectedFlight | null;
+  outboundFlight?: SelectedFlight;
+  inboundFlight?: SelectedFlight | null;
+  bookingId?: string;
+  booking_id?: string;
+  booking?: {
+    booking_id?: string;
+    pnr_reference?: string;
+    passengers?: PassengerContact[];
+  };
+  pnrReference?: string;
+  pnr_reference?: string;
+  passengers?: PassengerContact[];
+}
+
+interface PassengerContact {
+  pi_title?: string;
+  pi_first_name?: string;
+  pi_middle_name?: string;
+  pi_last_name?: string;
+  first_name?: string;
+  last_name?: string;
+  pi_contact_phone?: string;
+  phone?: string;
+}
+
+const escapeIcsText = (value?: string | number | null) =>
+  String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\n/g, '\\n')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,');
+
+const formatIcsDateTime = (value?: string) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return '';
+
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+    'T',
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    pad(date.getSeconds()),
+  ].join('');
+};
+
+const formatUtcStamp = (date = new Date()) =>
+  date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+
+const buildCalendarEvent = (flight: SelectedFlight, index: number, timezone: string, bookingReference: string) => {
+  const start = formatIcsDateTime(flight.departure_datetime);
+  const end = formatIcsDateTime(flight.arrival_datetime);
+  const airline = flight.airline_name || 'Horizon Elite';
+  const flightNumber = flight.flight_number || 'Flight';
+  const route = `${flight.origin_airport_code} to ${flight.destination_airport_code}`;
+  const uidParts = [
+    bookingReference,
+    flight.selected_flight_id,
+    flight.flight_number,
+    index,
+    '@horizonelite.local',
+  ].filter(Boolean);
+
+  return [
+    'BEGIN:VEVENT',
+    `UID:${escapeIcsText(uidParts.join('-'))}`,
+    `DTSTAMP:${formatUtcStamp()}`,
+    `DTSTART;TZID=${escapeIcsText(timezone)}:${start}`,
+    `DTEND;TZID=${escapeIcsText(timezone)}:${end || start}`,
+    `SUMMARY:${escapeIcsText(`${airline} ${flightNumber} - ${route}`)}`,
+    `DESCRIPTION:${escapeIcsText(`Flight ${flightNumber} from ${flight.origin_airport_code} to ${flight.destination_airport_code}. Cabin: ${flight.cabin_class || 'N/A'}. Booking reference: ${bookingReference}.`)}`,
+    `LOCATION:${escapeIcsText(`${flight.origin_airport_code} Airport`)}`,
+    'PRIORITY:1',
+    'CATEGORIES:Important,Flight',
+    'STATUS:CONFIRMED',
+    'BEGIN:VALARM',
+    'TRIGGER:-PT15M',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${escapeIcsText(`Reminder: ${flightNumber} departs from ${flight.origin_airport_code}`)}`,
+    'END:VALARM',
+    'END:VEVENT',
+  ].join('\r\n');
+};
+
+const buildFlightCalendar = (flights: SelectedFlight[], bookingReference: string) => {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const events = flights.map((flight, index) => buildCalendarEvent(flight, index + 1, timezone, bookingReference));
+
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Horizon Elite//Flight Reminder//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    ...events,
+    'END:VCALENDAR',
+  ].join('\r\n');
+};
+
+const downloadIcsFile = (content: string, filename: string) => {
+  const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
+
+const safeFilenamePart = (value: string) => value.replace(/[^a-z0-9-_]/gi, '-');
+
+const getPassengerName = (passenger?: PassengerContact) => [
+  passenger?.pi_title,
+  passenger?.pi_first_name || passenger?.first_name,
+  passenger?.pi_middle_name,
+  passenger?.pi_last_name || passenger?.last_name,
+].filter(Boolean).join(' ');
+
+const getPassengerPhone = (passenger?: PassengerContact) =>
+  passenger?.pi_contact_phone || passenger?.phone || '';
+
 function PersonalizedServices(): React.JSX.Element {
   const { state } = useLocation();
+  const navigate = useNavigate();
+  const routeState = (state ?? {}) as PersonalizedServicesState;
   const [enabled, setEnabled] = useState(() => services.map(() => true));
+  const [calendarMessage, setCalendarMessage] = useState('');
+  const [whatsAppMessage, setWhatsAppMessage] = useState('');
+  const [isFinishing, setIsFinishing] = useState(false);
+
+  const flights = [
+    routeState.selectedFlight || routeState.outboundFlight,
+    routeState.returnFlight || routeState.inboundFlight,
+  ].filter(Boolean) as SelectedFlight[];
+  const primaryFlight = flights[0];
+  const passengers = routeState.passengers || routeState.booking?.passengers || [];
+  const primaryPassenger = passengers[0];
+  const bookingReference = routeState.pnrReference || routeState.pnr_reference || routeState.booking?.pnr_reference || routeState.bookingId || routeState.booking_id || routeState.booking?.booking_id || 'HorizonElite';
+
+  const finishBooking = async () => {
+    setIsFinishing(true);
+    setCalendarMessage('');
+    setWhatsAppMessage('');
+
+    if (enabled[0]) {
+      if (flights.length === 0) {
+        setCalendarMessage('Calendar reminder could not be created because flight details are missing.');
+        setIsFinishing(false);
+        return;
+      }
+
+      const calendar = buildFlightCalendar(flights, bookingReference);
+      downloadIcsFile(calendar, `horizon-elite-flight-${safeFilenamePart(bookingReference)}.ics`);
+      setCalendarMessage('Calendar reminder downloaded. Open the .ics file to add it to your calendar.');
+    }
+
+    if (enabled[1]) {
+      const passengerPhone = getPassengerPhone(primaryPassenger);
+
+      if (!passengerPhone) {
+        setWhatsAppMessage('WhatsApp reminder could not be sent because the passenger phone number is missing.');
+        setIsFinishing(false);
+        return;
+      }
+
+      try {
+        await whatsappApi.sendCheckInReminder({
+          phoneNumber: passengerPhone,
+          passengerName: getPassengerName(primaryPassenger),
+          pnrReference: bookingReference,
+          flightNumber: primaryFlight?.flight_number,
+          origin: primaryFlight?.origin_airport_code,
+          destination: primaryFlight?.destination_airport_code,
+          departureDatetime: primaryFlight?.departure_datetime,
+        });
+        setWhatsAppMessage('WhatsApp check-in reminder sent to the passenger.');
+      } catch (error) {
+        setWhatsAppMessage(error instanceof Error ? error.message : 'WhatsApp reminder could not be sent.');
+        setIsFinishing(false);
+        return;
+      }
+    }
+
+    setIsFinishing(false);
+    navigate('/booking-confirmed', { state });
+  };
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-800">
@@ -72,7 +266,24 @@ function PersonalizedServices(): React.JSX.Element {
         </div>
 
         <div className="mt-14 flex flex-col items-center gap-5">
-          <Link to="/booking-confirmed" state={state} className="flex h-14 w-56 items-center justify-center rounded bg-[#073b70] text-sm font-black text-white shadow-lg shadow-blue-950/20">Finish Booking</Link>
+          {calendarMessage && (
+            <p className={`max-w-md text-center text-sm font-semibold ${calendarMessage.includes('could not') ? 'text-red-600' : 'text-emerald-700'}`}>
+              {calendarMessage}
+            </p>
+          )}
+          {whatsAppMessage && (
+            <p className={`max-w-md text-center text-sm font-semibold ${whatsAppMessage.includes('could not') || whatsAppMessage.includes('not configured') ? 'text-red-600' : 'text-emerald-700'}`}>
+              {whatsAppMessage}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={finishBooking}
+            disabled={isFinishing}
+            className="flex h-14 w-56 items-center justify-center rounded bg-[#073b70] text-sm font-black text-white shadow-lg shadow-blue-950/20 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isFinishing ? 'Setting Reminders...' : 'Finish Booking'}
+          </button>
           <Link to="/booking-confirmed" state={state} className="text-sm font-semibold text-slate-600 underline">Skip for now</Link>
         </div>
       </section>
