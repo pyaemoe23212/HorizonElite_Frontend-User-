@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Bell, CalendarDays, CheckSquare, ClipboardList, Mail, MessageSquare } from 'lucide-react';
+import { Bell, CalendarDays, CheckSquare, ClipboardList, Mail } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import PageHeader from '../components/PageHeader';
-import { whatsappApi, type SelectedFlightResponse } from '../Services/api';
+import { checkInApi, type SelectedFlightResponse } from '../Services/api';
 
 const services = [
   {
@@ -11,9 +11,9 @@ const services = [
     icons: [CalendarDays],
   },
   {
-    title: 'Check in Reminder - Email and WhatsApp',
-    description: 'A detailed check-in guide and boarding pass prompt sent to your inbox and WhatsApp 4 days before departure.',
-    icons: [Mail, MessageSquare],
+    title: 'Check-in Reminder - Email',
+    description: 'A detailed check-in guide and boarding pass prompt sent to your inbox 4 days before departure. WhatsApp reminders are coming later.',
+    icons: [Mail],
   },
   {
     title: 'Arrival Card Reminder',
@@ -153,38 +153,25 @@ const downloadIcsFile = (content: string, filename: string) => {
 
 const safeFilenamePart = (value: string) => value.replace(/[^a-z0-9-_]/gi, '-');
 
-const getPassengerName = (passenger?: PassengerContact) => [
-  passenger?.pi_title,
-  passenger?.pi_first_name || passenger?.first_name,
-  passenger?.pi_middle_name,
-  passenger?.pi_last_name || passenger?.last_name,
-].filter(Boolean).join(' ');
-
-const getPassengerPhone = (passenger?: PassengerContact) =>
-  passenger?.pi_contact_phone || passenger?.phone || '';
-
 function PersonalizedServices(): React.JSX.Element {
   const { state } = useLocation();
   const navigate = useNavigate();
   const routeState = (state ?? {}) as PersonalizedServicesState;
   const [enabled, setEnabled] = useState(() => services.map(() => true));
   const [calendarMessage, setCalendarMessage] = useState('');
-  const [whatsAppMessage, setWhatsAppMessage] = useState('');
+  const [checkInReminderMessage, setCheckInReminderMessage] = useState('');
   const [isFinishing, setIsFinishing] = useState(false);
 
   const flights = [
     routeState.selectedFlight || routeState.outboundFlight,
     routeState.returnFlight || routeState.inboundFlight,
   ].filter(Boolean) as SelectedFlight[];
-  const primaryFlight = flights[0];
-  const passengers = routeState.passengers || routeState.booking?.passengers || [];
-  const primaryPassenger = passengers[0];
   const bookingReference = routeState.pnrReference || routeState.pnr_reference || routeState.booking?.pnr_reference || routeState.bookingId || routeState.booking_id || routeState.booking?.booking_id || 'HorizonElite';
 
   const finishBooking = async () => {
     setIsFinishing(true);
     setCalendarMessage('');
-    setWhatsAppMessage('');
+    setCheckInReminderMessage('');
 
     if (enabled[0]) {
       if (flights.length === 0) {
@@ -199,27 +186,19 @@ function PersonalizedServices(): React.JSX.Element {
     }
 
     if (enabled[1]) {
-      const passengerPhone = getPassengerPhone(primaryPassenger);
+      const bookingId = routeState.bookingId || routeState.booking_id || routeState.booking?.booking_id;
 
-      if (!passengerPhone) {
-        setWhatsAppMessage('WhatsApp reminder could not be sent because the passenger phone number is missing.');
+      if (!bookingId) {
+        setCheckInReminderMessage('Email reminder could not be scheduled because the booking ID is missing.');
         setIsFinishing(false);
         return;
       }
 
       try {
-        await whatsappApi.sendCheckInReminder({
-          phoneNumber: passengerPhone,
-          passengerName: getPassengerName(primaryPassenger),
-          pnrReference: bookingReference,
-          flightNumber: primaryFlight?.flight_number,
-          origin: primaryFlight?.origin_airport_code,
-          destination: primaryFlight?.destination_airport_code,
-          departureDatetime: primaryFlight?.departure_datetime,
-        });
-        setWhatsAppMessage('WhatsApp check-in reminder sent to the passenger.');
+        await checkInApi.scheduleEmailReminder(bookingId);
+        setCheckInReminderMessage('Check-in reminder email scheduled for 4 days before departure.');
       } catch (error) {
-        setWhatsAppMessage(error instanceof Error ? error.message : 'WhatsApp reminder could not be sent.');
+        setCheckInReminderMessage(error instanceof Error ? error.message : 'Email reminder could not be scheduled.');
         setIsFinishing(false);
         return;
       }
@@ -271,9 +250,9 @@ function PersonalizedServices(): React.JSX.Element {
               {calendarMessage}
             </p>
           )}
-          {whatsAppMessage && (
-            <p className={`max-w-md text-center text-sm font-semibold ${whatsAppMessage.includes('could not') || whatsAppMessage.includes('not configured') ? 'text-red-600' : 'text-emerald-700'}`}>
-              {whatsAppMessage}
+          {checkInReminderMessage && (
+            <p className={`max-w-md text-center text-sm font-semibold ${checkInReminderMessage.includes('could not') ? 'text-red-600' : 'text-emerald-700'}`}>
+              {checkInReminderMessage}
             </p>
           )}
           <button

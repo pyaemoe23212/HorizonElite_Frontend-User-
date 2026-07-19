@@ -1162,6 +1162,12 @@ export const checkInApi = {
     axiosInstance.post('/check-in/lookup', { pnr_reference, passenger_last_name }),
   confirm: (pnr_reference: string, passenger_last_name: string): Promise<ApiMessageDataResponse<CheckInResult>> =>
     axiosInstance.post('/check-in/confirm', { pnr_reference, passenger_last_name }),
+  scheduleEmailReminder: (booking_id: string): Promise<ApiMessageDataResponse<{
+    booking_id: string;
+    recipient_email: string;
+    due_at: string;
+    status: string;
+  }>> => axiosInstance.post('/check-in/reminders/email', { booking_id }),
 };
 
 export interface WhatsAppCheckInReminderRequest {
