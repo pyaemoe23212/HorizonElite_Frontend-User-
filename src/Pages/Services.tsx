@@ -1,5 +1,5 @@
 import React from "react";
-import { BadgeCheck, CircleHelp, Luggage, Plane } from "lucide-react";
+import { BadgeCheck, CircleHelp, FileText, Luggage, Plane, TicketCheck } from "lucide-react";
 import { Link } from "react-router";
 import PageHeader from "../components/PageHeader";
 
@@ -21,6 +21,20 @@ const services = [
     description: "Prepare for departure and access check-in services.",
     action: "/check-in",
     icon: BadgeCheck,
+  },
+  {
+    title: "Download E-ticket",
+    description: "Open your confirmed itinerary and download your electronic ticket.",
+    action: "/manage-booking",
+    state: { redirectTo: "/download-e-ticket" },
+    icon: FileText,
+  },
+  {
+    title: "Download Boarding Pass",
+    description: "Access your boarding pass after check-in is completed.",
+    action: "/manage-booking",
+    state: { redirectTo: "/download-boarding-pass" },
+    icon: TicketCheck,
   },
   {
     title: "Help Desk",
@@ -52,7 +66,7 @@ function Services(): React.JSX.Element {
           </Link>
         </div>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {services.map((service) => {
             const Icon = service.icon;
 
@@ -60,6 +74,7 @@ function Services(): React.JSX.Element {
               <Link
                 key={service.title}
                 to={service.action}
+                state={"state" in service ? service.state : undefined}
                 className="rounded-lg border border-slate-300 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-[#073b70] hover:shadow-lg"
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded bg-blue-50 text-[#073b70]">

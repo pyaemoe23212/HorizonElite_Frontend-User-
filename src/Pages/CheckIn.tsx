@@ -78,11 +78,13 @@ function CheckIn(): React.JSX.Element {
           <form onSubmit={search} className="p-9">
             {error && <div className="mb-6 rounded border border-red-300 bg-red-50 p-4 font-semibold text-red-700">{error}</div>}
             <div className="grid gap-6 md:grid-cols-2">
-              <label className="text-xs font-bold uppercase tracking-wide text-slate-600">Booking Reference (PNR)
-                <input value={pnr} onChange={(event) => setPnr(event.target.value.toUpperCase())} maxLength={6} placeholder="e.g. G4KL9X" className="mt-2 h-12 w-full rounded border border-slate-300 px-4 text-base font-normal normal-case outline-none focus:border-[#073b70]" />
+              <label className="block">
+                <span className="mb-2 flex min-h-5 items-end text-xs font-bold uppercase tracking-wide text-slate-600">Booking Reference (PNR)</span>
+                <input value={pnr} onChange={(event) => setPnr(event.target.value.toUpperCase())} maxLength={6} placeholder="e.g. G4KL9X" className="h-12 w-full rounded border border-slate-300 px-4 text-base font-normal normal-case outline-none focus:border-[#073b70]" />
               </label>
-              <label className="text-xs font-bold uppercase tracking-wide text-slate-600">Passenger Last Name
-                <input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="As it appears on your ticket" className="mt-2 h-12 w-full rounded border border-slate-300 px-4 text-base font-normal normal-case outline-none focus:border-[#073b70]" />
+              <label className="block">
+                <span className="mb-2 flex min-h-5 items-end text-xs font-bold uppercase tracking-wide text-slate-600">Passenger Last Name</span>
+                <input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="As it appears on your ticket" className="h-12 w-full rounded border border-slate-300 px-4 text-base font-normal normal-case outline-none focus:border-[#073b70]" />
               </label>
             </div>
             <div className="mt-6 flex items-start gap-3 rounded-md bg-slate-100 p-4 text-sm text-slate-600"><CircleHelp className="mt-0.5 shrink-0 text-cyan-700" size={18} /><p>Online check-in opens <strong>48 hours</strong> before departure and closes <strong>90 minutes</strong> before take-off.</p></div>

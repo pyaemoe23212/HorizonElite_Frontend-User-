@@ -346,6 +346,8 @@ axiosInstance.interceptors.response.use(
           ? responseData.details.join(', ')
           : typeof responseData?.details === 'string'
           ? responseData.details
+          : typeof responseData?.details?.error?.message === 'string'
+          ? responseData.details.error.message
           : undefined;
     const backendError = responseData?.error;
     const genericStatusError =
@@ -1168,6 +1170,12 @@ export const checkInApi = {
     due_at: string;
     status: string;
   }>> => axiosInstance.post('/check-in/reminders/email', { booking_id }),
+  scheduleWhatsAppReminder: (booking_id: string): Promise<ApiMessageDataResponse<{
+    booking_id: string;
+    recipient_phone: string;
+    due_at: string;
+    status: string;
+  }>> => axiosInstance.post('/check-in/reminders/whatsapp', { booking_id }),
 };
 
 export interface WhatsAppCheckInReminderRequest {

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { CircleHelp, Download, Luggage as Suitcase, Mail, Plane } from "lucide-react";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { bookingApi, type ManageBookingDetails } from "../Services/api";
 import PageHeader from "../components/PageHeader";
 
@@ -26,6 +26,12 @@ const onlineServices = [
     icon: CircleHelp,
   },
 ];
+
+type ManageBookingRedirect = "/download-e-ticket" | "/download-boarding-pass";
+
+interface ManageBookingLocationState {
+  redirectTo?: ManageBookingRedirect;
+}
 
 const mapManagedBookingToRouteState = (details: ManageBookingDetails) => {
   const primaryPassenger = details.passengers[0];
@@ -75,6 +81,8 @@ const mapManagedBookingToRouteState = (details: ManageBookingDetails) => {
 
 function ManageBooking(): React.JSX.Element {
   const navigate = useNavigate();
+  const { state } = useLocation();
+  const redirectTo = (state as ManageBookingLocationState | null)?.redirectTo;
   const [pnr, setPnr] = useState("");
   const [lastName, setLastName] = useState("");
   const [bookingDetails, setBookingDetails] = useState<ManageBookingDetails | null>(null);
@@ -94,6 +102,9 @@ function ManageBooking(): React.JSX.Element {
       setErrorMessage("");
       const response = await bookingApi.getManageBooking(pnr.trim().toUpperCase(), lastName.trim());
       setBookingDetails(response.data);
+      if (redirectTo) {
+        navigate(redirectTo, { state: mapManagedBookingToRouteState(response.data), replace: true });
+      }
     } catch (error) {
       setBookingDetails(null);
       setErrorMessage(error instanceof Error ? error.message : "Booking not found.");
@@ -126,8 +137,9 @@ function ManageBooking(): React.JSX.Element {
             <h1 className="text-5xl font-black text-[#073b70]">Manage My Booking</h1>
 
             <p className="mt-4 max-w-2xl text-lg text-slate-600">
-              Retrieve your itinerary to select add-ons, download your e-ticket,
-              or review your travel information.
+              {redirectTo
+                ? "Enter your booking reference and passenger last name so we can open the correct travel document."
+                : "Retrieve your itinerary to select add-ons, download your e-ticket, or review your travel information."}
             </p>
 
             <div className="mt-10 rounded-lg border border-slate-300 bg-white p-8 shadow-sm">

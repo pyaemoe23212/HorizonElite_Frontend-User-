@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, CalendarDays, CheckSquare, ClipboardList, Mail } from 'lucide-react';
+import { Bell, CalendarDays, CheckSquare, ClipboardList, Mail, MessageCircle } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import PageHeader from '../components/PageHeader';
 import { checkInApi, type SelectedFlightResponse } from '../Services/api';
@@ -12,8 +12,13 @@ const services = [
   },
   {
     title: 'Check-in Reminder - Email',
-    description: 'A detailed check-in guide and boarding pass prompt sent to your inbox 4 days before departure. WhatsApp reminders are coming later.',
+    description: 'A detailed check-in guide and boarding pass prompt sent to your inbox 4 days before departure.',
     icons: [Mail],
+  },
+  {
+    title: 'Check-in Reminder - WhatsApp',
+    description: 'A concise check-in reminder sent to your passenger phone number 4 days before departure.',
+    icons: [MessageCircle],
   },
   {
     title: 'Arrival Card Reminder',
@@ -160,6 +165,7 @@ function PersonalizedServices(): React.JSX.Element {
   const [enabled, setEnabled] = useState(() => services.map(() => true));
   const [calendarMessage, setCalendarMessage] = useState('');
   const [checkInReminderMessage, setCheckInReminderMessage] = useState('');
+  const [whatsAppReminderMessage, setWhatsAppReminderMessage] = useState('');
   const [isFinishing, setIsFinishing] = useState(false);
 
   const flights = [
@@ -172,17 +178,16 @@ function PersonalizedServices(): React.JSX.Element {
     setIsFinishing(true);
     setCalendarMessage('');
     setCheckInReminderMessage('');
+    setWhatsAppReminderMessage('');
 
     if (enabled[0]) {
       if (flights.length === 0) {
         setCalendarMessage('Calendar reminder could not be created because flight details are missing.');
-        setIsFinishing(false);
-        return;
+      } else {
+        const calendar = buildFlightCalendar(flights, bookingReference);
+        downloadIcsFile(calendar, `horizon-elite-flight-${safeFilenamePart(bookingReference)}.ics`);
+        setCalendarMessage('Calendar reminder downloaded. Open the .ics file to add it to your calendar.');
       }
-
-      const calendar = buildFlightCalendar(flights, bookingReference);
-      downloadIcsFile(calendar, `horizon-elite-flight-${safeFilenamePart(bookingReference)}.ics`);
-      setCalendarMessage('Calendar reminder downloaded. Open the .ics file to add it to your calendar.');
     }
 
     if (enabled[1]) {
@@ -190,15 +195,30 @@ function PersonalizedServices(): React.JSX.Element {
 
       if (!bookingId) {
         setCheckInReminderMessage('Email reminder could not be scheduled because the booking ID is missing.');
+      } else {
+        try {
+          await checkInApi.scheduleEmailReminder(bookingId);
+          setCheckInReminderMessage('Check-in reminder email scheduled for 4 days before departure.');
+        } catch (error) {
+          setCheckInReminderMessage(error instanceof Error ? error.message : 'Email reminder could not be scheduled.');
+        }
+      }
+    }
+
+    if (enabled[2]) {
+      const bookingId = routeState.bookingId || routeState.booking_id || routeState.booking?.booking_id;
+
+      if (!bookingId) {
+        setWhatsAppReminderMessage('WhatsApp reminder could not be scheduled because the booking ID is missing.');
         setIsFinishing(false);
         return;
       }
 
       try {
-        await checkInApi.scheduleEmailReminder(bookingId);
-        setCheckInReminderMessage('Check-in reminder email scheduled for 4 days before departure.');
+        await checkInApi.scheduleWhatsAppReminder(bookingId);
+        setWhatsAppReminderMessage('Check-in WhatsApp reminder scheduled for 4 days before departure.');
       } catch (error) {
-        setCheckInReminderMessage(error instanceof Error ? error.message : 'Email reminder could not be scheduled.');
+        setWhatsAppReminderMessage(error instanceof Error ? error.message : 'WhatsApp reminder could not be scheduled.');
         setIsFinishing(false);
         return;
       }
@@ -253,6 +273,11 @@ function PersonalizedServices(): React.JSX.Element {
           {checkInReminderMessage && (
             <p className={`max-w-md text-center text-sm font-semibold ${checkInReminderMessage.includes('could not') ? 'text-red-600' : 'text-emerald-700'}`}>
               {checkInReminderMessage}
+            </p>
+          )}
+          {whatsAppReminderMessage && (
+            <p className={`max-w-md text-center text-sm font-semibold ${whatsAppReminderMessage.includes('could not') ? 'text-red-600' : 'text-emerald-700'}`}>
+              {whatsAppReminderMessage}
             </p>
           )}
           <button

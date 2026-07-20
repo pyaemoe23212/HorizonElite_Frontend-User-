@@ -49,7 +49,7 @@ const AppleIcon = () => (
 );
 
 const FieldLabel = ({ children }: { children: React.ReactNode }) => (
-  <span className="mb-2 block text-[11px] font-black uppercase tracking-wide text-[#063b70]">{children}</span>
+  <span className="mb-2 flex min-h-8 items-end text-[11px] font-black uppercase tracking-wide text-[#063b70]">{children}</span>
 );
 
 const isEmailStructureValid = (email: string): boolean =>
@@ -426,11 +426,10 @@ function Signup(): React.JSX.Element {
                 <option value="Mr">Mr.</option>
                 <option value="Ms">Ms.</option>
                 <option value="Mrs">Mrs.</option>
-                <option value="Dr">Dr.</option>
               </select>
             </label>
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <label className="block">
                 <FieldLabel>First Name <span className="text-red-500">*</span></FieldLabel>
                 <input required type="text" name="first_name" value={formData.first_name} onChange={handleChange} placeholder="Jane" className="h-11 w-full rounded border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600" />

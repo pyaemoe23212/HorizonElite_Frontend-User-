@@ -25,7 +25,7 @@ const isPassportNumberValid = (passportNumber: string): boolean =>
 
 const Label = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <label className="block">
-    <span className="mb-2 block text-[10px] font-black uppercase tracking-wide text-slate-500">
+    <span className="mb-2 flex min-h-7 items-end text-[10px] font-black uppercase tracking-wide text-slate-500">
       {label.includes('*') ? (
         <>
           {label.replace('*', '')}
