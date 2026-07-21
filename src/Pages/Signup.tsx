@@ -33,13 +33,26 @@ const ArrowRightIcon = () => (
 );
 
 const LineIcon = () => (
-  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#06c755] text-[10px] font-black text-white">L</span>
+  <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="#06c755" d="M19.7 3.5H4.3C2.5 3.5 1 5 1 6.8v7.9C1 16.5 2.5 18 4.3 18h5.1l-.8 2.8c-.1.4.3.7.6.5l5-3.3h5.5c1.8 0 3.3-1.5 3.3-3.3V6.8c0-1.8-1.5-3.3-3.3-3.3Z" />
+    <path fill="#fff" d="M5.5 8h1.1v4H9v1H5.5V8Zm4.1 0h1.1v5H9.6V8Zm2 0h1l2.1 3.1V8h1.1v5h-1l-2.1-3.1V13h-1.1V8Zm5.1 0h3.5v1h-2.4v1h2.1v1h-2.1v1h2.5v1h-3.6V8Z" />
+  </svg>
 );
 
-const GoogleIcon = () => <span className="text-lg font-black text-blue-500">G</span>;
+const GoogleIcon = () => (
+  <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="#4285f4" d="M21.6 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h5.4c-.2 1.2-.9 2.3-2 3v2.5h3.2c1.9-1.7 3-4.2 3-7.2Z" />
+    <path fill="#34a853" d="M12 22c2.7 0 5-.9 6.6-2.5l-3.2-2.5c-.9.6-2 .9-3.4.9-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6C4.7 19.7 8.1 22 12 22Z" />
+    <path fill="#fbbc05" d="M6.4 13.8c-.2-.6-.3-1.2-.3-1.8s.1-1.2.3-1.8V7.6H3.1C2.4 8.9 2 10.4 2 12s.4 3.1 1.1 4.4l3.3-2.6Z" />
+    <path fill="#ea4335" d="M12 6.1c1.5 0 2.8.5 3.8 1.5l2.9-2.9C17 3 14.7 2 12 2 8.1 2 4.7 4.3 3.1 7.6l3.3 2.6c.8-2.3 3-4.1 5.6-4.1Z" />
+  </svg>
+);
 
 const FacebookIcon = () => (
-  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-sm font-black text-white">f</span>
+  <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="#1877f2" d="M24 12a12 12 0 1 0-13.9 11.9v-8.4h-3V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0 0 24 12Z" />
+    <path fill="#fff" d="m16.7 15.5.5-3.5h-3.4V9.8c0-1 .5-1.9 2-1.9h1.5v-3s-1.4-.2-2.7-.2c-2.7 0-4.5 1.7-4.5 4.7V12h-3v3.5h3v8.4a12.1 12.1 0 0 0 3.7 0v-8.4h2.9Z" />
+  </svg>
 );
 
 const AppleIcon = () => (
@@ -432,21 +445,21 @@ function Signup(): React.JSX.Element {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <label className="block">
                 <FieldLabel>First Name <span className="text-red-500">*</span></FieldLabel>
-                <input required type="text" name="first_name" value={formData.first_name} onChange={handleChange} placeholder="Jane" className="h-11 w-full rounded border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600" />
+                <input required type="text" name="first_name" value={formData.first_name} onChange={handleChange} placeholder="" className="h-11 w-full rounded border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600" />
               </label>
               <label className="block">
                 <FieldLabel>Middle Name <span className="text-slate-400">(Optional)</span></FieldLabel>
-                <input type="text" name="middle_name" value={formData.middle_name} onChange={handleChange} placeholder="Marie" className="h-11 w-full rounded border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600" />
+                <input type="text" name="middle_name" value={formData.middle_name} onChange={handleChange} placeholder="" className="h-11 w-full rounded border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600" />
               </label>
               <label className="block">
                 <FieldLabel>Last Name <span className="text-red-500">*</span></FieldLabel>
-                <input required type="text" name="last_name" value={formData.last_name} onChange={handleChange} placeholder="Doe" className="h-11 w-full rounded border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600" />
+                <input required type="text" name="last_name" value={formData.last_name} onChange={handleChange} placeholder="" className="h-11 w-full rounded border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600" />
               </label>
             </div>
 
             <label className="block">
               <FieldLabel>Email Address <span className="text-red-500">*</span></FieldLabel>
-              <input required type="email" name="email_address" value={formData.email_address} onChange={handleChange} onBlur={validateEmail} placeholder="jane.doe@example.com" className={`h-11 w-full rounded border bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 ${
+              <input required type="email" name="email_address" value={formData.email_address} onChange={handleChange} onBlur={validateEmail} placeholder="" className={`h-11 w-full rounded border bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 ${
                 emailError ? 'border-red-500 focus:border-red-600' : 'border-slate-300 focus:border-blue-600'
               }`} />
               {emailSuggestions.length > 0 && (
@@ -533,7 +546,7 @@ function Signup(): React.JSX.Element {
                   value={phoneNumber}
                   onChange={handlePhoneChange}
                   onBlur={() => validatePhone(phoneNumber, phoneCountry)}
-                  placeholder="(555) 000-0000"
+                  placeholder=""
                   className={`flex-1 rounded border px-4 py-3 text-sm outline-none transition ${
                     phoneError ? 'border-red-500 focus:border-red-600' : 'border-slate-300 focus:border-blue-600'
                   }`}
@@ -600,10 +613,6 @@ function Signup(): React.JSX.Element {
                 <span>
                   I agree to the <a href="#" className="font-bold text-[#063b70] underline">Terms of Use</a> and <a href="#" className="font-bold text-[#063b70] underline">Privacy Policy</a>.
                 </span>
-              </label>
-              <label className="flex items-start gap-3">
-                <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-[#063b70]" />
-                Receive promotional campaigns from Horizon Elite or partners.
               </label>
             </div>
 

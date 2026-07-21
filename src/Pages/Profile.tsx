@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router';
-import { CreditCard, Eye, Plus, Save, Trash2, Users } from 'lucide-react';
+import { AlertCircle, CreditCard, Eye, IdCard, Mail, Phone, Plane, Plus, Save, ShieldCheck, Trash2, UserRound, Users, WalletCards } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import {
@@ -10,7 +10,6 @@ import {
   isValidPhoneNumber,
   parsePhoneNumber,
   type CountryCode,
-  type PhoneNumber,
 } from 'libphonenumber-js';
 import { useAuth } from '../contexts/useAuth';
 import {
@@ -25,18 +24,18 @@ import {
 } from '../Services/api';
 import CountrySelect from '../components/CountrySelect';
 
-const inputClass = 'h-11 w-full border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#073b70]';
-const textAreaClass = 'min-h-24 w-full border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#073b70]';
+const inputClass = 'h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#073b70] focus:ring-2 focus:ring-blue-100';
+const textAreaClass = 'min-h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#073b70] focus:ring-2 focus:ring-blue-100';
 
 const menuItems = [
-  'Sign Up Details',
-  'Personal Details',
-  'Contact Information',
-  'Passport Details',
-  'Visa Information',
-  'Emergency Contact',
-  'Passenger Management',
-  'Payment Methods',
+  { label: 'Account', href: 'sign-up-details', icon: UserRound },
+  { label: 'Personal', href: 'personal-details', icon: IdCard },
+  { label: 'Contact', href: 'contact-information', icon: Phone },
+  { label: 'Passengers', href: 'passenger-management', icon: Users },
+  { label: 'Passport', href: 'passport-details', icon: Plane },
+  { label: 'Visa', href: 'visa-information', icon: ShieldCheck },
+  { label: 'Emergency', href: 'emergency-contact', icon: AlertCircle },
+  { label: 'Payments', href: 'payment-methods', icon: WalletCards },
 ];
 
 const emptyProfile: Partial<ProfileResponse> = {
@@ -167,6 +166,31 @@ const maskValue = (value?: string | null) => {
   return `**** **** ${value.slice(-4)}`;
 };
 
+const formatDisplayDate = (value?: string | null) => {
+  const date = fromDateString(value);
+  if (!date) return 'Not saved';
+  return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const getProfileCompletion = (
+  profile: Partial<ProfileResponse>,
+  passengers: SavedPassenger[],
+  emergencyContacts: EmergencyContact[],
+  paymentMethods: SavedPaymentMethod[]
+) => {
+  const checks = [
+    Boolean(profile.first_name && profile.last_name),
+    Boolean(getProfileEmail(profile)),
+    Boolean(profile.phone_number),
+    Boolean(profile.date_of_birth),
+    Boolean(profile.nationality),
+    passengers.length > 0,
+    emergencyContacts.length > 0,
+    paymentMethods.length > 0,
+  ];
+  return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+};
+
 const isPhoneValueValid = (value?: string | null, required = false) => {
   if (!value?.trim()) return !required;
   return isValidPhoneNumber(value);
@@ -178,16 +202,19 @@ const isFutureDate = (value?: string | null) => {
   return Boolean(parsed && parsed > todayAtStart());
 };
 
-const Label = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <label className="block">
+const Label = ({ label, children, className = '' }: { label: string; children: React.ReactNode; className?: string }) => (
+  <label className={`block ${className}`}>
     <span className="mb-2 flex min-h-7 items-end text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</span>
     {children}
   </label>
 );
 
-const Section = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => (
-  <section id={id} className="border border-slate-300 bg-white p-6 shadow-sm">
-    <h2 className="mb-6 text-2xl font-black text-[#073b70]">{title}</h2>
+const Section = ({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) => (
+  <section id={id} className="scroll-mt-28 rounded-xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/70">
+    <div className="mb-6 border-b border-slate-100 pb-5">
+      <h2 className="text-2xl font-black text-[#073b70]">{title}</h2>
+      {description && <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">{description}</p>}
+    </div>
     {children}
   </section>
 );
@@ -196,12 +223,29 @@ const SaveButton = ({ children, disabled = false }: { children: React.ReactNode;
   <button
     type="submit"
     disabled={disabled}
-    className="inline-flex h-11 items-center justify-center gap-2 bg-[#073b70] px-6 text-xs font-black uppercase tracking-wide text-white transition hover:bg-[#052f59] disabled:opacity-50"
+    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#073b70] px-6 text-xs font-black uppercase tracking-wide text-white transition hover:bg-[#052f59] disabled:opacity-50"
   >
     <Save size={15} />
     {children}
   </button>
 );
+
+const StatCard = ({ icon: Icon, label, value, tone = 'blue' }: { icon: React.ElementType; label: string; value: string | number; tone?: 'blue' | 'amber' | 'emerald' }) => {
+  const tones = {
+    blue: 'bg-blue-50 text-[#073b70]',
+    amber: 'bg-amber-50 text-amber-700',
+    emerald: 'bg-emerald-50 text-emerald-700',
+  };
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg ${tones[tone]}`}>
+        <Icon size={19} />
+      </div>
+      <p className="text-2xl font-black text-slate-900">{value}</p>
+      <p className="mt-1 text-xs font-black uppercase tracking-wide text-slate-500">{label}</p>
+    </div>
+  );
+};
 
 interface CountryOption {
   flagUrl: string;
@@ -225,7 +269,6 @@ const PhoneInput = ({
   const [phoneCountry, setPhoneCountry] = React.useState('TH');
   const [phoneNumber, setPhoneNumber] = React.useState(value || '');
   const [phoneError, setPhoneError] = React.useState('');
-  const [parsedPhone, setParsedPhone] = React.useState<PhoneNumber | null>(null);
   const [isCountryListOpen, setIsCountryListOpen] = React.useState(false);
 
   const countryOptions = React.useMemo(() => {
@@ -255,10 +298,9 @@ const PhoneInput = ({
     if (value) {
       try {
         const parsed = parsePhoneNumber(value);
-        setParsedPhone(parsed);
         if (parsed.country) setPhoneCountry(parsed.country);
       } catch {
-        setParsedPhone(null);
+        // Keep the current country when an existing value cannot be parsed.
       }
     }
   }, [value]);
@@ -270,7 +312,6 @@ const PhoneInput = ({
 
   const validatePhone = (number: string, iso: string) => {
     if (!number.trim()) {
-      setParsedPhone(null);
       setPhoneError(required ? 'Phone number is required' : '');
       onChange('');
       return !required;
@@ -281,17 +322,14 @@ const PhoneInput = ({
 
     if (!isValidPhoneNumber(rawValue, iso as CountryCode)) {
       setPhoneError('Please enter a valid phone number for the selected country');
-      setParsedPhone(null);
       return false;
     }
 
     try {
       const parsed = parsePhoneNumber(rawValue, iso as CountryCode);
-      setParsedPhone(parsed);
       setPhoneError('');
       onChange(parsed.format('E.164'));
     } catch {
-      setParsedPhone(null);
       setPhoneError('Please enter a valid phone number for the selected country');
       return false;
     }
@@ -303,7 +341,6 @@ const PhoneInput = ({
     const formatted = new AsYouType(phoneCountry as CountryCode).input(event.target.value);
     setPhoneNumber(formatted);
     setPhoneError('');
-    setParsedPhone(null);
     const dialCode = countryOptions.find(c => c.iso === phoneCountry)?.dialCode ?? '';
     const rawValue = event.target.value.trim().startsWith('+') ? event.target.value.trim() : `${dialCode}${event.target.value}`;
     try {
@@ -321,15 +358,14 @@ const PhoneInput = ({
     setPhoneCountry(iso);
     setPhoneNumber('');
     setPhoneError('');
-    setParsedPhone(null);
     setIsCountryListOpen(false);
     onChange('');
   };
 
   return (
     <div>
-      <div className="flex gap-3">
-        <div className="relative w-44">
+      <div className="grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+        <div className="relative">
           <button
             type="button"
             onClick={() => setIsCountryListOpen(open => !open)}
@@ -368,12 +404,11 @@ const PhoneInput = ({
           value={phoneNumber}
           onChange={handlePhoneChange}
           onBlur={() => validatePhone(phoneNumber, phoneCountry)}
-          className={`${inputClass} flex-1 ${phoneError ? 'border-red-500 focus:border-red-600' : ''}`}
+          className={`${inputClass} ${phoneError ? 'border-red-500 focus:border-red-600' : ''}`}
           placeholder={placeholder}
         />
       </div>
       {phoneError && <p className="mt-1 text-xs font-semibold text-red-500">{phoneError}</p>}
-      {parsedPhone && !phoneError && <p className="mt-1 text-xs font-semibold text-green-600">{parsedPhone.formatInternational()}</p>}
     </div>
   );
 };
@@ -689,6 +724,9 @@ function Profile(): React.JSX.Element {
     }
   };
 
+  const profileCompletion = getProfileCompletion(profile, passengers, emergencyContacts, paymentMethods);
+  const defaultPayment = paymentMethods.find(method => method.is_default);
+
   if (isLoading || loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-100 text-slate-800">
@@ -714,60 +752,82 @@ function Profile(): React.JSX.Element {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-800">
-      <header className="border-b border-slate-300 bg-white">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-center px-6">
-          <Link to="/" className="text-2xl font-black tracking-wide text-[#073b70]">
+    <main className="min-h-screen bg-slate-50 text-slate-800">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+          <Link to="/" className="text-xl font-black tracking-wide text-[#073b70]">
             HORIZON<span className="text-amber-500">ELITE</span>
+          </Link>
+          <Link to="/" className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-black uppercase tracking-wide text-[#073b70] transition hover:border-[#073b70] hover:bg-blue-50">
+            Book a flight
           </Link>
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl px-6 py-10">
-        <section className="bg-[#073b70] p-8 text-white md:p-12">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-              <div className="flex h-28 w-28 items-center justify-center border-4 border-amber-300 bg-white shadow">
-                <span className="text-3xl font-black text-[#073b70]">{getInitials(profile)}</span>
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <section className="overflow-hidden rounded-2xl bg-[#073b70] text-white shadow-xl shadow-blue-950/10">
+          <div className="p-6 md:p-8 lg:p-10">
+            <div className="flex flex-col justify-between gap-8">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border-4 border-amber-300 bg-white shadow-lg">
+                  <span className="text-3xl font-black text-[#073b70]">{getInitials(profile)}</span>
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[.24em] text-amber-300">Horizon Elite Account</p>
+                  <h1 className="mt-2 text-4xl font-black tracking-normal">{fullName(profile) || 'Your travel profile'}</h1>
+                  <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold text-sky-100">
+                    <span className="inline-flex items-center gap-2"><Mail size={15} />{getProfileEmail(profile) || 'Email not available'}</span>
+                    <span className="inline-flex items-center gap-2"><Phone size={15} />{profile.phone_number || 'Phone not saved'}</span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h1 className="text-4xl font-black tracking-normal">{fullName(profile) || 'Profile'}</h1>
-                <p className="mt-2 text-sm font-bold">{getProfileEmail(profile) || 'Email not available'}</p>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3">
+                  <p className="text-xs font-black uppercase tracking-wide text-sky-100/80">Default Payment</p>
+                  <p className="mt-1 text-lg font-black">{defaultPayment ? `${defaultPayment.card_brand || 'Card'} ${defaultPayment.last_four}` : 'Not set'}</p>
+                </div>
+                <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3">
+                  <p className="text-xs font-black uppercase tracking-wide text-sky-100/80">Preferred Currency</p>
+                  <p className="mt-1 text-lg font-black">{profile.preferred_currency || 'USD'}</p>
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="border border-white/20 px-4 py-3"><p className="text-2xl font-black">{passengers.length}</p><p className="text-[10px] font-black uppercase">Passengers</p></div>
-              <div className="border border-white/20 px-4 py-3"><p className="text-2xl font-black">{emergencyContacts.length}</p><p className="text-[10px] font-black uppercase">Contacts</p></div>
-              <div className="border border-white/20 px-4 py-3"><p className="text-2xl font-black">{paymentMethods.length}</p><p className="text-[10px] font-black uppercase">Payments</p></div>
             </div>
           </div>
         </section>
 
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <StatCard icon={Users} label="Saved passengers" value={passengers.length} />
+          <StatCard icon={AlertCircle} label="Emergency contacts" value={emergencyContacts.length} tone="amber" />
+          <StatCard icon={WalletCards} label="Payment methods" value={paymentMethods.length} tone="emerald" />
+          <StatCard icon={Plane} label="Ready for booking" value={profileCompletion >= 75 ? 'Yes' : 'Almost'} />
+        </div>
+
         <div className="mt-6 min-h-12">
-          {message && <div className="border border-emerald-300 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">{message}</div>}
-          {error && <div className="border border-red-300 bg-red-50 p-4 text-sm font-bold text-red-700">{error}</div>}
+          {message && <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">{message}</div>}
+          {error && <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm font-bold text-red-700">{error}</div>}
         </div>
 
         <div className="mt-4 grid gap-8 lg:grid-cols-[250px_1fr]">
-          <aside className="h-fit border border-slate-300 bg-white">
+          <aside className="sticky top-24 h-fit overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-5 py-4">
+              <p className="text-xs font-black uppercase tracking-[.2em] text-slate-400">Manage</p>
+            </div>
             {menuItems.map(item => (
               <a
-                key={item}
-                href={`#${item.toLowerCase().replaceAll(' ', '-')}`}
-                className="flex h-14 items-center gap-3 border-b border-slate-200 px-6 text-xs font-black uppercase tracking-wide text-slate-600 hover:bg-slate-50 hover:text-[#073b70]"
+                key={item.href}
+                href={`#${item.href}`}
+                className="flex h-12 items-center gap-3 border-b border-slate-100 px-5 text-xs font-black uppercase tracking-wide text-slate-600 transition hover:bg-blue-50 hover:text-[#073b70]"
               >
-                <span className="h-3 w-3 bg-amber-300" />
-                {item}
+                <item.icon size={16} />
+                {item.label}
               </a>
             ))}
           </aside>
 
           <div className="space-y-8">
             <form onSubmit={submitProfile} className="space-y-8">
-              <Section id="sign-up-details" title="Sign Up Details">
-                <p className="mb-5 border border-blue-200 bg-blue-50 p-4 text-xs font-bold text-[#073b70]">
-                  These are the account details required when creating a Horizon Elite account. Email is used as your login ID and cannot be changed here.
-                </p>
+              <Section id="sign-up-details" title="Account Details" description="Your login identity and required profile basics. Email is used as your account ID and cannot be changed here.">
                 <div className="grid gap-5 md:grid-cols-3">
                   <Label label="Title *">
                     <select value={profile.title || ''} onChange={event => updateProfileField('title', event.target.value)} className={inputClass}>
@@ -788,7 +848,7 @@ function Profile(): React.JSX.Element {
                   <Label label="Email Address *">
                     <input value={getProfileEmail(profile)} className={`${inputClass} bg-slate-100 text-slate-500`} readOnly />
                   </Label>
-                  <Label label="Phone Number *">
+                  <Label label="Phone Number *" className="md:col-span-2">
                     <PhoneInput value={profile.phone_number || ''} onChange={value => updateProfileField('phone_number', value)} required />
                   </Label>
                   <Label label="Password *">
@@ -800,7 +860,7 @@ function Profile(): React.JSX.Element {
                 </div>
               </Section>
 
-              <Section id="personal-details" title="Personal Details">
+              <Section id="personal-details" title="Personal Details" description="Keep these details aligned with the passport or ID you use when flying.">
                 <div className="grid gap-5 md:grid-cols-4">
                   <Label label="Title">
                     <select value={profile.title || 'Mr'} onChange={event => updateProfileField('title', event.target.value)} className={inputClass}>
@@ -823,17 +883,12 @@ function Profile(): React.JSX.Element {
                       className={inputClass}
                       placeholderText="Select date of birth"
                       dateFormat="dd MMM yyyy"
-                      minDate={getBirthDateRangeForType(passengerForm.passenger_type_code).minDate}
-                      maxDate={getBirthDateRangeForType(passengerForm.passenger_type_code).maxDate}
+                      minDate={addYears(todayAtStart(), -120)}
+                      maxDate={todayAtStart()}
                       showMonthDropdown
                       showYearDropdown
                       dropdownMode="select"
                     />
-                    <p className="mt-1 text-xs font-semibold text-slate-500">
-                      {passengerForm.passenger_type_code === 'ADT' && 'Adult must be 12 years or older.'}
-                      {passengerForm.passenger_type_code === 'CHD' && 'Child must be 2 to 11 years old.'}
-                      {passengerForm.passenger_type_code === 'INF' && 'Infant must be under 2 years old.'}
-                    </p>
                   </Label>
                   <Label label="Gender">
                     <select value={profile.gender || 'M'} onChange={event => updateProfileField('gender', event.target.value)} className={inputClass}>
@@ -849,7 +904,7 @@ function Profile(): React.JSX.Element {
                 </div>
               </Section>
 
-              <Section id="contact-information" title="Contact Information">
+              <Section id="contact-information" title="Contact Information" description="Used for booking confirmations, flight changes, check-in reminders, and urgent service updates.">
                 <div className="grid gap-5 md:grid-cols-2">
                   <Label label="Email Address">
                     <input value={getProfileEmail(profile)} className={inputClass} readOnly />
@@ -876,39 +931,48 @@ function Profile(): React.JSX.Element {
             </form>
 
             <form onSubmit={submitPassenger} className="space-y-8">
-              <Section id="passenger-management" title="Passenger Management">
+              <Section id="passenger-management" title="Saved Passengers" description="Store frequent travelers so booking and check-in forms can be filled faster.">
                 <div className="mb-6 grid gap-3">
+                  {passengers.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                      <Users className="mx-auto text-slate-400" size={30} />
+                      <p className="mt-3 text-sm font-black text-slate-700">No saved passengers yet</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-500">Add yourself or a frequent travel companion below.</p>
+                    </div>
+                  )}
                   {passengers.map(passenger => (
-                    <div key={passenger.saved_passenger_id} className="flex flex-col gap-4 border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div key={passenger.saved_passenger_id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="font-black text-[#073b70]">{passenger.title} {passenger.first_name} {passenger.last_name}</p>
-                        <p className="text-xs font-bold text-slate-500">{passenger.relationship} | Passport {maskValue(passenger.passport_number)} | Visa {maskValue(passenger.visa_number)}</p>
+                        <p className="text-xs font-bold text-slate-500">{passenger.relationship} | {passenger.passenger_type_code} | Passport {maskValue(passenger.passport_number)}</p>
                       </div>
                       <div className="flex flex-wrap gap-3">
                         <button
                           type="button"
                           onClick={() => setViewingPassengerId(current => current === passenger.saved_passenger_id ? null : passenger.saved_passenger_id)}
-                          className="flex h-9 items-center gap-2 border border-slate-300 px-4 text-xs font-black uppercase text-slate-600"
+                          className="flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-xs font-black uppercase text-slate-600 transition hover:border-[#073b70] hover:text-[#073b70]"
                         >
                           <Eye size={14} />
                           {viewingPassengerId === passenger.saved_passenger_id ? 'Hide' : 'View'}
                         </button>
-                        <button type="button" onClick={() => editPassenger(passenger)} className="h-9 border border-[#073b70] px-4 text-xs font-black uppercase text-[#073b70]">Edit</button>
-                        <button type="button" onClick={() => deletePassenger(passenger.saved_passenger_id)} className="flex h-9 items-center gap-2 border border-red-300 px-4 text-xs font-black uppercase text-red-600"><Trash2 size={14} /> Delete</button>
+                        <button type="button" onClick={() => editPassenger(passenger)} className="h-9 rounded-lg border border-[#073b70] bg-white px-4 text-xs font-black uppercase text-[#073b70]">Edit</button>
+                        <button type="button" onClick={() => deletePassenger(passenger.saved_passenger_id)} className="flex h-9 items-center gap-2 rounded-lg border border-red-300 bg-white px-4 text-xs font-black uppercase text-red-600"><Trash2 size={14} /> Delete</button>
+                      </div>
                       </div>
                       {viewingPassengerId === passenger.saved_passenger_id && (
                         <div className="border-t border-slate-200 pt-4 sm:col-span-2 sm:w-full">
                           <dl className="grid gap-3 text-xs font-bold text-slate-600 md:grid-cols-4">
-                            <div><dt className="uppercase text-slate-400">Date of Birth</dt><dd>{toDateInput(passenger.date_of_birth) || 'Not saved'}</dd></div>
+                            <div><dt className="uppercase text-slate-400">Date of Birth</dt><dd>{formatDisplayDate(passenger.date_of_birth)}</dd></div>
                             <div><dt className="uppercase text-slate-400">Gender</dt><dd>{passenger.gender}</dd></div>
                             <div><dt className="uppercase text-slate-400">Nationality</dt><dd>{passenger.nationality || 'Not saved'}</dd></div>
                             <div><dt className="uppercase text-slate-400">Passenger Type</dt><dd>{passenger.passenger_type_code}</dd></div>
                             <div><dt className="uppercase text-slate-400">Email</dt><dd>{passenger.contact_email || 'Not saved'}</dd></div>
                             <div><dt className="uppercase text-slate-400">Phone</dt><dd>{passenger.contact_phone || 'Not saved'}</dd></div>
                             <div><dt className="uppercase text-slate-400">Passport Country</dt><dd>{passenger.passport_issuing_country || 'Not saved'}</dd></div>
-                            <div><dt className="uppercase text-slate-400">Passport Expiry</dt><dd>{toDateInput(passenger.passport_expiry_date) || 'Not saved'}</dd></div>
+                            <div><dt className="uppercase text-slate-400">Passport Expiry</dt><dd>{formatDisplayDate(passenger.passport_expiry_date)}</dd></div>
                             <div><dt className="uppercase text-slate-400">Visa Country</dt><dd>{passenger.visa_country || 'Not saved'}</dd></div>
-                            <div><dt className="uppercase text-slate-400">Visa Expiry</dt><dd>{toDateInput(passenger.visa_expiry_date) || 'Not saved'}</dd></div>
+                            <div><dt className="uppercase text-slate-400">Visa Expiry</dt><dd>{formatDisplayDate(passenger.visa_expiry_date)}</dd></div>
                           </dl>
                         </div>
                       )}
@@ -926,7 +990,7 @@ function Profile(): React.JSX.Element {
                       <button
                         type="button"
                         onClick={() => { setEditingPassengerId(null); setPassengerForm(emptyPassenger); }}
-                        className="h-11 border border-slate-300 px-6 text-xs font-black uppercase text-slate-600"
+                        className="h-11 rounded-lg border border-slate-300 px-6 text-xs font-black uppercase text-slate-600"
                       >
                         Cancel Edit
                       </button>
@@ -949,7 +1013,8 @@ function Profile(): React.JSX.Element {
                       className={inputClass}
                       placeholderText="Select date of birth"
                       dateFormat="dd MMM yyyy"
-                      maxDate={todayAtStart()}
+                      minDate={getBirthDateRangeForType(passengerForm.passenger_type_code).minDate}
+                      maxDate={getBirthDateRangeForType(passengerForm.passenger_type_code).maxDate}
                       showMonthDropdown
                       showYearDropdown
                       dropdownMode="select"
@@ -961,7 +1026,7 @@ function Profile(): React.JSX.Element {
                 </div>
               </Section>
 
-              <Section id="passport-details" title="Passport Details">
+              <Section id="passport-details" title="Passport Details" description="Passport details are saved to the selected passenger above. Make sure the number and expiry date match the travel document.">
                 <div className="grid gap-5 md:grid-cols-3">
                   <Label label="Passport Number"><input value={passengerForm.passport_number || ''} onChange={event => updatePassengerField('passport_number', event.target.value)} className={inputClass} /></Label>
                   <Label label="Issuing Country"><CountrySelect value={passengerForm.passport_issuing_country || ''} onChange={country => updatePassengerField('passport_issuing_country', country)} className={inputClass} placeholder="Select issuing country" /></Label>
@@ -981,7 +1046,7 @@ function Profile(): React.JSX.Element {
                 </div>
               </Section>
 
-              <Section id="visa-information" title="Visa Information">
+              <Section id="visa-information" title="Visa Information" description="Optional visa information for destinations that require entry documentation.">
                 <div className="grid gap-5 md:grid-cols-3">
                   <Label label="Visa Number"><input value={passengerForm.visa_number || ''} onChange={event => updatePassengerField('visa_number', event.target.value)} className={inputClass} /></Label>
                   <Label label="Visa Country"><CountrySelect value={passengerForm.visa_country || ''} onChange={country => updatePassengerField('visa_country', country)} className={inputClass} placeholder="Select visa country" /></Label>
@@ -1000,24 +1065,31 @@ function Profile(): React.JSX.Element {
                   </Label>
                 </div>
                 <div className="mt-7 flex flex-wrap justify-end gap-3">
-                  {editingPassengerId && <button type="button" onClick={() => { setEditingPassengerId(null); setPassengerForm(emptyPassenger); }} className="h-11 border border-slate-300 px-6 text-xs font-black uppercase text-slate-600">Cancel</button>}
+                  {editingPassengerId && <button type="button" onClick={() => { setEditingPassengerId(null); setPassengerForm(emptyPassenger); }} className="h-11 rounded-lg border border-slate-300 px-6 text-xs font-black uppercase text-slate-600">Cancel</button>}
                   <SaveButton disabled={saving}>{editingPassengerId ? 'Update Passenger' : 'Save Passenger'}</SaveButton>
                 </div>
               </Section>
             </form>
 
             <form onSubmit={submitEmergency}>
-              <Section id="emergency-contact" title="Emergency Contact">
+              <Section id="emergency-contact" title="Emergency Contacts" description="People Horizon Elite can contact if there is an urgent travel issue or service disruption.">
                 <div className="mb-6 grid gap-3">
+                  {emergencyContacts.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                      <AlertCircle className="mx-auto text-slate-400" size={30} />
+                      <p className="mt-3 text-sm font-black text-slate-700">No emergency contacts saved</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-500">Add one trusted contact for safer travel support.</p>
+                    </div>
+                  )}
                   {emergencyContacts.map(contact => (
-                    <div key={contact.emergency_contact_id} className="flex flex-col gap-4 border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div key={contact.emergency_contact_id} className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="font-black text-[#073b70]">{contact.contact_name}</p>
                         <p className="text-xs font-bold text-slate-500">{contact.relationship || 'Contact'} | {contact.phone_number} | Priority {contact.priority}</p>
                       </div>
                       <div className="flex gap-3">
-                        <button type="button" onClick={() => { setEditingEmergencyId(contact.emergency_contact_id); setEmergencyForm({ contact_name: contact.contact_name, relationship: contact.relationship || '', phone_number: contact.phone_number, email_address: contact.email_address || '', priority: contact.priority }); }} className="h-9 border border-[#073b70] px-4 text-xs font-black uppercase text-[#073b70]">Edit</button>
-                        <button type="button" onClick={() => deleteEmergency(contact.emergency_contact_id)} className="h-9 border border-red-300 px-4 text-xs font-black uppercase text-red-600">Delete</button>
+                        <button type="button" onClick={() => { setEditingEmergencyId(contact.emergency_contact_id); setEmergencyForm({ contact_name: contact.contact_name, relationship: contact.relationship || '', phone_number: contact.phone_number, email_address: contact.email_address || '', priority: contact.priority }); }} className="h-9 rounded-lg border border-[#073b70] bg-white px-4 text-xs font-black uppercase text-[#073b70]">Edit</button>
+                        <button type="button" onClick={() => deleteEmergency(contact.emergency_contact_id)} className="h-9 rounded-lg border border-red-300 bg-white px-4 text-xs font-black uppercase text-red-600">Delete</button>
                       </div>
                     </div>
                   ))}
@@ -1035,20 +1107,27 @@ function Profile(): React.JSX.Element {
             </form>
 
             <form onSubmit={submitPayment}>
-              <Section id="payment-methods" title="Payment Methods">
-                <p className="mb-5 border border-amber-300 bg-amber-50 p-4 text-xs font-bold text-amber-800">
+              <Section id="payment-methods" title="Payment Methods" description="Save card metadata for faster checkout. Full card numbers and CVV should never be stored here.">
+                <p className="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs font-bold text-amber-800">
                   For security, save only payment metadata here. Do not enter full card numbers or CVV.
                 </p>
                 <div className="mb-6 grid gap-3">
+                  {paymentMethods.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                      <WalletCards className="mx-auto text-slate-400" size={30} />
+                      <p className="mt-3 text-sm font-black text-slate-700">No payment methods saved</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-500">Add a card reference to speed up payment at checkout.</p>
+                    </div>
+                  )}
                   {paymentMethods.map(method => (
-                    <div key={method.payment_method_id} className="flex flex-col gap-4 border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div key={method.payment_method_id} className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="font-black text-[#073b70]">{method.card_brand || 'Card'} ending {method.last_four} {method.is_default ? <span className="text-xs text-emerald-600">Default</span> : null}</p>
+                        <p className="font-black text-[#073b70]">{method.card_brand || 'Card'} ending {method.last_four} {method.is_default ? <span className="ml-2 rounded-full bg-emerald-100 px-2 py-1 text-[10px] uppercase text-emerald-700">Default</span> : null}</p>
                         <p className="text-xs font-bold text-slate-500">{method.cardholder_name} | Expires {String(method.expiry_month).padStart(2, '0')}/{method.expiry_year}</p>
                       </div>
                       <div className="flex gap-3">
-                        <button type="button" onClick={() => { setEditingPaymentId(method.payment_method_id); setPaymentForm({ payment_type: method.payment_type, card_brand: method.card_brand || '', cardholder_name: method.cardholder_name, last_four: method.last_four, expiry_month: method.expiry_month, expiry_year: method.expiry_year, gateway_payment_method_id: method.gateway_payment_method_id || '', billing_address: method.billing_address || '', is_default: method.is_default }); }} className="h-9 border border-[#073b70] px-4 text-xs font-black uppercase text-[#073b70]">Edit</button>
-                        <button type="button" onClick={() => deletePayment(method.payment_method_id)} className="h-9 border border-red-300 px-4 text-xs font-black uppercase text-red-600">Delete</button>
+                        <button type="button" onClick={() => { setEditingPaymentId(method.payment_method_id); setPaymentForm({ payment_type: method.payment_type, card_brand: method.card_brand || '', cardholder_name: method.cardholder_name, last_four: method.last_four, expiry_month: method.expiry_month, expiry_year: method.expiry_year, gateway_payment_method_id: method.gateway_payment_method_id || '', billing_address: method.billing_address || '', is_default: method.is_default }); }} className="h-9 rounded-lg border border-[#073b70] bg-white px-4 text-xs font-black uppercase text-[#073b70]">Edit</button>
+                        <button type="button" onClick={() => deletePayment(method.payment_method_id)} className="h-9 rounded-lg border border-red-300 bg-white px-4 text-xs font-black uppercase text-red-600">Delete</button>
                       </div>
                     </div>
                   ))}
