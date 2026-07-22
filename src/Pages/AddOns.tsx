@@ -670,7 +670,7 @@ function AddOns(): React.JSX.Element {
   };
 
   useEffect(() => {
-    const seatMapId = outboundFlight?.duffel_order_id || outboundFlight?.order_id || outboundFlight?.flight_offer_id || '';
+    const seatMapId = outboundFlight?.duffel_order_id || outboundFlight?.order_id || '';
 
     if (seatMapId) {
       setSeatLoading(true);
@@ -684,6 +684,9 @@ function AddOns(): React.JSX.Element {
           setSeatError(error.message || 'Seat selection is not available for this flight.');
         })
         .finally(() => setSeatLoading(false));
+    } else {
+      setSeatOptions([]);
+      setSeatError('Seat maps are available after a Duffel order has been created for this booking.');
     }
 
     void mealApi.getMeals()

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { CircleHelp, Download, Luggage as Suitcase, Mail, Plane } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { bookingApi, type ManageBookingDetails } from "../Services/api";
+import { bookingApi, type BookingActions, type ManageBookingDetails } from "../Services/api";
 import PageHeader from "../components/PageHeader";
 
 const onlineServices = [
@@ -48,6 +48,8 @@ const mapManagedBookingToRouteState = (details: ManageBookingDetails) => {
     cabin_class: details.booking.cabin_class,
     selected_fare_price: details.booking.total_payment_amount,
     currency_code: details.booking.currency_code,
+    duffel_order_id: details.flight.duffel_order_id,
+    local_duffel_order_id: details.flight.local_duffel_order_id,
   };
 
   const passengers = details.passengers.map((passenger) => ({
@@ -86,6 +88,7 @@ function ManageBooking(): React.JSX.Element {
   const [pnr, setPnr] = useState("");
   const [lastName, setLastName] = useState("");
   const [bookingDetails, setBookingDetails] = useState<ManageBookingDetails | null>(null);
+  const [bookingActions, setBookingActions] = useState<BookingActions | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -100,13 +103,20 @@ function ManageBooking(): React.JSX.Element {
     try {
       setIsSearching(true);
       setErrorMessage("");
-      const response = await bookingApi.getManageBooking(pnr.trim().toUpperCase(), lastName.trim());
+      const normalizedPnr = pnr.trim().toUpperCase();
+      const normalizedLastName = lastName.trim();
+      const [response, actionsResponse] = await Promise.all([
+        bookingApi.getManageBooking(normalizedPnr, normalizedLastName),
+        bookingApi.getBookingActions(normalizedPnr, normalizedLastName),
+      ]);
       setBookingDetails(response.data);
+      setBookingActions(actionsResponse.data.actions);
       if (redirectTo) {
         navigate(redirectTo, { state: mapManagedBookingToRouteState(response.data), replace: true });
       }
     } catch (error) {
       setBookingDetails(null);
+      setBookingActions(null);
       setErrorMessage(error instanceof Error ? error.message : "Booking not found.");
     } finally {
       setIsSearching(false);
@@ -126,6 +136,11 @@ function ManageBooking(): React.JSX.Element {
   const goToBoardingPass = () => {
     if (!routeState) return;
     navigate("/download-boarding-pass", { state: routeState });
+  };
+
+  const goToCheckIn = () => {
+    if (!routeState) return;
+    navigate("/check-in", { state: routeState });
   };
 
   return (
@@ -217,13 +232,14 @@ function ManageBooking(): React.JSX.Element {
                   <hr className="my-8" />
 
                   <p className="mb-5 text-slate-500">
-                    Continue with add-ons or download your travel documents.
+                    Continue with the actions currently available for this booking.
                   </p>
 
-                  <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-4 md:grid-cols-4">
                     <button
                       type="button"
                       onClick={goToAddOns}
+                      disabled={!bookingActions?.change_booking && !bookingActions?.download_eticket && bookingDetails.booking.booking_status === "CANCELLED"}
                       className="rounded border border-[#073b70] px-4 py-3 font-semibold text-[#073b70] hover:bg-slate-50"
                     >
                       <span className="inline-flex items-center justify-center gap-2">
@@ -235,7 +251,8 @@ function ManageBooking(): React.JSX.Element {
                     <button
                       type="button"
                       onClick={goToETicket}
-                      className="rounded border border-[#073b70] px-4 py-3 font-semibold text-[#073b70] hover:bg-slate-50"
+                      disabled={!bookingActions?.download_eticket}
+                      className="rounded border border-[#073b70] px-4 py-3 font-semibold text-[#073b70] hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
                     >
                       <span className="inline-flex items-center justify-center gap-2">
                         <Download size={18} />
@@ -246,14 +263,36 @@ function ManageBooking(): React.JSX.Element {
                     <button
                       type="button"
                       onClick={goToBoardingPass}
-                      className="rounded border border-[#073b70] px-4 py-3 font-semibold text-[#073b70] hover:bg-slate-50"
+                      disabled={!bookingActions?.check_in}
+                      className="rounded border border-[#073b70] px-4 py-3 font-semibold text-[#073b70] hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
                     >
                       <span className="inline-flex items-center justify-center gap-2">
                         <Download size={18} />
                         Boarding Pass
                       </span>
                     </button>
+
+                    <button
+                      type="button"
+                      onClick={goToCheckIn}
+                      disabled={!bookingActions?.check_in}
+                      className="rounded border border-[#073b70] px-4 py-3 font-semibold text-[#073b70] hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+                    >
+                      <span className="inline-flex items-center justify-center gap-2">
+                        <Plane size={18} />
+                        Check In
+                      </span>
+                    </button>
                   </div>
+
+                  {bookingActions && (
+                    <div className="mt-5 rounded border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-600">
+                      Available actions: {Object.entries(bookingActions)
+                        .filter(([, enabled]) => enabled)
+                        .map(([action]) => action.replace(/_/g, " "))
+                        .join(", ") || "No self-service actions available yet."}
+                    </div>
+                  )}
                 </>
               )}
             </div>

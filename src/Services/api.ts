@@ -337,8 +337,38 @@ axiosInstance.interceptors.request.use(
 // Response interceptor – unwrap data and surface error messages
 axiosInstance.interceptors.response.use(
   (response) => response.data,
-  (error: AxiosError) => {
+  async (error: AxiosError) => {
     const responseData = error.response?.data as any;
+    const originalRequest = error.config as any;
+    const isAuthRefreshRequest =
+      typeof originalRequest?.url === 'string' &&
+      originalRequest.url.includes('/auth/refresh');
+    const shouldRefreshToken =
+      error.response?.status === 401 &&
+      !originalRequest?._retry &&
+      !isAuthRefreshRequest &&
+      Boolean(localStorage.getItem('jwt_token'));
+
+    if (shouldRefreshToken) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshResponse = await axiosInstance.post('/auth/refresh', {});
+        const refreshedToken = (refreshResponse as AuthResponse).token || (refreshResponse as AuthResponse).jwt_token;
+
+        if (refreshedToken) {
+          localStorage.setItem('jwt_token', refreshedToken);
+          originalRequest.headers = {
+            ...(originalRequest.headers || {}),
+            Authorization: `Bearer ${refreshedToken}`,
+          };
+          return axiosInstance(originalRequest);
+        }
+      } catch {
+        localStorage.removeItem('jwt_token');
+      }
+    }
+
     const detailMessages =
       Array.isArray(responseData?.details?.errors)
         ? responseData.details.errors.map((item: any) => item.message || item.title || item.code).filter(Boolean).join(', ')
@@ -839,6 +869,8 @@ export interface ManageBookingDetails {
     destination?: string;
     departure?: string;
     arrival?: string;
+    duffel_order_id?: string | null;
+    local_duffel_order_id?: string | null;
   };
   passengers: Array<{
     passenger_id: string;
@@ -861,6 +893,23 @@ export interface ManageBookingDetails {
 export interface ManageBookingResponse {
   message: string;
   data: ManageBookingDetails;
+}
+
+export interface BookingActions {
+  download_eticket: boolean;
+  download_invoice: boolean;
+  cancel_booking: boolean;
+  change_booking: boolean;
+  check_in: boolean;
+}
+
+export interface BookingActionsResponse {
+  message: string;
+  data: {
+    booking_status: string;
+    ticketing_status?: string;
+    actions: BookingActions;
+  };
 }
 
 // ─── Passenger Types ─────────────────────────────────────────────────────────
@@ -1071,6 +1120,9 @@ export const bookingApi = {
 
   getManageBooking: (pnr: string, lastName: string): Promise<ManageBookingResponse> =>
     axiosInstance.get(`/bookings/manage/${encodeURIComponent(pnr)}/${encodeURIComponent(lastName)}`),
+
+  getBookingActions: (pnr: string, lastName: string): Promise<BookingActionsResponse> =>
+    axiosInstance.get(`/bookings/manage/${encodeURIComponent(pnr)}/${encodeURIComponent(lastName)}/actions`),
 };
 
 // Extended API object with payment endpoints
