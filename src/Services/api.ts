@@ -814,6 +814,11 @@ export interface SelectSeatRequest {
   seat_id: string;
 }
 
+export interface SeatMapResponse {
+  message: string;
+  data: any;
+}
+
 export interface ManageBookingDetails {
   booking: {
     booking_id: string;
@@ -1253,14 +1258,16 @@ export const mealApi = {
 
 export const seatApi = {
   /**
-   * Seats are intentionally disabled for now.
+   * Get available seats for a Duffel order/offer identifier.
    */
-  getSeatMap: async (_offerId: string): Promise<false> => false,
+  getSeatMap: (offerId: string): Promise<SeatMapResponse> =>
+    axiosInstance.get(`/seats/map/${encodeURIComponent(offerId)}`),
 
   /**
-   * Seats are intentionally disabled for now.
+   * Select a seat for a passenger on an existing Duffel order.
    */
-  selectSeat: async (_data: SelectSeatRequest): Promise<false> => false,
+  selectSeat: (data: SelectSeatRequest): Promise<ApiMessageDataResponse<any>> =>
+    axiosInstance.post('/seats/select', data),
 };
 
 export default api;

@@ -108,12 +108,21 @@ const insuranceOptions = [
 ];
 
 interface SelectedAddon {
-  type: 'MEAL' | 'BAGGAGE' | 'ASSISTANCE' | 'LOUNGE' | 'INSURANCE';
+  type: 'SEAT' | 'MEAL' | 'BAGGAGE' | 'ASSISTANCE' | 'LOUNGE' | 'INSURANCE';
   code: string;
   name: string;
   price: number;
   currencyCode?: string;
   quantity?: number;
+}
+
+interface SeatOption {
+  id: string;
+  code: string;
+  name: string;
+  cabin?: string;
+  price: number;
+  currencyCode?: string;
 }
 
 interface PricedMealOption {
@@ -183,6 +192,46 @@ const getBaggageWeightFromAddon = (addon: Pick<BookingAddon, 'addon_code' | 'add
 
   const match = String(addon.addon_detail || '').match(/(\d+)\s*kg/i);
   return match ? Number(match[1]) : 0;
+};
+
+const flattenSeatOptions = (seatMapPayload: any): SeatOption[] => {
+  const root = seatMapPayload?.data?.data || seatMapPayload?.data || seatMapPayload;
+  const seats: SeatOption[] = [];
+  const seen = new Set<string>();
+
+  const visit = (value: any, cabin?: string) => {
+    if (!value || typeof value !== 'object') return;
+
+    const maybeSeat = value.type === 'seat' || value.designator || value.seat_number || value.seat_name;
+    const id = value.id || value.seat_id;
+    const code = value.designator || value.seat_number || value.seat_name || value.name;
+    const available = value.available !== false && value.is_available !== false;
+
+    if (maybeSeat && id && code && available && !seen.has(id)) {
+      const amount = Number(value.total_amount || value.amount || value.price || value.fee || 0);
+      seats.push({
+        id,
+        code: String(code),
+        name: `Seat ${code}`,
+        cabin: cabin || value.cabin_class || value.cabin || value.section,
+        price: Number.isFinite(amount) ? amount : 0,
+        currencyCode: value.total_currency || value.currency || value.currency_code,
+      });
+      seen.add(id);
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => visit(item, cabin));
+      return;
+    }
+
+    const nextCabin = value.cabin_class || value.cabin || value.name || cabin;
+    Object.values(value).forEach((item) => visit(item, typeof item === 'object' ? nextCabin : cabin));
+  };
+
+  visit(root);
+
+  return seats.slice(0, 48);
 };
 
 const BookingSummary = ({ 
@@ -300,12 +349,69 @@ const BookingSummary = ({
   );
 };
 
-const SeatContent = () => (
+const SeatContent = ({
+  selectedCode,
+  options,
+  loading,
+  error,
+  currencyCode,
+  onSelect,
+}: {
+  selectedCode?: string;
+  options: SeatOption[];
+  loading: boolean;
+  error: string;
+  currencyCode: string;
+  onSelect: (addon: SelectedAddon) => void;
+}) => (
   <div className="border-t border-slate-300 bg-slate-50 p-7">
-    <div className="rounded border border-slate-300 bg-white p-6 text-center">
-      <p className="text-lg font-black text-[#073b70]">Seat selection is currently unavailable</p>
-      <p className="mt-2 text-sm font-semibold text-slate-600">Seats will be assigned during check-in for this booking.</p>
-    </div>
+    {loading && (
+      <div className="rounded border border-slate-300 bg-white p-6 text-center text-sm font-semibold text-slate-600">
+        Loading available seats...
+      </div>
+    )}
+
+    {!loading && error && (
+      <div className="rounded border border-amber-300 bg-amber-50 p-6 text-center">
+        <p className="text-lg font-black text-amber-800">Seat map unavailable</p>
+        <p className="mt-2 text-sm font-semibold text-amber-700">{error}</p>
+      </div>
+    )}
+
+    {!loading && !error && options.length === 0 && (
+      <div className="rounded border border-slate-300 bg-white p-6 text-center">
+        <p className="text-lg font-black text-[#073b70]">No selectable seats returned</p>
+        <p className="mt-2 text-sm font-semibold text-slate-600">Seats may be assigned during check-in for this booking.</p>
+      </div>
+    )}
+
+    {!loading && !error && options.length > 0 && (
+      <div>
+        <p className="mb-5 text-xs font-black uppercase tracking-widest text-slate-500">Available Seats</p>
+        <div className="grid gap-3 sm:grid-cols-4 md:grid-cols-6">
+          {options.map((seat) => (
+            <button
+              key={seat.id}
+              type="button"
+              onClick={() => onSelect({
+                type: 'SEAT',
+                code: seat.id,
+                name: seat.name,
+                price: seat.price,
+                currencyCode: seat.currencyCode || currencyCode,
+              })}
+              className={`min-h-24 rounded border bg-white p-3 text-center ${selectedCode === seat.id ? 'border-[#073b70] bg-blue-50' : 'border-slate-300'}`}
+            >
+              <span className="block text-xl font-black text-[#073b70]">{seat.code}</span>
+              {seat.cabin && <span className="mt-1 block truncate text-[11px] font-bold text-slate-500">{seat.cabin}</span>}
+              <span className="mt-2 block text-xs font-black uppercase text-cyan-700">
+                {seat.price > 0 ? `${seat.currencyCode || currencyCode} ${seat.price.toLocaleString()}` : 'Free'}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
   </div>
 );
 
@@ -463,6 +569,9 @@ function AddOns(): React.JSX.Element {
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
   const [backendMeals, setBackendMeals] = useState<PricedMealOption[]>([]);
   const [backendBaggage, setBackendBaggage] = useState<PricedBaggageOption[]>([]);
+  const [seatOptions, setSeatOptions] = useState<SeatOption[]>([]);
+  const [seatLoading, setSeatLoading] = useState(false);
+  const [seatError, setSeatError] = useState('');
   
   const personalized = openSection === 'assistance';
 
@@ -535,7 +644,16 @@ function AddOns(): React.JSX.Element {
   const renderContent = (key: AddOnKey) => {
     switch (key) {
       case 'seat':
-        return <SeatContent />;
+        return (
+          <SeatContent
+            selectedCode={getSelectedCode('SEAT')}
+            options={seatOptions}
+            loading={seatLoading}
+            error={seatError}
+            currencyCode={currencyCode}
+            onSelect={selectAddon}
+          />
+        );
       case 'meal':
         return <MealContent selectedCode={getSelectedCode('MEAL')} options={mealDisplayOptions} currencyCode={currencyCode} onSelect={selectAddon} />;
       case 'baggage':
@@ -552,9 +670,22 @@ function AddOns(): React.JSX.Element {
   };
 
   useEffect(() => {
-    void seatApi.getSeatMap(outboundFlight?.flight_offer_id || '').then((seatMap) => {
-      if (seatMap === false) return;
-    });
+    const seatMapId = outboundFlight?.duffel_order_id || outboundFlight?.order_id || outboundFlight?.flight_offer_id || '';
+
+    if (seatMapId) {
+      setSeatLoading(true);
+      setSeatError('');
+      void seatApi.getSeatMap(seatMapId)
+        .then((response) => {
+          setSeatOptions(flattenSeatOptions(response));
+        })
+        .catch((error: Error) => {
+          setSeatOptions([]);
+          setSeatError(error.message || 'Seat selection is not available for this flight.');
+        })
+        .finally(() => setSeatLoading(false));
+    }
+
     void mealApi.getMeals()
       .then((response) => {
         const meals = Array.isArray(response.data)
