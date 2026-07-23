@@ -247,6 +247,18 @@ export interface SearchFlightResponse {
   [key: string]: any;                     // Allow additional fields from backend
 }
 
+export interface PopularRoute {
+  origin_airport_code: string;
+  destination_airport_code: string;
+  search_count: number;
+  last_searched_at?: string;
+}
+
+export interface PopularRoutesResponse {
+  message: string;
+  data: PopularRoute[];
+}
+
 // ─── Selected Flight Types ────────────────────────────────────────────────────
 
 /**
@@ -608,6 +620,9 @@ export const api = {
   searchFlights: (searchData: SearchFlightRequest): Promise<SearchFlightResponse> =>
     axiosInstance.post('/flights/search', searchData),
 
+  getPopularRoutes: (limit = 6): Promise<PopularRoutesResponse> =>
+    axiosInstance.get('/flights/popular-routes', { params: { limit } }),
+
   // ─── Flight Results API ───────────────────────────────────────────────────
 
   /**
@@ -856,7 +871,10 @@ export interface ManageBookingDetails {
     pnr_reference: string;
     booking_status: string;
     ticketing_status?: string;
-    total_payment_amount?: string;
+    total_payment_amount?: string | number;
+    original_payment_amount?: string | number;
+    paid_addons_total?: string | number;
+    total_paid_amount?: string | number;
     currency_code?: string;
     trip_type?: 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_CITY';
     cabin_class?: string;

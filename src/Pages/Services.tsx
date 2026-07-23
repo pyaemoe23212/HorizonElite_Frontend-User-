@@ -51,8 +51,8 @@ function Services(): React.JSX.Element {
       <section className="mx-auto max-w-7xl px-6 py-14">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-cyan-700">Horizon Elite</p>
-            <h1 className="mt-2 text-5xl font-black text-[#073b70]">Additional Services</h1>
+            <p className="text-xs font-semibold uppercase tracking-widest text-cyan-700">Horizon Elite</p>
+            <h1 className="mt-2 text-5xl font-semibold text-[#073b70]">Additional Services</h1>
             <p className="mt-4 max-w-2xl text-lg font-semibold text-slate-600">
               Access post-booking services from the home page: manage a trip, check flight updates, check in, or get support.
             </p>
@@ -60,7 +60,7 @@ function Services(): React.JSX.Element {
 
           <Link
             to="/manage-booking"
-            className="inline-flex h-12 items-center justify-center rounded bg-[#073b70] px-6 text-sm font-black text-white hover:bg-[#052f59]"
+            className="inline-flex h-12 items-center justify-center rounded bg-[#073b70] px-6 text-sm font-semibold text-white hover:bg-[#052f59]"
           >
             Find My Booking
           </Link>
@@ -81,9 +81,9 @@ function Services(): React.JSX.Element {
                   <Icon size={25} strokeWidth={2.2} />
                 </div>
 
-                <h2 className="mt-6 text-2xl font-black text-[#073b70]">{service.title}</h2>
+                <h2 className="mt-6 text-2xl font-semibold text-[#073b70]">{service.title}</h2>
                 <p className="mt-3 min-h-16 text-sm font-semibold leading-6 text-slate-600">{service.description}</p>
-                <span className="mt-6 inline-block text-xs font-black uppercase tracking-widest text-cyan-700">Open</span>
+                <span className="mt-6 inline-block text-xs font-semibold uppercase tracking-widest text-cyan-700">Open</span>
               </Link>
             );
           })}

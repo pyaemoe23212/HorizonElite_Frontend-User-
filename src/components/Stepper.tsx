@@ -10,7 +10,7 @@ export const Stepper: React.FC<StepperProps> = ({ currentStep = 1 }) => (
       <div key={step} className="relative flex flex-col items-center gap-2 text-center">
         {index > 0 && <span className="absolute left-[-50%] top-4 h-px w-full bg-slate-300" />}
         <span
-          className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border text-sm font-black ${
+          className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold ${
             index + 1 === currentStep
               ? 'border-amber-400 bg-[#073b70] text-white'
               : index + 1 < currentStep
@@ -21,7 +21,7 @@ export const Stepper: React.FC<StepperProps> = ({ currentStep = 1 }) => (
           {index + 1 < currentStep ? '✓' : index + 1}
         </span>
         <span
-          className={`text-[10px] font-black uppercase ${
+          className={`text-[10px] font-semibold uppercase ${
             index + 1 === currentStep ? 'text-[#073b70]' : 'text-slate-400'
           }`}
         >

@@ -234,7 +234,7 @@ function PersonalizedServices(): React.JSX.Element {
 
       <section className="mx-auto max-w-4xl px-6 py-20">
         <div className="text-center">
-          <h1 className="text-4xl font-black text-[#073b70]">Personalized Flight Services</h1>
+          <h1 className="text-4xl font-semibold text-[#073b70]">Personalized Flight Services</h1>
           <p className="mx-auto mt-5 max-w-2xl text-base font-semibold leading-7 text-slate-600">Enhance your travel experience with our automated notification and reminder suite. Horizon Elite ensures you're prepared at every step of your journey.</p>
         </div>
 
@@ -258,7 +258,7 @@ function PersonalizedServices(): React.JSX.Element {
                   <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${enabled[index] ? 'left-6' : 'left-1'}`} />
                 </button>
               </div>
-              <h2 className="mt-9 text-2xl font-black text-[#073b70]">{service.title}</h2>
+              <h2 className="mt-9 text-2xl font-semibold text-[#073b70]">{service.title}</h2>
               <p className="mt-3 text-sm font-semibold leading-6 text-slate-600">{service.description}</p>
             </article>
           ))}
@@ -284,7 +284,7 @@ function PersonalizedServices(): React.JSX.Element {
             type="button"
             onClick={finishBooking}
             disabled={isFinishing}
-            className="flex h-14 w-56 items-center justify-center rounded bg-[#073b70] text-sm font-black text-white shadow-lg shadow-blue-950/20 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-14 w-56 items-center justify-center rounded bg-[#073b70] text-sm font-semibold text-white shadow-lg shadow-blue-950/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isFinishing ? 'Setting Reminders...' : 'Finish Booking'}
           </button>

@@ -204,7 +204,7 @@ const isFutureDate = (value?: string | null) => {
 
 const Label = ({ label, children, className = '' }: { label: string; children: React.ReactNode; className?: string }) => (
   <label className={`block ${className}`}>
-    <span className="mb-2 flex min-h-7 items-end text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</span>
+    <span className="mb-2 flex min-h-7 items-end text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</span>
     {children}
   </label>
 );
@@ -212,7 +212,7 @@ const Label = ({ label, children, className = '' }: { label: string; children: R
 const Section = ({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) => (
   <section id={id} className="scroll-mt-28 rounded-xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/70">
     <div className="mb-6 border-b border-slate-100 pb-5">
-      <h2 className="text-2xl font-black text-[#073b70]">{title}</h2>
+      <h2 className="text-2xl font-semibold text-[#073b70]">{title}</h2>
       {description && <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">{description}</p>}
     </div>
     {children}
@@ -223,7 +223,7 @@ const SaveButton = ({ children, disabled = false }: { children: React.ReactNode;
   <button
     type="submit"
     disabled={disabled}
-    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#073b70] px-6 text-xs font-black uppercase tracking-wide text-white transition hover:bg-[#052f59] disabled:opacity-50"
+    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#073b70] px-6 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-[#052f59] disabled:opacity-50"
   >
     <Save size={15} />
     {children}
@@ -241,8 +241,8 @@ const StatCard = ({ icon: Icon, label, value, tone = 'blue' }: { icon: React.Ele
       <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg ${tones[tone]}`}>
         <Icon size={19} />
       </div>
-      <p className="text-2xl font-black text-slate-900">{value}</p>
-      <p className="mt-1 text-xs font-black uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="text-2xl font-semibold text-slate-900">{value}</p>
+      <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
     </div>
   );
 };
@@ -731,7 +731,7 @@ function Profile(): React.JSX.Element {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-100 text-slate-800">
         <div className="border border-slate-300 bg-white p-8 text-center shadow-sm">
-          <p className="text-sm font-black uppercase tracking-widest text-[#073b70]">Loading Profile</p>
+          <p className="text-sm font-semibold uppercase tracking-widest text-[#073b70]">Loading Profile</p>
         </div>
       </main>
     );
@@ -741,9 +741,9 @@ function Profile(): React.JSX.Element {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-100 px-6 text-slate-800">
         <div className="max-w-md border border-amber-300 bg-amber-50 p-8 text-center">
-          <h1 className="text-2xl font-black text-amber-800">Sign in required</h1>
+          <h1 className="text-2xl font-semibold text-amber-800">Sign in required</h1>
           <p className="mt-3 text-sm font-semibold text-amber-700">Please sign in to manage your saved travel profile.</p>
-          <Link to="/signin" className="mt-6 inline-flex h-11 items-center justify-center bg-[#073b70] px-6 text-sm font-black text-white">
+          <Link to="/signin" className="mt-6 inline-flex h-11 items-center justify-center bg-[#073b70] px-6 text-sm font-semibold text-white">
             Sign In
           </Link>
         </div>
@@ -755,10 +755,10 @@ function Profile(): React.JSX.Element {
     <main className="min-h-screen bg-slate-50 text-slate-800">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Link to="/" className="text-xl font-black tracking-wide text-[#073b70]">
+          <Link to="/" className="text-xl font-semibold tracking-wide text-[#073b70]">
             HORIZON<span className="text-amber-500">ELITE</span>
           </Link>
-          <Link to="/" className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-black uppercase tracking-wide text-[#073b70] transition hover:border-[#073b70] hover:bg-blue-50">
+          <Link to="/" className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#073b70] transition hover:border-[#073b70] hover:bg-blue-50">
             Book a flight
           </Link>
         </div>
@@ -770,11 +770,11 @@ function Profile(): React.JSX.Element {
             <div className="flex flex-col justify-between gap-8">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
                 <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border-4 border-amber-300 bg-white shadow-lg">
-                  <span className="text-3xl font-black text-[#073b70]">{getInitials(profile)}</span>
+                  <span className="text-3xl font-semibold text-[#073b70]">{getInitials(profile)}</span>
                 </div>
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[.24em] text-amber-300">Horizon Elite Account</p>
-                  <h1 className="mt-2 text-4xl font-black tracking-normal">{fullName(profile) || 'Your travel profile'}</h1>
+                  <p className="text-xs font-semibold uppercase tracking-[.24em] text-amber-300">Horizon Elite Account</p>
+                  <h1 className="mt-2 text-4xl font-semibold tracking-normal">{fullName(profile) || 'Your travel profile'}</h1>
                   <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold text-sky-100">
                     <span className="inline-flex items-center gap-2"><Mail size={15} />{getProfileEmail(profile) || 'Email not available'}</span>
                     <span className="inline-flex items-center gap-2"><Phone size={15} />{profile.phone_number || 'Phone not saved'}</span>
@@ -784,12 +784,12 @@ function Profile(): React.JSX.Element {
 
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3">
-                  <p className="text-xs font-black uppercase tracking-wide text-sky-100/80">Default Payment</p>
-                  <p className="mt-1 text-lg font-black">{defaultPayment ? `${defaultPayment.card_brand || 'Card'} ${defaultPayment.last_four}` : 'Not set'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-sky-100/80">Default Payment</p>
+                  <p className="mt-1 text-lg font-semibold">{defaultPayment ? `${defaultPayment.card_brand || 'Card'} ${defaultPayment.last_four}` : 'Not set'}</p>
                 </div>
                 <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3">
-                  <p className="text-xs font-black uppercase tracking-wide text-sky-100/80">Preferred Currency</p>
-                  <p className="mt-1 text-lg font-black">{profile.preferred_currency || 'USD'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-sky-100/80">Preferred Currency</p>
+                  <p className="mt-1 text-lg font-semibold">{profile.preferred_currency || 'USD'}</p>
                 </div>
               </div>
             </div>
@@ -804,20 +804,20 @@ function Profile(): React.JSX.Element {
         </div>
 
         <div className="mt-6 min-h-12">
-          {message && <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">{message}</div>}
-          {error && <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm font-bold text-red-700">{error}</div>}
+          {message && <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-medium text-emerald-700">{message}</div>}
+          {error && <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm font-medium text-red-700">{error}</div>}
         </div>
 
         <div className="mt-4 grid gap-8 lg:grid-cols-[250px_1fr]">
           <aside className="sticky top-24 h-fit overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 px-5 py-4">
-              <p className="text-xs font-black uppercase tracking-[.2em] text-slate-400">Manage</p>
+              <p className="text-xs font-semibold uppercase tracking-[.2em] text-slate-400">Manage</p>
             </div>
             {menuItems.map(item => (
               <a
                 key={item.href}
                 href={`#${item.href}`}
-                className="flex h-12 items-center gap-3 border-b border-slate-100 px-5 text-xs font-black uppercase tracking-wide text-slate-600 transition hover:bg-blue-50 hover:text-[#073b70]"
+                className="flex h-12 items-center gap-3 border-b border-slate-100 px-5 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:bg-blue-50 hover:text-[#073b70]"
               >
                 <item.icon size={16} />
                 {item.label}
@@ -936,7 +936,7 @@ function Profile(): React.JSX.Element {
                   {passengers.length === 0 && (
                     <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
                       <Users className="mx-auto text-slate-400" size={30} />
-                      <p className="mt-3 text-sm font-black text-slate-700">No saved passengers yet</p>
+                      <p className="mt-3 text-sm font-semibold text-slate-700">No saved passengers yet</p>
                       <p className="mt-1 text-sm font-semibold text-slate-500">Add yourself or a frequent travel companion below.</p>
                     </div>
                   )}
@@ -944,25 +944,25 @@ function Profile(): React.JSX.Element {
                     <div key={passenger.saved_passenger_id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="font-black text-[#073b70]">{passenger.title} {passenger.first_name} {passenger.last_name}</p>
-                        <p className="text-xs font-bold text-slate-500">{passenger.relationship} | {passenger.passenger_type_code} | Passport {maskValue(passenger.passport_number)}</p>
+                        <p className="font-semibold text-[#073b70]">{passenger.title} {passenger.first_name} {passenger.last_name}</p>
+                        <p className="text-xs font-medium text-slate-500">{passenger.relationship} | {passenger.passenger_type_code} | Passport {maskValue(passenger.passport_number)}</p>
                       </div>
                       <div className="flex flex-wrap gap-3">
                         <button
                           type="button"
                           onClick={() => setViewingPassengerId(current => current === passenger.saved_passenger_id ? null : passenger.saved_passenger_id)}
-                          className="flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-xs font-black uppercase text-slate-600 transition hover:border-[#073b70] hover:text-[#073b70]"
+                          className="flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold uppercase text-slate-600 transition hover:border-[#073b70] hover:text-[#073b70]"
                         >
                           <Eye size={14} />
                           {viewingPassengerId === passenger.saved_passenger_id ? 'Hide' : 'View'}
                         </button>
-                        <button type="button" onClick={() => editPassenger(passenger)} className="h-9 rounded-lg border border-[#073b70] bg-white px-4 text-xs font-black uppercase text-[#073b70]">Edit</button>
-                        <button type="button" onClick={() => deletePassenger(passenger.saved_passenger_id)} className="flex h-9 items-center gap-2 rounded-lg border border-red-300 bg-white px-4 text-xs font-black uppercase text-red-600"><Trash2 size={14} /> Delete</button>
+                        <button type="button" onClick={() => editPassenger(passenger)} className="h-9 rounded-lg border border-[#073b70] bg-white px-4 text-xs font-semibold uppercase text-[#073b70]">Edit</button>
+                        <button type="button" onClick={() => deletePassenger(passenger.saved_passenger_id)} className="flex h-9 items-center gap-2 rounded-lg border border-red-300 bg-white px-4 text-xs font-semibold uppercase text-red-600"><Trash2 size={14} /> Delete</button>
                       </div>
                       </div>
                       {viewingPassengerId === passenger.saved_passenger_id && (
                         <div className="border-t border-slate-200 pt-4 sm:col-span-2 sm:w-full">
-                          <dl className="grid gap-3 text-xs font-bold text-slate-600 md:grid-cols-4">
+                          <dl className="grid gap-3 text-xs font-medium text-slate-600 md:grid-cols-4">
                             <div><dt className="uppercase text-slate-400">Date of Birth</dt><dd>{formatDisplayDate(passenger.date_of_birth)}</dd></div>
                             <div><dt className="uppercase text-slate-400">Gender</dt><dd>{passenger.gender}</dd></div>
                             <div><dt className="uppercase text-slate-400">Nationality</dt><dd>{passenger.nationality || 'Not saved'}</dd></div>
@@ -981,7 +981,7 @@ function Profile(): React.JSX.Element {
                 </div>
 
                 <div className="mb-5 flex flex-col gap-4 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-2 text-sm font-black uppercase text-[#073b70]">
+                  <div className="flex items-center gap-2 text-sm font-semibold uppercase text-[#073b70]">
                     <Users size={18} />
                     {editingPassengerId ? 'Edit Saved Passenger' : 'Add Saved Passenger'}
                   </div>
@@ -990,7 +990,7 @@ function Profile(): React.JSX.Element {
                       <button
                         type="button"
                         onClick={() => { setEditingPassengerId(null); setPassengerForm(emptyPassenger); }}
-                        className="h-11 rounded-lg border border-slate-300 px-6 text-xs font-black uppercase text-slate-600"
+                        className="h-11 rounded-lg border border-slate-300 px-6 text-xs font-semibold uppercase text-slate-600"
                       >
                         Cancel Edit
                       </button>
@@ -1065,7 +1065,7 @@ function Profile(): React.JSX.Element {
                   </Label>
                 </div>
                 <div className="mt-7 flex flex-wrap justify-end gap-3">
-                  {editingPassengerId && <button type="button" onClick={() => { setEditingPassengerId(null); setPassengerForm(emptyPassenger); }} className="h-11 rounded-lg border border-slate-300 px-6 text-xs font-black uppercase text-slate-600">Cancel</button>}
+                  {editingPassengerId && <button type="button" onClick={() => { setEditingPassengerId(null); setPassengerForm(emptyPassenger); }} className="h-11 rounded-lg border border-slate-300 px-6 text-xs font-semibold uppercase text-slate-600">Cancel</button>}
                   <SaveButton disabled={saving}>{editingPassengerId ? 'Update Passenger' : 'Save Passenger'}</SaveButton>
                 </div>
               </Section>
@@ -1077,19 +1077,19 @@ function Profile(): React.JSX.Element {
                   {emergencyContacts.length === 0 && (
                     <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
                       <AlertCircle className="mx-auto text-slate-400" size={30} />
-                      <p className="mt-3 text-sm font-black text-slate-700">No emergency contacts saved</p>
+                      <p className="mt-3 text-sm font-semibold text-slate-700">No emergency contacts saved</p>
                       <p className="mt-1 text-sm font-semibold text-slate-500">Add one trusted contact for safer travel support.</p>
                     </div>
                   )}
                   {emergencyContacts.map(contact => (
                     <div key={contact.emergency_contact_id} className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="font-black text-[#073b70]">{contact.contact_name}</p>
-                        <p className="text-xs font-bold text-slate-500">{contact.relationship || 'Contact'} | {contact.phone_number} | Priority {contact.priority}</p>
+                        <p className="font-semibold text-[#073b70]">{contact.contact_name}</p>
+                        <p className="text-xs font-medium text-slate-500">{contact.relationship || 'Contact'} | {contact.phone_number} | Priority {contact.priority}</p>
                       </div>
                       <div className="flex gap-3">
-                        <button type="button" onClick={() => { setEditingEmergencyId(contact.emergency_contact_id); setEmergencyForm({ contact_name: contact.contact_name, relationship: contact.relationship || '', phone_number: contact.phone_number, email_address: contact.email_address || '', priority: contact.priority }); }} className="h-9 rounded-lg border border-[#073b70] bg-white px-4 text-xs font-black uppercase text-[#073b70]">Edit</button>
-                        <button type="button" onClick={() => deleteEmergency(contact.emergency_contact_id)} className="h-9 rounded-lg border border-red-300 bg-white px-4 text-xs font-black uppercase text-red-600">Delete</button>
+                        <button type="button" onClick={() => { setEditingEmergencyId(contact.emergency_contact_id); setEmergencyForm({ contact_name: contact.contact_name, relationship: contact.relationship || '', phone_number: contact.phone_number, email_address: contact.email_address || '', priority: contact.priority }); }} className="h-9 rounded-lg border border-[#073b70] bg-white px-4 text-xs font-semibold uppercase text-[#073b70]">Edit</button>
+                        <button type="button" onClick={() => deleteEmergency(contact.emergency_contact_id)} className="h-9 rounded-lg border border-red-300 bg-white px-4 text-xs font-semibold uppercase text-red-600">Delete</button>
                       </div>
                     </div>
                   ))}
@@ -1108,31 +1108,31 @@ function Profile(): React.JSX.Element {
 
             <form onSubmit={submitPayment}>
               <Section id="payment-methods" title="Payment Methods" description="Save card metadata for faster checkout. Full card numbers and CVV should never be stored here.">
-                <p className="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs font-bold text-amber-800">
+                <p className="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs font-medium text-amber-800">
                   For security, save only payment metadata here. Do not enter full card numbers or CVV.
                 </p>
                 <div className="mb-6 grid gap-3">
                   {paymentMethods.length === 0 && (
                     <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
                       <WalletCards className="mx-auto text-slate-400" size={30} />
-                      <p className="mt-3 text-sm font-black text-slate-700">No payment methods saved</p>
+                      <p className="mt-3 text-sm font-semibold text-slate-700">No payment methods saved</p>
                       <p className="mt-1 text-sm font-semibold text-slate-500">Add a card reference to speed up payment at checkout.</p>
                     </div>
                   )}
                   {paymentMethods.map(method => (
                     <div key={method.payment_method_id} className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="font-black text-[#073b70]">{method.card_brand || 'Card'} ending {method.last_four} {method.is_default ? <span className="ml-2 rounded-full bg-emerald-100 px-2 py-1 text-[10px] uppercase text-emerald-700">Default</span> : null}</p>
-                        <p className="text-xs font-bold text-slate-500">{method.cardholder_name} | Expires {String(method.expiry_month).padStart(2, '0')}/{method.expiry_year}</p>
+                        <p className="font-semibold text-[#073b70]">{method.card_brand || 'Card'} ending {method.last_four} {method.is_default ? <span className="ml-2 rounded-full bg-emerald-100 px-2 py-1 text-[10px] uppercase text-emerald-700">Default</span> : null}</p>
+                        <p className="text-xs font-medium text-slate-500">{method.cardholder_name} | Expires {String(method.expiry_month).padStart(2, '0')}/{method.expiry_year}</p>
                       </div>
                       <div className="flex gap-3">
-                        <button type="button" onClick={() => { setEditingPaymentId(method.payment_method_id); setPaymentForm({ payment_type: method.payment_type, card_brand: method.card_brand || '', cardholder_name: method.cardholder_name, last_four: method.last_four, expiry_month: method.expiry_month, expiry_year: method.expiry_year, gateway_payment_method_id: method.gateway_payment_method_id || '', billing_address: method.billing_address || '', is_default: method.is_default }); }} className="h-9 rounded-lg border border-[#073b70] bg-white px-4 text-xs font-black uppercase text-[#073b70]">Edit</button>
-                        <button type="button" onClick={() => deletePayment(method.payment_method_id)} className="h-9 rounded-lg border border-red-300 bg-white px-4 text-xs font-black uppercase text-red-600">Delete</button>
+                        <button type="button" onClick={() => { setEditingPaymentId(method.payment_method_id); setPaymentForm({ payment_type: method.payment_type, card_brand: method.card_brand || '', cardholder_name: method.cardholder_name, last_four: method.last_four, expiry_month: method.expiry_month, expiry_year: method.expiry_year, gateway_payment_method_id: method.gateway_payment_method_id || '', billing_address: method.billing_address || '', is_default: method.is_default }); }} className="h-9 rounded-lg border border-[#073b70] bg-white px-4 text-xs font-semibold uppercase text-[#073b70]">Edit</button>
+                        <button type="button" onClick={() => deletePayment(method.payment_method_id)} className="h-9 rounded-lg border border-red-300 bg-white px-4 text-xs font-semibold uppercase text-red-600">Delete</button>
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="mb-5 flex items-center gap-2 text-sm font-black uppercase text-[#073b70]">
+                <div className="mb-5 flex items-center gap-2 text-sm font-semibold uppercase text-[#073b70]">
                   {editingPaymentId ? <CreditCard size={18} /> : <Plus size={18} />}
                   {editingPaymentId ? 'Edit Payment Method' : 'Add Payment Method'}
                 </div>
@@ -1143,7 +1143,7 @@ function Profile(): React.JSX.Element {
                   <Label label="Expiry Month"><input type="number" min="1" max="12" value={paymentForm.expiry_month} onChange={event => setPaymentForm(prev => ({ ...prev, expiry_month: Number(event.target.value) }))} className={inputClass} /></Label>
                   <Label label="Expiry Year"><input type="number" min={new Date().getFullYear()} value={paymentForm.expiry_year} onChange={event => setPaymentForm(prev => ({ ...prev, expiry_year: Number(event.target.value) }))} className={inputClass} /></Label>
                   <Label label="Gateway Token ID"><input value={paymentForm.gateway_payment_method_id || ''} onChange={event => setPaymentForm(prev => ({ ...prev, gateway_payment_method_id: event.target.value }))} className={inputClass} placeholder="Optional token/reference" /></Label>
-                  <label className="flex h-11 items-center gap-3 text-sm font-bold text-slate-600 md:col-span-2"><input type="checkbox" checked={paymentForm.is_default} onChange={event => setPaymentForm(prev => ({ ...prev, is_default: event.target.checked }))} className="accent-[#073b70]" /> Set as default payment method</label>
+                  <label className="flex h-11 items-center gap-3 text-sm font-medium text-slate-600 md:col-span-2"><input type="checkbox" checked={paymentForm.is_default} onChange={event => setPaymentForm(prev => ({ ...prev, is_default: event.target.checked }))} className="accent-[#073b70]" /> Set as default payment method</label>
                 </div>
                 <div className="mt-7 flex justify-end">
                   <SaveButton disabled={saving}>{editingPaymentId ? 'Update Payment' : 'Save Payment'}</SaveButton>

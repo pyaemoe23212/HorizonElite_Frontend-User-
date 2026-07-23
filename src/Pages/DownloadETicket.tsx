@@ -68,7 +68,7 @@ function DownloadETicket(): React.JSX.Element {
       <PageHeader rightLink={{ label: "Manage Booking", to: "/manage-booking" }} />
       <div className="mx-auto max-w-7xl px-6 py-14">
         {/* Heading */}
-        <h1 className="text-5xl font-black text-[#073b70]">
+        <h1 className="text-5xl font-semibold text-[#073b70]">
           Download E-ticket
         </h1>
 
@@ -89,7 +89,7 @@ function DownloadETicket(): React.JSX.Element {
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_280px]">
           {/* Main Card */}
           <section className="rounded-lg border border-slate-300 bg-white p-8 shadow-sm">
-            <h2 className="text-3xl font-black text-[#073b70]">
+            <h2 className="text-3xl font-semibold text-[#073b70]">
               E-ticket Details
             </h2>
 
@@ -129,13 +129,13 @@ function DownloadETicket(): React.JSX.Element {
 
             {/* Flight Card */}
             <div className="rounded bg-slate-100 p-6">
-              <p className="mb-5 text-xs font-bold uppercase text-slate-500">
+              <p className="mb-5 text-xs font-medium uppercase text-slate-500">
                 <span className="inline-flex items-center gap-2"><Plane size={16} /> Flight {outbound?.flight_number || "Not available"}</span>
               </p>
 
               <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
                 <div>
-                  <p className="text-4xl font-black text-[#073b70]">
+                  <p className="text-4xl font-semibold text-[#073b70]">
                     {outbound?.origin_airport_code || outbound?.departure_airport || "--"}
                   </p>
 
@@ -143,7 +143,7 @@ function DownloadETicket(): React.JSX.Element {
 
                   <Plane className="my-2 text-cyan-700" size={24} />
 
-                  <p className="text-4xl font-black text-[#073b70]">
+                  <p className="text-4xl font-semibold text-[#073b70]">
                     {outbound?.destination_airport_code || outbound?.arrival_airport || "--"}
                   </p>
 
@@ -203,7 +203,7 @@ function DownloadETicket(): React.JSX.Element {
                 type="button"
                 onClick={handleDownload}
                 disabled={isDownloading || !bookingId}
-                className="inline-flex items-center gap-2 rounded bg-[#073b70] px-6 py-3 font-bold text-white hover:bg-[#052f59] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded bg-[#073b70] px-6 py-3 font-medium text-white hover:bg-[#052f59] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Download size={18} />
                 {isDownloading ? "Downloading..." : "Download E-ticket PDF"}
@@ -213,13 +213,13 @@ function DownloadETicket(): React.JSX.Element {
                 type="button"
                 onClick={handleSendEmail}
                 disabled={isSendingEmail || !bookingId}
-                className="inline-flex items-center gap-2 rounded border border-[#073b70] px-6 py-3 font-bold text-[#073b70] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded border border-[#073b70] px-6 py-3 font-medium text-[#073b70] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Mail size={18} />
                 {isSendingEmail ? "Sending..." : "Send E-ticket to Email"}
               </button>
 
-              <button className="inline-flex items-center gap-2 font-bold text-[#073b70] hover:underline">
+              <button className="inline-flex items-center gap-2 font-medium text-[#073b70] hover:underline">
                 <Printer size={18} />
                 Print E-ticket
               </button>
@@ -230,7 +230,7 @@ function DownloadETicket(): React.JSX.Element {
           <aside className="space-y-6">
             {/* Help */}
             <section className="rounded-lg border border-slate-300 bg-white p-6 shadow-sm">
-              <h3 className="text-2xl font-black text-[#073b70]">
+              <h3 className="text-2xl font-semibold text-[#073b70]">
                 Need Help?
               </h3>
 
@@ -239,14 +239,14 @@ function DownloadETicket(): React.JSX.Element {
                 download the file, please contact Horizon Elite support.
               </p>
 
-              <Link to="/case-management" className="mt-6 flex w-full items-center justify-center rounded border border-[#073b70] py-3 font-bold text-[#073b70] hover:bg-slate-50">
+              <Link to="/case-management" className="mt-6 flex w-full items-center justify-center rounded border border-[#073b70] py-3 font-medium text-[#073b70] hover:bg-slate-50">
                 Contact Support
               </Link>
             </section>
 
             {/* Travel Note */}
             <section className="rounded-lg border border-slate-300 bg-white p-6 shadow-sm">
-              <h3 className="text-2xl font-black text-[#073b70]">
+              <h3 className="text-2xl font-semibold text-[#073b70]">
                 Travel Note
               </h3>
 
@@ -279,11 +279,11 @@ function Info({
 }: InfoProps) {
   return (
     <div>
-      <p className="text-xs font-bold uppercase text-slate-500">
+      <p className="text-xs font-medium uppercase text-slate-500">
         {label}
       </p>
 
-      <div className={`mt-2 font-bold ${valueColor}`}>
+      <div className={`mt-2 font-medium ${valueColor}`}>
         {value}
       </div>
     </div>

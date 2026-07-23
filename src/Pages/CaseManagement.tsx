@@ -19,7 +19,7 @@ function CaseManagement(): React.JSX.Element {
 
         <section className="mx-auto max-w-3xl px-6 py-24">
           <form className="border border-slate-300 bg-white p-12 shadow-xl shadow-slate-200/70">
-            <h1 className="text-3xl font-black text-[#073b70]">Open New Case</h1>
+            <h1 className="text-3xl font-semibold text-[#073b70]">Open New Case</h1>
             <p className="mt-3 text-sm font-semibold text-slate-500">Please provide as much detail as possible to help our Elite Support team assist you efficiently.</p>
 
             <div className="mt-9 space-y-6">
@@ -37,7 +37,7 @@ function CaseManagement(): React.JSX.Element {
               <Field label="Description"><textarea className="min-h-48 w-full rounded border border-slate-300 px-4 py-4 text-base outline-none focus:border-[#073b70]" placeholder="Describe your issue in detail..." /></Field>
 
               <label className="block">
-                <span className="mb-3 block text-xs font-black uppercase tracking-wide text-slate-700">Attachments</span>
+                <span className="mb-3 block text-xs font-semibold uppercase tracking-wide text-slate-700">Attachments</span>
                 <span className="flex min-h-44 flex-col items-center justify-center border border-dashed border-slate-400 bg-white text-center text-base font-semibold text-slate-600">
                   <CloudUpload className="mb-3 text-slate-500" size={34} />
                   Drag and drop files here, or <span className="text-[#073b70]">browse</span>
@@ -47,8 +47,8 @@ function CaseManagement(): React.JSX.Element {
             </div>
 
             <div className="mt-12 flex justify-end gap-8">
-              <button type="button" onClick={() => setOpenForm(false)} className="h-12 px-5 text-sm font-black text-slate-600">Cancel</button>
-              <button type="button" onClick={() => setOpenForm(false)} className="h-12 rounded bg-[#073b70] px-10 text-sm font-black text-white">Submit Request</button>
+              <button type="button" onClick={() => setOpenForm(false)} className="h-12 px-5 text-sm font-semibold text-slate-600">Cancel</button>
+              <button type="button" onClick={() => setOpenForm(false)} className="h-12 rounded bg-[#073b70] px-10 text-sm font-semibold text-white">Submit Request</button>
             </div>
           </form>
         </section>
@@ -63,18 +63,18 @@ function CaseManagement(): React.JSX.Element {
       <section className="mx-auto max-w-6xl px-6 py-20">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div>
-            <h1 className="text-4xl font-black text-[#073b70]">Case Management</h1>
+            <h1 className="text-4xl font-semibold text-[#073b70]">Case Management</h1>
             <p className="mt-3 max-w-2xl text-base font-semibold leading-7 text-slate-600">Track your ongoing inquiries or escalate new concerns. Our Elite support team monitors these requests 24/7 with dedicated priority.</p>
           </div>
-          <button onClick={() => setOpenForm(true)} className="flex h-14 items-center justify-center gap-2 rounded bg-[#073b70] px-8 text-sm font-black text-white">
+          <button onClick={() => setOpenForm(true)} className="flex h-14 items-center justify-center gap-2 rounded bg-[#073b70] px-8 text-sm font-semibold text-white">
             <Plus size={18} /> Open New Case
           </button>
         </div>
 
         <div className="mt-14 grid gap-6 lg:grid-cols-[350px_1fr]">
           <aside className="rounded bg-[#073b70] p-8 text-white">
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-cyan-100">Elite Service Status</p>
-            <h2 className="mt-6 text-3xl font-black">Concierge Priority Active</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-cyan-100">Elite Service Status</p>
+            <h2 className="mt-6 text-3xl font-semibold">Concierge Priority Active</h2>
             <p className="mt-4 text-sm font-semibold leading-6 text-blue-100">Your member status ensures a response time of under 15 minutes for all active cases.</p>
             <div className="mt-10 border-t border-blue-300/20 pt-7">
               <div className="flex gap-10">
@@ -86,8 +86,8 @@ function CaseManagement(): React.JSX.Element {
 
           <section className="overflow-hidden rounded border border-slate-300 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-300 px-7 py-6">
-              <h2 className="text-2xl font-black text-[#073b70]">Recent Activity</h2>
-              <span className="flex items-center gap-2 text-xs font-black text-slate-500"><Filter size={14} /> Sort by: Newest</span>
+              <h2 className="text-2xl font-semibold text-[#073b70]">Recent Activity</h2>
+              <span className="flex items-center gap-2 text-xs font-semibold text-slate-500"><Filter size={14} /> Sort by: Newest</span>
             </div>
             {cases.map((item) => {
               const Icon = item.icon;
@@ -95,15 +95,15 @@ function CaseManagement(): React.JSX.Element {
                 <Link to="/manage-booking" key={item.id} className="flex items-center gap-5 border-b border-slate-200 px-7 py-5 transition hover:bg-slate-50">
                   <span className={`flex h-10 w-10 items-center justify-center rounded ${item.accent}`}><Icon size={18} /></span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-lg font-black text-[#073b70]">{item.title}</span>
+                    <span className="block truncate text-lg font-semibold text-[#073b70]">{item.title}</span>
                     <span className="mt-1 block text-xs font-semibold text-slate-500">Case ID: {item.id} - Last update: 14 mins ago</span>
                   </span>
-                  <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${item.status === 'In Progress' ? 'bg-amber-50 text-amber-700' : 'bg-cyan-50 text-cyan-700'}`}>{item.status}</span>
+                  <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase ${item.status === 'In Progress' ? 'bg-amber-50 text-amber-700' : 'bg-cyan-50 text-cyan-700'}`}>{item.status}</span>
                   <ChevronRight className="text-slate-400" size={18} />
                 </Link>
               );
             })}
-            <Link to="/manage-booking" className="flex h-14 items-center justify-center bg-slate-50 text-xs font-black uppercase text-[#073b70]">View All History</Link>
+            <Link to="/manage-booking" className="flex h-14 items-center justify-center bg-slate-50 text-xs font-semibold uppercase text-[#073b70]">View All History</Link>
           </section>
         </div>
 
@@ -116,8 +116,8 @@ function CaseManagement(): React.JSX.Element {
         </div>
 
         <div className="mt-24 border-t border-slate-300 pt-12 text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">Trusted Protection Partner</p>
-          <div className="mt-8 flex flex-wrap justify-center gap-10 text-lg font-black uppercase text-slate-400">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-slate-500">Trusted Protection Partner</p>
+          <div className="mt-8 flex flex-wrap justify-center gap-10 text-lg font-semibold uppercase text-slate-400">
             <span className="inline-flex items-center gap-2"><ShieldCheck size={18} /> Skyguard</span>
             <span className="inline-flex items-center gap-2"><ShieldCheck size={18} /> Eliteprotect</span>
             <span className="inline-flex items-center gap-2"><Star size={18} /> Globecare</span>
@@ -133,7 +133,7 @@ const inputClass = 'h-12 w-full rounded border border-slate-300 px-4 text-base o
 function Field({ label, optional, children }: { label: string; optional?: boolean; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-3 flex justify-between text-xs font-black uppercase tracking-wide text-slate-700">
+      <span className="mb-3 flex justify-between text-xs font-semibold uppercase tracking-wide text-slate-700">
         {label}
         {optional && <span className="normal-case tracking-normal text-slate-500">Optional</span>}
       </span>
@@ -146,7 +146,7 @@ function Metric({ value, label }: { value: string; label: string }) {
   return (
     <div>
       <p className="text-3xl font-light">{value}</p>
-      <p className="mt-1 text-[10px] font-black uppercase text-blue-100">{label}</p>
+      <p className="mt-1 text-[10px] font-semibold uppercase text-blue-100">{label}</p>
     </div>
   );
 }
@@ -155,9 +155,9 @@ function SupportCard({ icon: Icon, title, text, action }: { icon: typeof Calenda
   return (
     <article className="rounded border border-slate-300 bg-white p-8 shadow-sm">
       <span className="flex h-12 w-12 items-center justify-center rounded bg-[#073b70] text-amber-300"><Icon size={22} /></span>
-      <h3 className="mt-8 text-2xl font-black text-[#073b70]">{title}</h3>
+      <h3 className="mt-8 text-2xl font-semibold text-[#073b70]">{title}</h3>
       <p className="mt-3 min-h-20 text-sm font-semibold leading-6 text-slate-600">{text}</p>
-      <button className="mt-4 h-11 w-full rounded border border-amber-300 text-sm font-black text-[#073b70]">{action}</button>
+      <button className="mt-4 h-11 w-full rounded border border-amber-300 text-sm font-semibold text-[#073b70]">{action}</button>
     </article>
   );
 }

@@ -197,7 +197,7 @@ const CardBrandLogo = ({ brand, compact = false }: { brand: string; compact?: bo
 
   if (brand === 'Visa') {
     return (
-      <span className={`inline-flex ${compact ? 'h-8 w-14 text-lg' : 'h-12 w-24 text-4xl'} items-center justify-center rounded bg-white font-black italic text-[#173f8a] shadow-sm`} aria-label="Visa">
+      <span className={`inline-flex ${compact ? 'h-8 w-14 text-lg' : 'h-12 w-24 text-4xl'} items-center justify-center rounded bg-white font-semibold italic text-[#173f8a] shadow-sm`} aria-label="Visa">
         VISA
       </span>
     );
@@ -205,7 +205,7 @@ const CardBrandLogo = ({ brand, compact = false }: { brand: string; compact?: bo
 
   if (brand === 'American Express') {
     return (
-      <span className={`inline-flex ${compact ? 'h-8 w-14 text-[10px]' : 'h-12 w-24 text-sm'} items-center justify-center rounded bg-[#2e77bb] font-black leading-none text-white shadow-sm`} aria-label="American Express">
+      <span className={`inline-flex ${compact ? 'h-8 w-14 text-[10px]' : 'h-12 w-24 text-sm'} items-center justify-center rounded bg-[#2e77bb] font-semibold leading-none text-white shadow-sm`} aria-label="American Express">
         AMEX
       </span>
     );
@@ -213,14 +213,14 @@ const CardBrandLogo = ({ brand, compact = false }: { brand: string; compact?: bo
 
   if (brand === 'Discover') {
     return (
-      <span className={`inline-flex ${compact ? 'h-8 w-16 text-[10px]' : 'h-12 w-28 text-sm'} items-center justify-center rounded bg-gradient-to-r from-slate-900 via-orange-500 to-slate-900 font-black text-white shadow-sm`} aria-label="Discover">
+      <span className={`inline-flex ${compact ? 'h-8 w-16 text-[10px]' : 'h-12 w-28 text-sm'} items-center justify-center rounded bg-gradient-to-r from-slate-900 via-orange-500 to-slate-900 font-semibold text-white shadow-sm`} aria-label="Discover">
         DISCOVER
       </span>
     );
   }
 
   return (
-    <span className={`inline-flex ${compact ? 'h-8 w-12 text-[10px]' : 'h-12 w-20 text-xs'} items-center justify-center rounded border border-slate-300 bg-white font-black text-slate-500`} aria-label="Card">
+    <span className={`inline-flex ${compact ? 'h-8 w-12 text-[10px]' : 'h-12 w-20 text-xs'} items-center justify-center rounded border border-slate-300 bg-white font-semibold text-slate-500`} aria-label="Card">
       CARD
     </span>
   );
@@ -304,10 +304,10 @@ const Stepper = () => (
       return (
         <div key={step} className="relative flex flex-col items-center gap-2 text-center">
           {index > 0 && <span className="absolute left-[-50%] top-4 h-px w-full bg-slate-300" />}
-          <span className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border text-sm font-black ${complete ? 'border-blue-600 bg-blue-600 text-white' : active ? 'border-amber-400 bg-[#073b70] text-white' : 'border-slate-300 bg-slate-100 text-slate-400'}`}>
+          <span className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold ${complete ? 'border-blue-600 bg-blue-600 text-white' : active ? 'border-amber-400 bg-[#073b70] text-white' : 'border-slate-300 bg-slate-100 text-slate-400'}`}>
             {complete ? <BadgeCheck size={18} /> : index + 1}
           </span>
-          <span className={`text-[10px] font-black uppercase ${complete || active ? 'text-[#073b70]' : 'text-slate-400'}`}>{step}</span>
+          <span className={`text-[10px] font-semibold uppercase ${complete || active ? 'text-[#073b70]' : 'text-slate-400'}`}>{step}</span>
         </div>
       );
     })}
@@ -351,34 +351,34 @@ const TripSummary = ({
 
   return (
     <aside className="h-fit border border-slate-300 bg-white p-8 shadow-md">
-      <h2 className="text-3xl font-black text-[#073b70]">Trip Summary</h2>
+      <h2 className="text-3xl font-semibold text-[#073b70]">Trip Summary</h2>
       <div className="my-7 h-px bg-slate-200" />
       {/* PNR Reference Display */}
       <div className="mb-6 rounded bg-blue-50 p-4 border border-blue-200">
-        <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-1">Booking Reference (PNR)</p>
-        <p className="text-2xl font-black text-[#073b70]">{pnrReference}</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Booking Reference (PNR)</p>
+        <p className="text-2xl font-semibold text-[#073b70]">{pnrReference}</p>
       </div>
       {/* Flight Route */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
         <div>
-          <p className="text-xl font-black text-[#073b70]">{outboundFlight?.departure_airport || outboundFlight?.origin_airport_code || '--'}</p>
-          <p className="text-[10px] font-black uppercase text-slate-500">Departure</p>
+          <p className="text-xl font-semibold text-[#073b70]">{outboundFlight?.departure_airport || outboundFlight?.origin_airport_code || '--'}</p>
+          <p className="text-[10px] font-semibold uppercase text-slate-500">Departure</p>
         </div>
         <div className="text-center text-amber-500">
           <Plane className="mx-auto" size={24} />
           <div className="mt-2 h-px w-24 bg-slate-300" />
-          <p className="mt-2 text-[10px] font-black uppercase text-slate-500">
+          <p className="mt-2 text-[10px] font-semibold uppercase text-slate-500">
             {outboundFlight?.total_stop_count === 0 ? 'Non-stop' : `${outboundFlight?.total_stop_count} Stop(s)`}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xl font-black text-[#073b70]">{outboundFlight?.arrival_airport || outboundFlight?.destination_airport_code || '--'}</p>
-          <p className="text-[10px] font-black uppercase text-slate-500">Arrival</p>
+          <p className="text-xl font-semibold text-[#073b70]">{outboundFlight?.arrival_airport || outboundFlight?.destination_airport_code || '--'}</p>
+          <p className="text-[10px] font-semibold uppercase text-slate-500">Arrival</p>
         </div>
       </div>
       {/* Price Breakdown */}
       <div className="mt-10 space-y-4 text-base font-semibold text-slate-600">
-        <div className="flex justify-between"><span>Total Amount</span><span className="font-black text-[#073b70]">{currencyCode} {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+        <div className="flex justify-between"><span>Total Amount</span><span className="font-semibold text-[#073b70]">{currencyCode} {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
         <div className="flex justify-between pt-3 text-xl"><span>Amount Due</span><span className="text-[#073b70]">{currencyCode} {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
       </div>
       {/* Error Message */}
@@ -392,12 +392,12 @@ const TripSummary = ({
         type="button"
         onClick={onPay}
         disabled={isProcessing}
-        className="mt-9 flex h-16 w-full items-center justify-center rounded bg-[#073b70] text-base font-black text-white shadow-lg shadow-blue-950/20 transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-500"
+        className="mt-9 flex h-16 w-full items-center justify-center rounded bg-[#073b70] text-base font-semibold text-white shadow-lg shadow-blue-950/20 transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-500"
       >
         {offerUnavailable ? 'Search Again' : isMissingCheckoutState ? 'Return to Booking' : isProcessing ? 'Creating Payment...' : method === 'qr' ? 'Complete QR Payment' : `Pay ${currencyCode} ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
       </button>
-      {isProcessing && <p className="mt-4 text-center text-xs font-black uppercase tracking-widest text-cyan-700">Processing...</p>}
-      <div className="mt-7 text-center text-xs font-black uppercase tracking-widest text-slate-400">SSL 256-bit encrypted</div>
+      {isProcessing && <p className="mt-4 text-center text-xs font-semibold uppercase tracking-widest text-cyan-700">Processing...</p>}
+      <div className="mt-7 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">SSL 256-bit encrypted</div>
     </aside>
   );
 };
@@ -415,16 +415,16 @@ const CardPanel = ({
 
   return (
   <section>
-    <h1 className="text-3xl font-black text-[#073b70]">Credit / Debit Card</h1>
+    <h1 className="text-3xl font-semibold text-[#073b70]">Credit / Debit Card</h1>
     <p className="mt-3 text-base font-semibold text-slate-600">Enter your card details for secure payment processing.</p>
     <div className="mt-8 flex items-center gap-5">
       <CardBrandLogo brand={cardBrand} />
-      <p className="text-sm font-black uppercase tracking-widest text-slate-500">{cardBrand === 'Card' ? 'Card type will appear as you type' : `${cardBrand} detected`}</p>
+      <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">{cardBrand === 'Card' ? 'Card type will appear as you type' : `${cardBrand} detected`}</p>
     </div>
     <div className="my-9 h-px bg-slate-200" />
     <form className="space-y-8">
       <label className="block">
-        <span className="mb-3 block text-xs font-black uppercase tracking-widest text-[#073b70]">Card Number</span>
+        <span className="mb-3 block text-xs font-semibold uppercase tracking-widest text-[#073b70]">Card Number</span>
         <div className={`flex h-14 items-center rounded border bg-white px-5 transition focus-within:border-[#073b70] ${cardErrors.cardNumber ? errorInputClass : 'border-slate-300'}`}>
           <input
             className="min-w-0 flex-1 bg-transparent text-lg text-slate-700 outline-none placeholder:text-slate-400"
@@ -441,7 +441,7 @@ const CardPanel = ({
       </label>
       <div className="grid gap-6 md:grid-cols-2">
         <label className="block">
-          <span className="mb-3 block text-xs font-black uppercase tracking-widest text-[#073b70]">Expiry Date</span>
+          <span className="mb-3 block text-xs font-semibold uppercase tracking-widest text-[#073b70]">Expiry Date</span>
           <input
             className={`${inputClass} ${cardErrors.expiryDate ? errorInputClass : ''}`}
             inputMode="numeric"
@@ -454,7 +454,7 @@ const CardPanel = ({
           {cardErrors.expiryDate && <p className="mt-2 text-xs font-semibold text-red-600">{cardErrors.expiryDate}</p>}
         </label>
         <label className="block">
-          <span className="mb-3 block text-xs font-black uppercase tracking-widest text-[#073b70]">CVV</span>
+          <span className="mb-3 block text-xs font-semibold uppercase tracking-widest text-[#073b70]">CVV</span>
           <input
             className={`${inputClass} ${cardErrors.cvv ? errorInputClass : ''}`}
             inputMode="numeric"
@@ -468,7 +468,7 @@ const CardPanel = ({
         </label>
       </div>
       <label className="block">
-        <span className="mb-3 block text-xs font-black uppercase tracking-widest text-[#073b70]">Cardholder's Full Name</span>
+        <span className="mb-3 block text-xs font-semibold uppercase tracking-widest text-[#073b70]">Cardholder's Full Name</span>
         <input
           className={`${inputClass} ${cardErrors.cardholderName ? errorInputClass : ''}`}
           autoComplete="cc-name"
@@ -485,7 +485,7 @@ const CardPanel = ({
           onChange={(event) => onCardChange('acceptedTerms', event.target.checked)}
           className="mt-1 h-5 w-5 accent-[#073b70]"
         />
-        <span>I agree to the <a href="#" className="font-black text-[#073b70]">Terms & Conditions</a> and confirm that I am authorized to use this payment method.</span>
+        <span>I agree to the <a href="#" className="font-semibold text-[#073b70]">Terms & Conditions</a> and confirm that I am authorized to use this payment method.</span>
       </label>
       {cardErrors.acceptedTerms && <p className="-mt-6 text-xs font-semibold text-red-600">{cardErrors.acceptedTerms}</p>}
     </form>
@@ -509,21 +509,21 @@ const QrPanel = ({ amount, currencyCode }: { amount: number; currencyCode: strin
 
   return (
     <section>
-      <h1 className="text-3xl font-black text-[#073b70]">Thai QR / PromptPay</h1>
+      <h1 className="text-3xl font-semibold text-[#073b70]">Thai QR / PromptPay</h1>
       <p className="mt-3 text-base font-semibold text-slate-600">Scan this QR code using your Thai mobile banking app.</p>
       <div className="mt-6 border border-dashed border-slate-500 bg-slate-50 p-10 text-center">
         <div className="mx-auto w-64 bg-white p-8">
-          <p className="mb-4 inline-block border border-[#073b70] px-3 text-sm font-black text-[#073b70]">PromptPay</p>
+          <p className="mb-4 inline-block border border-[#073b70] px-3 text-sm font-semibold text-[#073b70]">PromptPay</p>
           <div className="grid grid-cols-7 gap-1">
             {Array.from({ length: 49 }).map((_, index) => (
               <span key={index} className={`h-5 w-5 ${index % 3 === 0 || index % 7 === 0 || index % 11 === 0 ? 'bg-black' : 'bg-white'}`} />
             ))}
           </div>
         </div>
-        <p className="mt-8 text-3xl font-black text-slate-900">
+        <p className="mt-8 text-3xl font-semibold text-slate-900">
           {currencyCode} {amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </p>
-        <p className="mt-4 text-base font-black text-red-600">
+        <p className="mt-4 text-base font-semibold text-red-600">
           {secondsRemaining > 0 ? `QR code expires in ${minutes}:${seconds}` : 'QR code expired. Please refresh this payment method.'}
         </p>
       </div>
@@ -541,13 +541,13 @@ const BankingPanel = ({
   onSelectProvider: (provider: PaymentProvider) => void;
 }) => (
   <section>
-    <h1 className="text-3xl font-black text-[#073b70]">Mobile Banking</h1>
+    <h1 className="text-3xl font-semibold text-[#073b70]">Mobile Banking</h1>
     <p className="mt-3 text-base font-semibold text-slate-600">Choose your bank</p>
     <div className="mt-8 grid gap-5 md:grid-cols-2">
       {['K PLUS', 'SCB Easy', 'Krungthai NEXT', 'Bangkok Bank'].map((bank, index) => (
         <button key={bank} type="button" onClick={() => onSelectProvider(bank)} className={`flex h-24 items-center gap-5 rounded-lg border p-6 text-left ${selectedProvider === bank ? 'border-[#073b70] bg-blue-50 ring-1 ring-[#073b70]' : 'border-slate-300 bg-white'}`}>
-          <span className={`flex h-12 w-12 items-center justify-center text-lg font-black text-white ${index === 0 ? 'bg-emerald-600' : index === 1 ? 'bg-purple-700' : index === 2 ? 'bg-sky-500' : 'bg-blue-900'}`}>{bank.slice(0, 2)}</span>
-          <span className="text-lg font-black text-[#073b70]">{bank}</span>
+          <span className={`flex h-12 w-12 items-center justify-center text-lg font-semibold text-white ${index === 0 ? 'bg-emerald-600' : index === 1 ? 'bg-purple-700' : index === 2 ? 'bg-sky-500' : 'bg-blue-900'}`}>{bank.slice(0, 2)}</span>
+          <span className="text-lg font-semibold text-[#073b70]">{bank}</span>
         </button>
       ))}
     </div>
@@ -565,13 +565,13 @@ const WalletPanel = ({
   onSelectProvider: (provider: PaymentProvider) => void;
 }) => (
   <section>
-    <h1 className="text-3xl font-black text-[#073b70]">eWallet</h1>
+    <h1 className="text-3xl font-semibold text-[#073b70]">eWallet</h1>
     <p className="mt-3 text-base font-semibold text-slate-600">Choose your wallet</p>
     <div className="mt-8 grid gap-6 md:grid-cols-2">
       {['TrueMoney Wallet', 'Line Pay'].map((wallet, index) => (
         <button key={wallet} type="button" onClick={() => onSelectProvider(wallet)} className={`flex h-36 flex-col items-center justify-center rounded border bg-white p-6 ${selectedProvider === wallet ? 'border-[#073b70] ring-1 ring-[#073b70]' : 'border-slate-300'}`}>
-          <span className={`text-4xl font-black ${index === 0 ? 'text-orange-500' : 'text-green-600'}`}>{index === 0 ? 'W' : 'LINE'}</span>
-          <span className="mt-4 text-sm font-black uppercase tracking-wide text-slate-700">{wallet}</span>
+          <span className={`text-4xl font-semibold ${index === 0 ? 'text-orange-500' : 'text-green-600'}`}>{index === 0 ? 'W' : 'LINE'}</span>
+          <span className="mt-4 text-sm font-semibold uppercase tracking-wide text-slate-700">{wallet}</span>
         </button>
       ))}
     </div>
@@ -859,17 +859,17 @@ function Payment(): React.JSX.Element {
   return (
     <main className="min-h-screen bg-slate-100 text-slate-800">
       <header className="bg-slate-100 pt-10 text-center">
-        <Link to="/" className="text-4xl font-black tracking-wide text-[#073b70]">HORIZON<span className="text-amber-500">ELITE</span></Link>
+        <Link to="/" className="text-4xl font-semibold tracking-wide text-[#073b70]">HORIZON<span className="text-amber-500">ELITE</span></Link>
       </header>
       <Stepper />
 
       <div className="mx-auto grid max-w-7xl gap-8 px-6 pb-28 lg:grid-cols-[310px_1fr_310px]">
         <aside>
-          <h2 className="mb-4 text-sm font-black uppercase tracking-widest text-slate-600">Payment Methods</h2>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-slate-600">Payment Methods</h2>
           <div className="space-y-4">
             {methods.map((item) => (
               <button key={item.id} onClick={() => setMethod(item.id)} className={`flex min-h-20 w-full items-center gap-4 rounded border bg-white p-5 text-left transition ${method === item.id ? 'border-l-4 border-l-amber-300 border-slate-200 shadow-sm' : 'border-slate-300 hover:border-[#073b70]'}`}>
-                <span className="w-12 text-center text-xs font-black text-[#073b70]">{item.icon}</span>
+                <span className="w-12 text-center text-xs font-semibold text-[#073b70]">{item.icon}</span>
                 <span>
                   <span className="block text-lg font-semibold text-slate-700">{item.title}</span>
                   <span className="text-xs font-semibold text-slate-500">{item.subtitle}</span>

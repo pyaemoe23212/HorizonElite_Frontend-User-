@@ -70,7 +70,7 @@ function CheckIn(): React.JSX.Element {
     <main className="min-h-screen bg-slate-100">
       <PageHeader rightLink={{ label: "Services", to: "/services" }} />
       <div className="mx-auto max-w-4xl px-6 py-14">
-        <h1 className="text-center text-5xl font-black text-[#073b70]">Online Check-in</h1>
+        <h1 className="text-center text-5xl font-semibold text-[#073b70]">Online Check-in</h1>
         <p className="mx-auto mt-5 max-w-xl text-center text-lg text-slate-600">Enter your booking reference and passenger last name to check in.</p>
 
         <section className="mx-auto mt-10 max-w-2xl overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm">
@@ -79,23 +79,23 @@ function CheckIn(): React.JSX.Element {
             {error && <div className="mb-6 rounded border border-red-300 bg-red-50 p-4 font-semibold text-red-700">{error}</div>}
             <div className="grid gap-6 md:grid-cols-2">
               <label className="block">
-                <span className="mb-2 flex min-h-5 items-end text-xs font-bold uppercase tracking-wide text-slate-600">Booking Reference (PNR)</span>
+                <span className="mb-2 flex min-h-5 items-end text-xs font-medium uppercase tracking-wide text-slate-600">Booking Reference (PNR)</span>
                 <input value={pnr} onChange={(event) => setPnr(event.target.value.toUpperCase())} maxLength={6} placeholder="e.g. G4KL9X" className="h-12 w-full rounded border border-slate-300 px-4 text-base font-normal normal-case outline-none focus:border-[#073b70]" />
               </label>
               <label className="block">
-                <span className="mb-2 flex min-h-5 items-end text-xs font-bold uppercase tracking-wide text-slate-600">Passenger Last Name</span>
+                <span className="mb-2 flex min-h-5 items-end text-xs font-medium uppercase tracking-wide text-slate-600">Passenger Last Name</span>
                 <input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="As it appears on your ticket" className="h-12 w-full rounded border border-slate-300 px-4 text-base font-normal normal-case outline-none focus:border-[#073b70]" />
               </label>
             </div>
             <div className="mt-6 flex items-start gap-3 rounded-md bg-slate-100 p-4 text-sm text-slate-600"><CircleHelp className="mt-0.5 shrink-0 text-cyan-700" size={18} /><p>Online check-in opens <strong>48 hours</strong> before departure and closes <strong>90 minutes</strong> before take-off.</p></div>
-            <button disabled={loading} className="mt-8 flex h-12 w-full items-center justify-center rounded bg-[#073b70] font-bold uppercase tracking-widest text-white hover:bg-[#052b52] disabled:opacity-60">{loading ? "Searching..." : "Search Booking →"}</button>
+            <button disabled={loading} className="mt-8 flex h-12 w-full items-center justify-center rounded bg-[#073b70] font-medium uppercase tracking-widest text-white hover:bg-[#052b52] disabled:opacity-60">{loading ? "Searching..." : "Search Booking →"}</button>
           </form>
         </section>
 
         {details && result && (
           <section className={`mx-auto mt-8 max-w-2xl rounded-lg border bg-white p-8 shadow-sm ${complete ? "border-green-300" : result.eligibility.eligible ? "border-cyan-300" : "border-amber-300"}`}>
             <div className="flex items-start justify-between gap-4">
-              <div><p className="text-xs font-black uppercase tracking-widest text-slate-500">{complete ? "Checked In" : "Booking Found"}</p><h2 className="mt-2 text-2xl font-black text-[#073b70]">{details.passengers[0]?.first_name} {details.passengers[0]?.last_name}</h2></div>
+              <div><p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{complete ? "Checked In" : "Booking Found"}</p><h2 className="mt-2 text-2xl font-semibold text-[#073b70]">{details.passengers[0]?.first_name} {details.passengers[0]?.last_name}</h2></div>
               {complete && <BadgeCheck className="text-green-600" size={32} />}
             </div>
             <div className="mt-6 grid gap-5 rounded bg-slate-100 p-5 sm:grid-cols-3">
@@ -107,8 +107,8 @@ function CheckIn(): React.JSX.Element {
               <Info label="Cabin" value={details.booking.cabin_class || "Not available"} />
             </div>
             <p className={`mt-5 rounded p-4 font-semibold ${result.eligibility.eligible ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-800"}`}>{result.eligibility.reason}{result.eligibility.opens_at ? ` Available from ${new Date(result.eligibility.opens_at).toLocaleString()}.` : ""}</p>
-            {result.eligibility.eligible && !complete && <button type="button" onClick={confirm} disabled={confirming} className="mt-6 flex h-12 w-full items-center justify-center rounded bg-cyan-700 font-black uppercase tracking-widest text-white hover:bg-cyan-800 disabled:opacity-60">{confirming ? "Completing Check-in..." : "Confirm Check-in"}</button>}
-            {complete && <button type="button" onClick={() => navigate("/download-boarding-pass", { state: toRouteState(details) })} className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded bg-[#073b70] font-black uppercase tracking-widest text-white"><Plane size={18} /> View Boarding Pass</button>}
+            {result.eligibility.eligible && !complete && <button type="button" onClick={confirm} disabled={confirming} className="mt-6 flex h-12 w-full items-center justify-center rounded bg-cyan-700 font-semibold uppercase tracking-widest text-white hover:bg-cyan-800 disabled:opacity-60">{confirming ? "Completing Check-in..." : "Confirm Check-in"}</button>}
+            {complete && <button type="button" onClick={() => navigate("/download-boarding-pass", { state: toRouteState(details) })} className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded bg-[#073b70] font-semibold uppercase tracking-widest text-white"><Plane size={18} /> View Boarding Pass</button>}
           </section>
         )}
       </div>
@@ -117,7 +117,7 @@ function CheckIn(): React.JSX.Element {
 }
 
 function Info({ label, value }: { label: string; value: React.ReactNode }) {
-  return <div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 font-bold text-[#073b70]">{value}</p></div>;
+  return <div><p className="text-xs font-medium uppercase text-slate-500">{label}</p><p className="mt-1 font-medium text-[#073b70]">{value}</p></div>;
 }
 
 export default CheckIn;

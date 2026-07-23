@@ -2,11 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { Plane } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import type { FlightResultItem, SelectedFlightResponse, SelectFlightRequest } from '../Services/api';
+import type { FlightSegment, SearchFlightRequest } from '../Services/api';
 import { api } from '../Services/api';
 import { FlightCard } from '../components/FlightCard';
 import { Stepper } from '../components/Stepper';
-import { DateStrip } from '../components/DateStrip';
-import { ModifySearch } from '../components/ModifySearch';
+import { ModifySearch, type ModifySearchValues } from '../components/ModifySearch';
 
 type FlightPhase = 'outbound' | 'inbound';
 type TripType = 'ONE_WAY' | 'ROUND_TRIP';
@@ -45,6 +45,18 @@ const formatTime = (value: string) =>
     minute: '2-digit',
   });
 
+const formatDisplayDate = (value?: string) => {
+  if (!value) return 'Date not selected';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
 const normalizeCabinClass = (value?: string) => {
   const normalized = value?.trim().toUpperCase().replace(/[\s-]+/g, '_');
   return cabinClassMap[normalized || ''] || 'ECONOMY';
@@ -71,7 +83,9 @@ function FlightResults(): React.JSX.Element {
   const [savedOutboundFlight, setSavedOutboundFlight] = useState<SelectedFlight | null>(null);
   const [selectedInboundFlight, setSelectedInboundFlight] = useState<FlightResultItem | null>(null);
   const [isSavingSelection, setIsSavingSelection] = useState(false);
+  const [isModifyingSearch, setIsModifyingSearch] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [modifySearchError, setModifySearchError] = useState('');
   const [showModify, setShowModify] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('recommended');
   const [stopsFilter, setStopsFilter] = useState<'all' | 'direct'>('all');
@@ -127,6 +141,96 @@ function FlightResults(): React.JSX.Element {
     baggage_allowance: flight.baggage_allowance || '20kg',
     refundable_status: flight.refundable_status ?? false,
   });
+
+  const extractAirportCode = (location?: string): string => {
+    const match = String(location || '').match(/\(([A-Z]{3})\)/);
+    return match ? match[1] : '';
+  };
+
+  const getPassengerCounts = () => {
+    const passengerCount = Number(String(searchData.passengers || '1').match(/\d+/)?.[0] || 1);
+    return {
+      adult_passenger_count: Math.max(1, passengerCount),
+      child_passenger_count: 0,
+      infant_passenger_count: 0,
+    };
+  };
+
+  const handleModifySearch = async (values: ModifySearchValues) => {
+    const originCode = extractAirportCode(values.from);
+    const destinationCode = extractAirportCode(values.to);
+
+    if (!originCode || !destinationCode || !values.departDate) {
+      setModifySearchError('Please use airport values with IATA codes, and select a departure date.');
+      return;
+    }
+
+    if (originCode === destinationCode) {
+      setModifySearchError('From and To airports must be different.');
+      return;
+    }
+
+    try {
+      setIsModifyingSearch(true);
+      setModifySearchError('');
+      setErrorMessage('');
+
+      const isReturnSearch = Boolean(values.returnDate);
+      const segments: FlightSegment[] = [
+        {
+          origin_airport_code: originCode,
+          destination_airport_code: destinationCode,
+          departure_date: values.departDate,
+        },
+      ];
+
+      if (isReturnSearch) {
+        segments.push({
+          origin_airport_code: destinationCode,
+          destination_airport_code: originCode,
+          departure_date: values.returnDate,
+        });
+      }
+
+      const passengerCounts = getPassengerCounts();
+      const searchRequest: SearchFlightRequest = {
+        trip_type: isReturnSearch ? 'ROUND_TRIP' : 'ONE_WAY',
+        ...passengerCounts,
+        cabin_class: (searchData.cabinClass || 'Economy').toLowerCase(),
+        currency_code: 'USD',
+        segments,
+      };
+
+      const response = await api.searchFlights(searchRequest);
+
+      setSelectedOutboundFlight(null);
+      setSavedOutboundFlight(null);
+      setSelectedInboundFlight(null);
+      setPhase('outbound');
+      setShowModify(false);
+
+      navigate('/flight-results', {
+        replace: true,
+        state: {
+          searchData: {
+            ...searchData,
+            tripType: isReturnSearch ? 'Return' : 'One-way',
+            from: values.from,
+            to: values.to,
+            departDate: values.departDate,
+            returnDate: values.returnDate || null,
+            passengers: `${passengerCounts.adult_passenger_count} Passenger${passengerCounts.adult_passenger_count !== 1 ? 's' : ''}`,
+          },
+          flightSearchId: response.flight_search_id,
+          flightResults: response.results,
+        },
+      });
+    } catch (error) {
+      setModifySearchError(error instanceof Error ? error.message : 'Failed to search flights. Please try again.');
+    } finally {
+      setIsModifyingSearch(false);
+    }
+  };
 
   const goToPassengerInformation = (savedFlight: SelectedFlight, returnFlight: SelectedFlight | null) => {
     navigate('/passenger-information', {
@@ -184,7 +288,7 @@ function FlightResults(): React.JSX.Element {
       <main className="min-h-screen bg-slate-100 text-slate-800">
         <header className="bg-[#073b70] text-white">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-            <Link to="/" className="text-2xl font-black tracking-wide">
+            <Link to="/" className="text-2xl font-semibold tracking-wide">
               HORIZON<span className="text-amber-400">ELITE</span>
             </Link>
           </div>
@@ -192,13 +296,13 @@ function FlightResults(): React.JSX.Element {
 
         <div className="mx-auto max-w-7xl px-5 py-24">
           <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-8 text-center">
-            <p className="mb-4 text-lg font-black text-amber-800">No Flight Data Found</p>
+            <p className="mb-4 text-lg font-semibold text-amber-800">No Flight Data Found</p>
             <p className="mb-6 text-sm text-amber-700">
               It looks like you navigated directly to this page. Please search for flights from the home page.
             </p>
             <Link
               to="/"
-              className="inline-block rounded-lg bg-[#073b70] px-6 py-3 font-black text-white transition hover:bg-[#0a2d51]"
+              className="inline-block rounded-lg bg-[#073b70] px-6 py-3 font-semibold text-white transition hover:bg-[#0a2d51]"
             >
               Back to Search
             </Link>
@@ -209,13 +313,13 @@ function FlightResults(): React.JSX.Element {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-800">
-      <header className="bg-[#073b70] text-white">
+    <main className="min-h-screen bg-[#eef4fb] text-slate-800">
+      <header className="border-b border-blue-100 bg-white text-[#073b70]">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Link to="/" className="text-2xl font-black tracking-wide">
-            HORIZON<span className="text-amber-400">ELITE</span>
+          <Link to="/" className="text-2xl font-semibold tracking-wide">
+            HORIZON<span className="text-amber-500">ELITE</span>
           </Link>
-          <div className="hidden items-center gap-8 text-sm font-bold md:flex">
+          <div className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
             <span>
               {searchData.from} to {searchData.to}
             </span>
@@ -226,12 +330,14 @@ function FlightResults(): React.JSX.Element {
       </header>
 
       <Stepper currentStep={1} />
-      <DateStrip selectedReturn={phase === 'inbound'} />
 
       <div className="mx-auto max-w-7xl px-5 pb-24">
         {showModify && (
           <ModifySearch
             onClose={() => setShowModify(false)}
+            onSearch={handleModifySearch}
+            isSearching={isModifyingSearch}
+            errorMessage={modifySearchError}
             from={searchData.from}
             to={searchData.to}
             departDate={searchData.departDate}
@@ -239,25 +345,50 @@ function FlightResults(): React.JSX.Element {
           />
         )}
 
+        <section className="mb-8 rounded-3xl border border-blue-100 bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-amber-500">
+                {phase === 'outbound' ? 'Departure flights' : 'Return flights'}
+              </p>
+              <h1 className="mt-2 flex flex-wrap items-center gap-3 text-3xl font-semibold text-[#073b70]">
+                <span>{searchData.from || '--'}</span>
+                <Plane size={22} className="text-amber-500" />
+                <span>{searchData.to || '--'}</span>
+              </h1>
+              <p className="mt-2 text-sm font-semibold text-slate-500">
+                {formatDisplayDate(phase === 'inbound' ? searchData.returnDate : searchData.departDate)} · {searchData.passengers ?? '1 Passenger'} · {searchData.cabinClass || 'Economy'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowModify(true)}
+              className="rounded-xl border border-[#073b70] bg-white px-5 py-3 text-sm font-semibold text-[#073b70] transition hover:bg-blue-50"
+            >
+              Modify search
+            </button>
+          </div>
+        </section>
+
         {phase === 'inbound' && selectedOutboundFlight && (
           <section className="mx-auto mb-8 max-w-5xl border-t-4 border-[#073b70] bg-white p-6">
-            <p className="mb-6 text-xs font-black uppercase tracking-widest text-slate-500">
+            <p className="mb-6 text-xs font-semibold uppercase tracking-widest text-slate-500">
               Your selected outbound flight <span className="float-right text-blue-600">Confirmed</span>
             </p>
             <div className="grid gap-5 md:grid-cols-4 md:items-center">
-              <p className="text-3xl font-black text-[#073b70]">
+              <p className="text-3xl font-semibold text-[#073b70]">
                 {formatTime(selectedOutboundFlight.departure_datetime)}
-                <span className="block text-xs font-bold text-slate-500">{selectedOutboundFlight.departure_airport}</span>
+                <span className="block text-xs font-medium text-slate-500">{selectedOutboundFlight.departure_airport}</span>
               </p>
-              <p className="flex flex-col items-center gap-1 text-center text-sm font-bold text-slate-500">
+              <p className="flex flex-col items-center gap-1 text-center text-sm font-medium text-slate-500">
                 <Plane size={18} />
                 {selectedOutboundFlight.duration || '~'}
               </p>
-              <p className="text-3xl font-black text-[#073b70]">
+              <p className="text-3xl font-semibold text-[#073b70]">
                 {formatTime(selectedOutboundFlight.arrival_datetime)}
-                <span className="block text-xs font-bold text-slate-500">{selectedOutboundFlight.arrival_airport}</span>
+                <span className="block text-xs font-medium text-slate-500">{selectedOutboundFlight.arrival_airport}</span>
               </p>
-              <p className="text-sm font-bold text-slate-600">
+              <p className="text-sm font-medium text-slate-600">
                 {normalizeCabinClass(selectedOutboundFlight.cabin_class || searchData.cabinClass)}
                 <br />
                 {selectedOutboundFlight.currency_code} {Number(selectedOutboundFlight.total_price).toFixed(2)}
@@ -278,20 +409,20 @@ function FlightResults(): React.JSX.Element {
           </div>
         )}
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_350px]">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_330px]">
           <section className="flex flex-col gap-6">
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-slate-600">
-              Select your {phase === 'outbound' ? 'departure' : 'return'} flight. Prices include taxes and fees.
-            </div>
-            <div className="mb-2 flex flex-col gap-4 rounded-lg border border-slate-300 bg-white p-4 md:flex-row md:items-center md:justify-between">
-              <h1 className="flex items-center gap-2 text-2xl font-black text-[#073b70]">
-                <Plane size={24} /> Select your {phase === 'outbound' ? 'departure' : 'return'} flight
-              </h1>
+            <div className="mb-2 flex flex-col gap-4 rounded-2xl border border-blue-100 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Showing {visibleFlights.length} of {flightResults.length}</p>
+                <h2 className="mt-1 text-xl font-semibold text-[#073b70]">
+                  Select your {phase === 'outbound' ? 'departure' : 'return'} flight
+                </h2>
+              </div>
               <div className="flex flex-wrap gap-3">
                 <select
                   value={sortBy}
                   onChange={(event) => setSortBy(event.target.value as SortOption)}
-                  className="h-10 rounded border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700"
+                  className="h-10 rounded-xl border border-blue-100 bg-blue-50 px-3 text-sm font-medium text-[#073b70]"
                 >
                   <option value="recommended">Recommended</option>
                   <option value="cheapest">Cheapest</option>
@@ -301,14 +432,14 @@ function FlightResults(): React.JSX.Element {
                 <button
                   type="button"
                   onClick={() => setStopsFilter(current => current === 'direct' ? 'all' : 'direct')}
-                  className={`h-10 rounded border px-4 text-sm font-bold ${stopsFilter === 'direct' ? 'border-[#073b70] bg-blue-50 text-[#073b70]' : 'border-slate-300 text-slate-600'}`}
+                  className={`h-10 rounded-xl border px-4 text-sm font-medium ${stopsFilter === 'direct' ? 'border-[#073b70] bg-[#073b70] text-white' : 'border-blue-100 bg-white text-slate-600'}`}
                 >
                   Direct only
                 </button>
                 <button
                   type="button"
                   onClick={() => setRefundableOnly(current => !current)}
-                  className={`h-10 rounded border px-4 text-sm font-bold ${refundableOnly ? 'border-[#073b70] bg-blue-50 text-[#073b70]' : 'border-slate-300 text-slate-600'}`}
+                  className={`h-10 rounded-xl border px-4 text-sm font-medium ${refundableOnly ? 'border-[#073b70] bg-[#073b70] text-white' : 'border-blue-100 bg-white text-slate-600'}`}
                 >
                   Refundable
                 </button>
@@ -337,18 +468,18 @@ function FlightResults(): React.JSX.Element {
             </div>
           </section>
 
-          <aside className="h-fit rounded-xl border border-slate-300 bg-white p-6 shadow-sm">
-            <div className="mb-5 rounded bg-blue-50 p-3 text-xs font-black text-slate-600">
+          <aside className="h-fit rounded-3xl border border-blue-100 bg-white p-6 shadow-sm">
+            <div className="mb-5 rounded-2xl bg-blue-50 p-4 text-xs font-semibold text-slate-600">
               {!currentFlight && (phase === 'outbound' ? 'Select your departure flight' : 'Select your return flight')}
               {currentFlight && (phase === 'outbound' ? 'Departure ready' : 'Return ready')}
             </div>
 
-            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Total Price</p>
-            <p className="mb-8 border-b border-slate-200 pb-6 text-4xl font-black text-[#073b70]">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Total Price</p>
+            <p className="mb-8 border-b border-slate-200 pb-6 text-3xl font-semibold text-[#073b70]">
               {flightResults[0]?.currency_code || 'USD'} {totalPrice.toFixed(2)}
             </p>
 
-            <p className="mb-5 text-sm font-black uppercase tracking-wide text-[#073b70]">Trip Summary</p>
+            <p className="mb-5 text-sm font-semibold uppercase tracking-wide text-[#073b70]">Trip Summary</p>
 
             <FlightSummaryItem
               title="Outbound"
@@ -365,14 +496,14 @@ function FlightResults(): React.JSX.Element {
             <button
               disabled={isSavingSelection || !currentFlight}
               onClick={continueToNextStep}
-              className="mt-5 flex h-16 w-full items-center justify-center rounded-xl bg-[#073b70] text-base font-black uppercase tracking-wide text-white transition hover:bg-[#0a2d51] disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-5 flex h-14 w-full items-center justify-center rounded-2xl bg-[#073b70] text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-[#0a2d51] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSavingSelection ? 'Processing...' : phase === 'outbound' && isRoundTrip ? 'Continue to Return Flight' : 'Continue to Passenger Info'}
             </button>
           </aside>
         </div>
 
-        <footer className="pt-24 text-center text-xs font-black uppercase tracking-widest text-slate-400">
+        <footer className="pt-24 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
           (C) 2026 Horizon Elite. Elevating global standards.
         </footer>
       </div>
@@ -389,9 +520,9 @@ function FlightSummaryItem({
 }) {
   return (
     <div className="mb-4 bg-slate-50 p-4">
-      <p className="text-[10px] font-black uppercase text-slate-400">{title}</p>
+      <p className="text-[10px] font-semibold uppercase text-slate-400">{title}</p>
       {flight ? (
-        <p className="mt-2 text-sm font-black text-[#073b70]">
+        <p className="mt-2 text-sm font-semibold text-[#073b70]">
           {flight.departure_airport} to {flight.arrival_airport}
           <span className="block text-xs font-normal text-slate-500">
             {new Date(flight.departure_datetime).toLocaleDateString()}

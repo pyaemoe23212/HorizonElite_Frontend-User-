@@ -99,7 +99,7 @@ function CountrySelect({
               >
                 <img src={country.flagUrl} alt={country.iso} className="h-3 w-5 shrink-0 object-cover" />
                 <span className="truncate">{country.name}</span>
-                <span className="ml-auto text-xs font-black text-slate-400">{country.iso}</span>
+                <span className="ml-auto text-xs font-semibold text-slate-400">{country.iso}</span>
               </button>
             ))}
             {filteredCountries.length === 0 && (

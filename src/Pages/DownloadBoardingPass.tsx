@@ -50,7 +50,7 @@ function DownloadBoardingPass(): React.JSX.Element {
       <PageHeader rightLink={{ label: "Services", to: "/additional-services" }} />
       <div className="mx-auto max-w-7xl px-6 py-14">
         {/* Heading */}
-        <h1 className="text-5xl font-black text-[#073b70]">
+        <h1 className="text-5xl font-semibold text-[#073b70]">
           Download Boarding Pass
         </h1>
 
@@ -66,7 +66,7 @@ function DownloadBoardingPass(): React.JSX.Element {
               {/* Passenger Details */}
               <div className="border-r border-dashed border-slate-300 p-6">
                 <Info label="Passenger">
-                  <p className="font-bold text-[#073b70]">
+                  <p className="font-medium text-[#073b70]">
                     {passengerName}
                   </p>
                   <p>{passengerType}</p>
@@ -80,11 +80,11 @@ function DownloadBoardingPass(): React.JSX.Element {
                 </div>
 
                 <div className="mt-8">
-                  <p className="text-xs font-bold uppercase text-slate-500">
+                  <p className="text-xs font-medium uppercase text-slate-500">
                     Status
                   </p>
 
-                  <p className="mt-2 font-bold text-cyan-700">
+                  <p className="mt-2 font-medium text-cyan-700">
                     <span className="inline-flex items-center gap-2"><BadgeCheck size={16} /> Ready, Checked In</span>
                   </p>
                 </div>
@@ -95,21 +95,21 @@ function DownloadBoardingPass(): React.JSX.Element {
                 <div className="p-6">
                   <div className="flex justify-between">
                     <div>
-                      <p className="text-xs font-bold uppercase text-slate-500">
+                      <p className="text-xs font-medium uppercase text-slate-500">
                         Flight
                       </p>
 
-                      <p className="font-bold text-[#073b70]">
+                      <p className="font-medium text-[#073b70]">
                         {flight.flight_number || "Not available"}
                       </p>
                     </div>
 
                     <div className="text-right">
-                      <p className="text-xs font-bold uppercase text-slate-500">
+                      <p className="text-xs font-medium uppercase text-slate-500">
                         Date
                       </p>
 
-                      <p className="font-bold text-[#073b70]">
+                      <p className="font-medium text-[#073b70]">
                         {flight.departure_datetime ? new Date(flight.departure_datetime).toLocaleDateString() : "Not available"}
                       </p>
                     </div>
@@ -117,13 +117,13 @@ function DownloadBoardingPass(): React.JSX.Element {
 
                   <div className="my-8 flex items-center justify-between">
                     <div>
-                      <p className="text-3xl font-black text-[#073b70]">
+                      <p className="text-3xl font-semibold text-[#073b70]">
                         {flight.origin_airport_code || flight.departure_airport || "--"}
                       </p>
 
                       <p>{flight.departure_airport_name || flight.origin_airport_name || "Origin airport"}</p>
 
-                      <p className="mt-2 font-bold">
+                      <p className="mt-2 font-medium">
                         {flight.departure_datetime ? new Date(flight.departure_datetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--"}
                       </p>
                     </div>
@@ -131,19 +131,19 @@ function DownloadBoardingPass(): React.JSX.Element {
                     <div className="text-center">
                       <Plane className="mx-auto text-[#073b70]" size={28} />
 
-                      <p className="text-xs font-bold uppercase text-slate-500">
+                      <p className="text-xs font-medium uppercase text-slate-500">
                         Non-stop
                       </p>
                     </div>
 
                     <div className="text-right">
-                      <p className="text-3xl font-black text-[#073b70]">
+                      <p className="text-3xl font-semibold text-[#073b70]">
                         {flight.destination_airport_code || flight.arrival_airport || "--"}
                       </p>
 
                       <p>{flight.arrival_airport_name || flight.destination_airport_name || "Destination airport"}</p>
 
-                      <p className="mt-2 font-bold">
+                      <p className="mt-2 font-medium">
                         {flight.arrival_datetime ? new Date(flight.arrival_datetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--"}
                       </p>
                     </div>
@@ -187,7 +187,7 @@ function DownloadBoardingPass(): React.JSX.Element {
                     ▩
                   </div>
 
-                  <p className="mt-5 font-bold text-[#073b70]">
+                  <p className="mt-5 font-medium text-[#073b70]">
                     Scan at Airport
                   </p>
 
@@ -204,17 +204,17 @@ function DownloadBoardingPass(): React.JSX.Element {
               {message && <p className="w-full rounded border border-green-300 bg-green-50 p-3 font-semibold text-green-700">{message}</p>}
               {error && <p className="w-full rounded border border-red-300 bg-red-50 p-3 font-semibold text-red-700">{error}</p>}
               {!bookingId && <p className="w-full rounded border border-amber-300 bg-amber-50 p-3 font-semibold text-amber-800">Open Boarding Pass from your confirmed booking to enable download and email.</p>}
-              <button type="button" onClick={handleDownload} disabled={!bookingId || isDownloading} className="inline-flex items-center gap-2 rounded bg-[#073b70] px-8 py-4 font-bold text-white hover:bg-[#052b52] disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="button" onClick={handleDownload} disabled={!bookingId || isDownloading} className="inline-flex items-center gap-2 rounded bg-[#073b70] px-8 py-4 font-medium text-white hover:bg-[#052b52] disabled:cursor-not-allowed disabled:opacity-60">
                 <Download size={18} />
                 {isDownloading ? "Downloading..." : "Download Boarding Pass PDF"}
               </button>
 
-              <button type="button" onClick={handleEmail} disabled={!bookingId || isSending} className="inline-flex items-center gap-2 rounded border border-amber-300 bg-white px-8 py-4 font-bold text-amber-700 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="button" onClick={handleEmail} disabled={!bookingId || isSending} className="inline-flex items-center gap-2 rounded border border-amber-300 bg-white px-8 py-4 font-medium text-amber-700 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60">
                 <Mail size={18} />
                 {isSending ? "Sending..." : "Send Boarding Pass to Email"}
               </button>
 
-              <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-2 font-bold text-[#073b70] hover:underline">
+              <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-2 font-medium text-[#073b70] hover:underline">
                 <Printer size={18} />
                 Print Boarding Pass
               </button>
@@ -224,7 +224,7 @@ function DownloadBoardingPass(): React.JSX.Element {
           {/* Sidebar */}
           <aside className="space-y-6">
             <section className="rounded-lg border border-slate-300 bg-white p-6 shadow-sm">
-              <h2 className="text-xl font-black text-[#073b70]">
+              <h2 className="text-xl font-semibold text-[#073b70]">
                 Airport Reminder
               </h2>
 
@@ -247,13 +247,13 @@ function DownloadBoardingPass(): React.JSX.Element {
 
               <hr className="my-6" />
 
-              <button className="font-bold text-cyan-700 hover:underline">
+              <button className="font-medium text-cyan-700 hover:underline">
                 View Baggage Policy
               </button>
             </section>
 
             <section className="rounded-lg bg-[#073b70] p-6 text-white shadow-sm">
-              <h2 className="text-xl font-black">
+              <h2 className="text-xl font-semibold">
                 Need Help?
               </h2>
 
@@ -262,7 +262,7 @@ function DownloadBoardingPass(): React.JSX.Element {
                 travel arrangements.
               </p>
 
-              <button className="mt-6 w-full rounded border border-white py-3 font-bold hover:bg-white hover:text-[#073b70]">
+              <button className="mt-6 w-full rounded border border-white py-3 font-medium hover:bg-white hover:text-[#073b70]">
                 Contact Support
               </button>
             </section>
@@ -282,12 +282,12 @@ type InfoProps = {
 function Info({ label, value, children }: InfoProps) {
   return (
     <div>
-      <p className="text-xs font-bold uppercase text-slate-500">
+      <p className="text-xs font-medium uppercase text-slate-500">
         {label}
       </p>
 
       {value && (
-        <div className="mt-2 font-bold text-[#073b70]">
+        <div className="mt-2 font-medium text-[#073b70]">
           {value}
         </div>
       )}

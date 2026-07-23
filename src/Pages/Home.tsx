@@ -29,6 +29,14 @@ interface SearchData {
   returnDate: Date | null;
 }
 
+interface PopularRouteCard {
+  fromCity: string;
+  fromCode: string;
+  toCity: string;
+  toCode: string;
+  searchCount?: number;
+}
+
 const AIRPORT_CACHE_KEY = 'horizon_elite_airports_v1';
 const MAX_PASSENGERS = 9;
 
@@ -58,6 +66,34 @@ const fallbackAirports: Airport[] = [
   { city: 'Los Angeles', country: 'United States', name: 'Los Angeles International Airport', IATA: 'LAX', ICAO: 'KLAX', lat: '33.9416', lon: '-118.4085', timezone: 'America/Los_Angeles' },
   { city: 'Sydney', country: 'Australia', name: 'Sydney Kingsford Smith Airport', IATA: 'SYD', ICAO: 'YSSY', lat: '-33.9399', lon: '151.1753', timezone: 'Australia/Sydney' },
 ];
+
+const fallbackPopularRoutes: PopularRouteCard[] = [
+  { fromCity: 'Yangon', fromCode: 'RGN', toCity: 'Bangkok', toCode: 'BKK' },
+  { fromCity: 'Yangon', fromCode: 'RGN', toCity: 'Mandalay', toCode: 'MDL' },
+  { fromCity: 'Yangon', fromCode: 'RGN', toCity: 'Singapore', toCode: 'SIN' },
+  { fromCity: 'Mandalay', fromCode: 'MDL', toCity: 'Bangkok', toCode: 'BKK' },
+  { fromCity: 'Yangon', fromCode: 'RGN', toCity: 'Bagan', toCode: 'NYU' },
+  { fromCity: 'Yangon', fromCode: 'RGN', toCity: 'Kuala Lumpur', toCode: 'KUL' },
+];
+
+const airportDisplayByCode: Record<string, string> = {
+  RGN: 'Yangon, Myanmar (RGN)',
+  BKK: 'Bangkok, Thailand (BKK)',
+  MDL: 'Mandalay, Myanmar (MDL)',
+  SIN: 'Singapore, Singapore (SIN)',
+  NYU: 'Bagan, Myanmar (NYU)',
+  KUL: 'Kuala Lumpur, Malaysia (KUL)',
+};
+
+const airportCityByCode: Record<string, string> = {
+  RGN: 'Yangon',
+  BKK: 'Bangkok',
+  DMK: 'Bangkok',
+  MDL: 'Mandalay',
+  SIN: 'Singapore',
+  NYU: 'Bagan',
+  KUL: 'Kuala Lumpur',
+};
 
 const PlaneIcon = ({ className = 'h-4 w-4' }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -111,6 +147,7 @@ function Home(): React.JSX.Element {
   const [airports, setAirports] = useState<Airport[]>([]);
   const [isLoadingAirports, setIsLoadingAirports] = useState(true);
   const [showPassengerModal, setShowPassengerModal] = useState(false);
+  const [popularRoutes, setPopularRoutes] = useState<PopularRouteCard[]>(fallbackPopularRoutes);
 
   const [labels, setLabels] = useState({
     searchFlights: 'Search Flights',
@@ -189,6 +226,39 @@ function Home(): React.JSX.Element {
       .finally(() => setIsLoadingAirports(false));
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    api.getPopularRoutes(6)
+      .then((response) => {
+        if (cancelled || !Array.isArray(response.data) || response.data.length === 0) return;
+
+        const routes = response.data.map((route) => {
+          const fromCode = String(route.origin_airport_code || '').trim().toUpperCase();
+          const toCode = String(route.destination_airport_code || '').trim().toUpperCase();
+
+          return {
+            fromCity: airportCityByCode[fromCode] || fromCode,
+            fromCode,
+            toCity: airportCityByCode[toCode] || toCode,
+            toCode,
+            searchCount: route.search_count,
+          };
+        }).filter(route => route.fromCode && route.toCode);
+
+        if (routes.length > 0) {
+          setPopularRoutes(routes);
+        }
+      })
+      .catch((error) => {
+        console.warn('Popular routes fetch failed, using fallback routes:', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Translate labels
   useEffect(() => {
     const translateLabels = async () => {
@@ -261,6 +331,20 @@ function Home(): React.JSX.Element {
   const focusNext = (ref: any) => setTimeout(() => ref.current?.focus(), 80);
   const openDatePicker = (ref: React.RefObject<DatePicker | null>) => {
     window.setTimeout(() => ref.current?.setOpen(true), 120);
+  };
+
+  const handlePopularRoute = (route: PopularRouteCard) => {
+    setSearchData(prev => ({
+      ...prev,
+      tripType: 'One-way',
+      from: airportDisplayByCode[route.fromCode] || `${route.fromCity} (${route.fromCode})`,
+      to: airportDisplayByCode[route.toCode] || `${route.toCity} (${route.toCode})`,
+      returnDate: null,
+    }));
+    setSearchError('');
+    setFromSuggestions([]);
+    setToSuggestions([]);
+    openDatePicker(departDateRef);
   };
   const openPassengers = () => {
     window.setTimeout(() => {
@@ -432,7 +516,7 @@ function Home(): React.JSX.Element {
 
       <div className="relative mx-auto max-w-6xl px-6 pt-16 pb-12">
         <div className="max-w-lg">
-          <h1 className="text-5xl font-bold text-white tracking-tight">Search Flights</h1>
+          <h1 className="text-5xl font-medium text-white tracking-tight">Search Flights</h1>
           <p className="mt-4 text-lg text-white/90">Search flights, compare fares, and book your next adventure with ease.</p>
         </div>
 
@@ -461,7 +545,7 @@ function Home(): React.JSX.Element {
 
             {/* FROM */}
             <div className="lg:col-span-5 relative">
-              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">{labels.from}</label>
+              <label className="block text-xs font-medium uppercase tracking-widest text-slate-500 mb-2">{labels.from}</label>
               <div className="flex h-16 items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 focus-within:border-blue-500 transition-all">
                 <PinIcon />
                 <input
@@ -496,7 +580,7 @@ function Home(): React.JSX.Element {
 
             {/* TO */}
             <div className="lg:col-span-5 relative">
-              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">{labels.to}</label>
+              <label className="block text-xs font-medium uppercase tracking-widest text-slate-500 mb-2">{labels.to}</label>
               <div className="flex h-16 items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 focus-within:border-blue-500 transition-all">
                 <PinIcon />
                 <input
@@ -524,7 +608,7 @@ function Home(): React.JSX.Element {
 
             {/* DEPART DATE */}
             <div className={searchData.tripType === 'One-way' ? 'lg:col-span-6' : 'lg:col-span-3'}>
-              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">{labels.departDate}</label>
+              <label className="block text-xs font-medium uppercase tracking-widest text-slate-500 mb-2">{labels.departDate}</label>
               <div className="flex h-16 items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 focus-within:border-blue-500 transition-all">
                 <CalendarIcon />
                 <DatePicker
@@ -554,7 +638,7 @@ function Home(): React.JSX.Element {
             {/* RETURN DATE */}
             {searchData.tripType === 'Return' && (
               <div className="lg:col-span-3">
-                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">{labels.returnDate}</label>
+                <label className="block text-xs font-medium uppercase tracking-widest text-slate-500 mb-2">{labels.returnDate}</label>
                 <div className="flex h-16 items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 focus-within:border-blue-500 transition-all">
                   <CalendarIcon />
                   <DatePicker
@@ -577,7 +661,7 @@ function Home(): React.JSX.Element {
 
             {/* PASSENGERS */}
             <div className="lg:col-span-4">
-              <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">PASSENGERS</label>
+              <label className="block text-xs font-medium uppercase tracking-widest text-slate-500 mb-2">PASSENGERS</label>
               <button ref={passengerBoxRef} type="button" onClick={() => setShowPassengerModal(true)} className="flex h-16 w-full items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 px-5 cursor-pointer text-left hover:border-blue-500 transition-all focus:border-blue-500 focus:outline-none">
                 <UserIcon />
                 <div>
@@ -613,13 +697,44 @@ function Home(): React.JSX.Element {
             </div>
           )}
         </form>
+
+        <section className="mx-auto mt-14 max-w-5xl rounded-3xl border border-slate-200 bg-white/95 p-7 text-slate-900 shadow-2xl shadow-slate-950/20 backdrop-blur">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-amber-300">Quick access</p>
+              <h2 className="mt-2 text-2xl font-semibold text-[#073b70]">Popular routes</h2>
+              <p className="mt-1 text-sm font-semibold text-slate-600">Tap a route to fill your search and see upcoming fares.</p>
+            </div>
+            <span className="rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#073b70]">
+              Based on searches
+            </span>
+          </div>
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            {popularRoutes.map((route) => (
+              <button
+                key={`${route.fromCode}-${route.toCode}`}
+                type="button"
+                onClick={() => handlePopularRoute(route)}
+                className="group rounded-2xl border border-blue-100 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-lg"
+              >
+                <span className="block text-base font-semibold text-[#073b70]">
+                  {route.fromCity} <span className="text-amber-500 transition group-hover:text-orange-500">-&gt;</span> {route.toCity}
+                </span>
+                <span className="mt-1 block text-xs font-semibold text-slate-500">
+                  {route.fromCode} {'->'} {route.toCode}
+                  {route.searchCount ? ` · ${route.searchCount} searches` : ''}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
       </div>
 
       {isSearching && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/40 px-6 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl bg-white p-7 text-center shadow-2xl">
             <div className="mx-auto mb-5 h-12 w-12 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
-            <p className="text-lg font-black text-[#073b70]">Searching Flights</p>
+            <p className="text-lg font-semibold text-[#073b70]">Searching Flights</p>
             <p className="mt-2 text-sm font-semibold text-slate-500">Comparing fares and schedules. This may take a moment.</p>
           </div>
         </div>

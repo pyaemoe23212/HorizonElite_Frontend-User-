@@ -63,12 +63,12 @@ export const FareSelection: React.FC<FareSelectionProps> = ({ fares = defaultFar
       >
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <h3 className="text-lg font-black text-[#073b70]">{fare.name}</h3>
-            {fare.active && <p className="text-[10px] font-black uppercase text-blue-600">Recommended</p>}
+            <h3 className="text-lg font-semibold text-[#073b70]">{fare.name}</h3>
+            {fare.active && <p className="text-[10px] font-semibold uppercase text-blue-600">Recommended</p>}
           </div>
           <span className={`h-5 w-5 rounded-full border ${fare.active ? 'border-[#073b70] bg-[#073b70]' : 'border-slate-300'}`} />
         </div>
-        <p className="mb-5 text-2xl font-black text-[#073b70]">THB {fare.price.toFixed(2)}</p>
+        <p className="mb-5 text-2xl font-semibold text-[#073b70]">THB {fare.price.toFixed(2)}</p>
         <ul className="space-y-4 text-sm font-semibold text-slate-600">
           {fare.perks.map((perk) => (
             <li key={perk}>□ {perk}</li>

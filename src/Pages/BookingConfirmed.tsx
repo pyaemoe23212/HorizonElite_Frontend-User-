@@ -131,10 +131,10 @@ function BookingConfirmed(): React.JSX.Element {
     <main className="min-h-screen bg-slate-100 text-slate-800">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
-          <Link to="/" className="text-2xl font-black tracking-wide text-[#073b70]">
+          <Link to="/" className="text-2xl font-semibold tracking-wide text-[#073b70]">
             HORIZON<span className="text-amber-500">ELITE</span>
           </Link>
-          <Link to="/" className="inline-flex h-11 items-center gap-2 rounded border border-[#073b70] px-4 text-sm font-black text-[#073b70] hover:bg-slate-50">
+          <Link to="/" className="inline-flex h-11 items-center gap-2 rounded border border-[#073b70] px-4 text-sm font-semibold text-[#073b70] hover:bg-slate-50">
             <Home size={18} />
             Home
           </Link>
@@ -151,7 +151,7 @@ function BookingConfirmed(): React.JSX.Element {
                 </span>
               </div>
               <div>
-                <h1 className="text-4xl font-black tracking-normal text-[#073b70] sm:text-5xl">
+                <h1 className="text-4xl font-semibold tracking-normal text-[#073b70] sm:text-5xl">
                   {isPostBookingAddonPayment ? 'Add-ons Confirmed' : 'Booking Confirmed'}
                 </h1>
                 <p className="mt-3 text-lg font-semibold text-slate-600">
@@ -161,8 +161,8 @@ function BookingConfirmed(): React.JSX.Element {
             </div>
 
             <div className="rounded-lg border border-slate-300 bg-slate-50 px-6 py-4 text-left">
-              <span className="text-xs font-black uppercase tracking-widest text-slate-500">Booking Reference</span>
-              <span className="mt-1 block text-3xl font-black tracking-widest text-[#073b70]">{pnrReference}</span>
+              <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">Booking Reference</span>
+              <span className="mt-1 block text-3xl font-semibold tracking-widest text-[#073b70]">{pnrReference}</span>
             </div>
           </div>
 
@@ -174,7 +174,7 @@ function BookingConfirmed(): React.JSX.Element {
 
           {paymentStatus === 'PAID' && !isPostBookingAddonPayment && ticketingStatus !== 'ORDER_CREATED' && (
             <div className={`mx-auto mt-6 max-w-3xl rounded-lg border p-5 text-left ${ticketingStatus === 'ORDER_FAILED' ? 'border-red-300 bg-red-50' : 'border-amber-300 bg-amber-50'}`}>
-              <p className={`text-sm font-black uppercase tracking-widest ${ticketingStatus === 'ORDER_FAILED' ? 'text-red-700' : 'text-amber-700'}`}>
+              <p className={`text-sm font-semibold uppercase tracking-widest ${ticketingStatus === 'ORDER_FAILED' ? 'text-red-700' : 'text-amber-700'}`}>
                 {ticketingStatus === 'ORDER_FAILED' ? 'Payment received, ticketing failed' : 'Payment received, ticketing pending'}
               </p>
               <p className={`mt-2 text-sm font-semibold ${ticketingStatus === 'ORDER_FAILED' ? 'text-red-800' : 'text-amber-800'}`}>
@@ -190,8 +190,8 @@ function BookingConfirmed(): React.JSX.Element {
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
           <section className="overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm">
             <div className="flex items-center justify-between bg-[#073b70] px-8 py-5 text-white">
-              <h2 className="text-3xl font-black">Flight Itinerary</h2>
-              <span className="rounded bg-cyan-700/60 px-4 py-2 text-xs font-black uppercase tracking-widest text-cyan-100">Confirmed</span>
+              <h2 className="text-3xl font-semibold">Flight Itinerary</h2>
+              <span className="rounded bg-cyan-700/60 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-cyan-100">Confirmed</span>
             </div>
 
             <div className="space-y-8 px-8 py-10">
@@ -204,8 +204,8 @@ function BookingConfirmed(): React.JSX.Element {
               {flights.map(([title, flight]) => (
                 <div key={title} className="grid items-start gap-8 border-b border-slate-200 pb-8 last:border-b-0 last:pb-0 md:grid-cols-[1fr_1.2fr_1fr]">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-500">{title} Origin</p>
-                    <p className="mt-4 text-4xl font-black text-[#073b70]">{getAirportCode(flight, 'origin')}</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{title} Origin</p>
+                    <p className="mt-4 text-4xl font-semibold text-[#073b70]">{getAirportCode(flight, 'origin')}</p>
                     <p className="mt-2 text-lg font-semibold text-slate-700">{getAirportName(flight, 'origin')}</p>
                     <p className="mt-3 text-base font-semibold text-slate-500">{formatDateTime(flight.departure_datetime)}</p>
                   </div>
@@ -216,14 +216,14 @@ function BookingConfirmed(): React.JSX.Element {
                       <Plane className="text-[#073b70]" size={34} strokeWidth={2.4} />
                       <span className="h-px bg-slate-300" />
                     </div>
-                    <p className="mt-5 text-sm font-black uppercase tracking-widest text-cyan-600">
+                    <p className="mt-5 text-sm font-semibold uppercase tracking-widest text-cyan-600">
                       {flight.total_stop_count === 0 ? 'Non-stop' : flight.total_stop_count != null ? `${flight.total_stop_count} Stop(s)` : 'Stops unavailable'} {flight.duration ? `- ${flight.duration}` : ''}
                     </p>
                   </div>
 
                   <div className="text-left md:text-right">
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-500">Destination</p>
-                    <p className="mt-4 text-4xl font-black text-[#073b70]">{getAirportCode(flight, 'destination')}</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Destination</p>
+                    <p className="mt-4 text-4xl font-semibold text-[#073b70]">{getAirportCode(flight, 'destination')}</p>
                     <p className="mt-2 text-lg font-semibold text-slate-700">{getAirportName(flight, 'destination')}</p>
                     <p className="mt-3 text-base font-semibold text-slate-500">{formatDateTime(flight.arrival_datetime)}</p>
                   </div>
@@ -234,16 +234,16 @@ function BookingConfirmed(): React.JSX.Element {
 
           <aside className="space-y-8">
             <section className="rounded-lg border border-slate-300 bg-white p-8 shadow-sm">
-              <h2 className="border-b border-slate-200 pb-4 text-sm font-black uppercase tracking-widest text-slate-600">Passenger Details</h2>
+              <h2 className="border-b border-slate-200 pb-4 text-sm font-semibold uppercase tracking-widest text-slate-600">Passenger Details</h2>
               {passengers.length > 0 ? (
                 <div className="mt-6 space-y-5">
                   {passengers.map((passenger: any, index: number) => (
                     <div key={passenger.passenger_id || passenger.passengerId || index} className="rounded border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-xs font-black uppercase tracking-widest text-slate-500">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
                         Passenger {index + 1} - {getPassengerTypeLabel(passenger.pi_passenger_type_code)}
                       </p>
-                      <p className="mt-2 text-xl font-black text-[#073b70]">{formatPassengerName(passenger) || 'Name not provided'}</p>
-                      <p className="mt-1 text-xs font-black uppercase text-slate-500">{cabinClass}</p>
+                      <p className="mt-2 text-xl font-semibold text-[#073b70]">{formatPassengerName(passenger) || 'Name not provided'}</p>
+                      <p className="mt-1 text-xs font-semibold uppercase text-slate-500">{cabinClass}</p>
                       <div className="mt-4 grid gap-4 text-sm font-semibold text-slate-600 sm:grid-cols-2">
                         <Info label="Date of Birth" value={formatDate(passenger.pi_date_of_birth)} />
                         <Info label="Nationality" value={passenger.pi_nationality || 'Not provided'} />
@@ -261,20 +261,20 @@ function BookingConfirmed(): React.JSX.Element {
             </section>
 
             <section className="rounded-lg border border-slate-300 bg-white p-8 shadow-sm">
-              <h2 className="border-b border-slate-200 pb-4 text-sm font-black uppercase tracking-widest text-slate-600">Payment Summary</h2>
+              <h2 className="border-b border-slate-200 pb-4 text-sm font-semibold uppercase tracking-widest text-slate-600">Payment Summary</h2>
               <div className="mt-6 flex items-end justify-between">
                 <div>
                   <p className="text-base font-semibold text-slate-500">Total Paid</p>
-                  <p className="mt-2 text-3xl font-black text-[#073b70]">{formatMoney(totalPaid, currencyCode)}</p>
+                  <p className="mt-2 text-3xl font-semibold text-[#073b70]">{formatMoney(totalPaid, currencyCode)}</p>
                 </div>
-                <span className={`text-sm font-black uppercase ${paymentStatus === 'PAID' ? 'text-green-600' : 'text-amber-600'}`}>
+                <span className={`text-sm font-semibold uppercase ${paymentStatus === 'PAID' ? 'text-green-600' : 'text-amber-600'}`}>
                   {paymentStatus === 'PAID' ? 'Paid' : paymentStatus}
                 </span>
               </div>
 
               <div className="mt-6 border-t border-slate-200 pt-4">
                 <p className="text-sm font-semibold text-slate-500">Duffel Order ID</p>
-                <p className="mt-2 break-all text-sm font-black text-[#073b70]">{duffelOrderId || 'Not created yet'}</p>
+                <p className="mt-2 break-all text-sm font-semibold text-[#073b70]">{duffelOrderId || 'Not created yet'}</p>
               </div>
             </section>
           </aside>
@@ -285,20 +285,20 @@ function BookingConfirmed(): React.JSX.Element {
             {userEmail ? `The e-ticket and payment receipt have been sent to ${userEmail}.` : 'Your e-ticket and receipt are available from Manage Booking once details are loaded.'}
           </p>
           <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <Link to="/" className="flex h-14 items-center justify-center gap-2 rounded bg-[#073b70] text-base font-black text-white">
+            <Link to="/" className="flex h-14 items-center justify-center gap-2 rounded bg-[#073b70] text-base font-semibold text-white">
               <Home size={20} />
               Home
             </Link>
-            <Link to="/additional-services?flow=booking" state={{ ...bookingState, bookingId }} className="flex h-14 items-center justify-center gap-2 rounded bg-[#073b70] text-base font-black text-white">
+            <Link to="/additional-services?flow=booking" state={{ ...bookingState, bookingId }} className="flex h-14 items-center justify-center gap-2 rounded bg-[#073b70] text-base font-semibold text-white">
               <BadgeCheck size={20} />
               Services
             </Link>
-            <Link to="/download-e-ticket" state={{ ...bookingState, bookingId }} className="flex h-14 items-center justify-center gap-2 rounded border border-[#073b70] bg-white text-base font-black text-[#073b70]">
+            <Link to="/download-e-ticket" state={{ ...bookingState, bookingId }} className="flex h-14 items-center justify-center gap-2 rounded border border-[#073b70] bg-white text-base font-semibold text-[#073b70]">
               <Download size={20} />
               E-Ticket
             </Link>
-            <Link to="/manage-booking" state={{ ...bookingState, bookingId }} className="flex h-14 items-center justify-center rounded border border-amber-300 bg-white text-base font-black text-amber-600">Manage</Link>
-            <button type="button" onClick={() => window.print()} className="flex h-14 items-center justify-center gap-2 rounded border border-slate-300 bg-white text-base font-black text-[#073b70]">
+            <Link to="/manage-booking" state={{ ...bookingState, bookingId }} className="flex h-14 items-center justify-center rounded border border-amber-300 bg-white text-base font-semibold text-amber-600">Manage</Link>
+            <button type="button" onClick={() => window.print()} className="flex h-14 items-center justify-center gap-2 rounded border border-slate-300 bg-white text-base font-semibold text-[#073b70]">
               <Printer size={20} />
               Print
             </button>
@@ -312,7 +312,7 @@ function BookingConfirmed(): React.JSX.Element {
 function Info({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs font-black uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
       <p className="mt-1 text-slate-700">{value}</p>
     </div>
   );

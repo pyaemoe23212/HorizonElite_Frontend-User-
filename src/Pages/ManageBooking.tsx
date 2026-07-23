@@ -81,6 +81,33 @@ const mapManagedBookingToRouteState = (details: ManageBookingDetails) => {
   };
 };
 
+const toNumberOrZero = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatCurrency = (currencyCode?: string, amount?: unknown): string => {
+  const normalizedAmount = toNumberOrZero(amount);
+  return `${currencyCode || ""} ${normalizedAmount.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`.trim();
+};
+
+const getManageBookingPaidAmount = (details: ManageBookingDetails): number => {
+  const backendTotal = details.booking.total_paid_amount;
+  if (backendTotal !== undefined && backendTotal !== null) {
+    return toNumberOrZero(backendTotal);
+  }
+
+  const originalPaymentAmount = toNumberOrZero(details.booking.total_payment_amount);
+  const paidAddonsTotal = (details.addons || []).reduce((total, addon) => {
+    return total + toNumberOrZero(addon.addon_price) * toNumberOrZero(addon.quantity || 1);
+  }, 0);
+
+  return originalPaymentAmount + paidAddonsTotal;
+};
+
 function ManageBooking(): React.JSX.Element {
   const navigate = useNavigate();
   const { state } = useLocation();
@@ -149,7 +176,7 @@ function ManageBooking(): React.JSX.Element {
       <div className="mx-auto max-w-7xl px-6 py-14">
         <div className="grid gap-12 lg:grid-cols-[1fr_340px]">
           <section>
-            <h1 className="text-5xl font-black text-[#073b70]">Manage My Booking</h1>
+            <h1 className="text-5xl font-semibold text-[#073b70]">Manage My Booking</h1>
 
             <p className="mt-4 max-w-2xl text-lg text-slate-600">
               {redirectTo
@@ -166,7 +193,7 @@ function ManageBooking(): React.JSX.Element {
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-xs font-bold uppercase text-[#073b70]">
+                  <label className="mb-2 block text-xs font-medium uppercase text-[#073b70]">
                     Booking Reference (PNR)
                   </label>
                   <input
@@ -182,7 +209,7 @@ function ManageBooking(): React.JSX.Element {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-xs font-bold uppercase text-[#073b70]">
+                  <label className="mb-2 block text-xs font-medium uppercase text-[#073b70]">
                     Passenger Last Name
                   </label>
                   <input
@@ -202,7 +229,7 @@ function ManageBooking(): React.JSX.Element {
                   type="button"
                   onClick={handleFindBooking}
                   disabled={isSearching}
-                  className="rounded bg-[#073b70] px-8 py-3 font-bold text-white transition hover:bg-[#052f59] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded bg-[#073b70] px-8 py-3 font-medium text-white transition hover:bg-[#052f59] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSearching ? "Finding Booking..." : "Find My Booking"}
                 </button>
@@ -217,14 +244,26 @@ function ManageBooking(): React.JSX.Element {
                   <hr className="my-8" />
 
                   <div className="rounded border border-green-200 bg-green-50 p-5">
-                    <p className="text-xs font-black uppercase tracking-widest text-green-700">Booking Found</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-green-700">Booking Found</p>
                     <div className="mt-4 grid gap-4 md:grid-cols-3">
                       <Info label="PNR" value={bookingDetails.booking.pnr_reference} />
                       <Info label="Status" value={bookingDetails.booking.booking_status} />
                       <Info label="Passenger" value={`${bookingDetails.passengers[0]?.first_name || ""} ${bookingDetails.passengers[0]?.last_name || ""}`.trim() || "Passenger"} />
                       <Info label="Route" value={`${bookingDetails.flight.origin || "--"} to ${bookingDetails.flight.destination || "--"}`} />
                       <Info label="Flight" value={bookingDetails.flight.flight_number || "Not available"} />
-                      <Info label="Payment" value={`${bookingDetails.booking.currency_code || ""} ${bookingDetails.booking.total_payment_amount || ""}`.trim()} />
+                      <Info
+                        label="Payment"
+                        value={
+                          <>
+                            {formatCurrency(bookingDetails.booking.currency_code, getManageBookingPaidAmount(bookingDetails))}
+                            {toNumberOrZero(bookingDetails.booking.paid_addons_total) > 0 && (
+                              <span className="mt-1 block text-xs font-semibold text-slate-500">
+                                Includes {formatCurrency(bookingDetails.booking.currency_code, bookingDetails.booking.paid_addons_total)} paid add-ons
+                              </span>
+                            )}
+                          </>
+                        }
+                      />
                       <Info label="Add-ons" value={`${bookingDetails.addons?.length || 0} paid service(s)`} />
                     </div>
                   </div>
@@ -299,7 +338,7 @@ function ManageBooking(): React.JSX.Element {
           </section>
 
           <aside>
-            <h2 className="mb-6 text-3xl font-black text-[#073b70]">Online Services</h2>
+            <h2 className="mb-6 text-3xl font-semibold text-[#073b70]">Online Services</h2>
 
             <div className="space-y-4">
               {onlineServices.map((service) => {
@@ -314,7 +353,7 @@ function ManageBooking(): React.JSX.Element {
                     </div>
 
                     <div>
-                      <h3 className="font-bold uppercase text-[#073b70]">{service.title}</h3>
+                      <h3 className="font-medium uppercase text-[#073b70]">{service.title}</h3>
                       <p className="mt-1 text-sm text-slate-600">{service.description}</p>
                     </div>
                   </div>
@@ -323,12 +362,12 @@ function ManageBooking(): React.JSX.Element {
             </div>
 
             <div className="mt-8 rounded-lg bg-[#073b70] p-8 text-white">
-              <p className="text-xs font-bold uppercase tracking-wider text-cyan-300">Elite Benefit</p>
-              <h3 className="mt-2 text-3xl font-black">Priority Assistance</h3>
+              <p className="text-xs font-medium uppercase tracking-wider text-cyan-300">Elite Benefit</p>
+              <h3 className="mt-2 text-3xl font-semibold">Priority Assistance</h3>
               <p className="mt-4 text-slate-200">
                 Need help with your booking? Our dedicated Elite concierge is available 24/7 to assist you.
               </p>
-              <Link to="/case-management" className="mt-8 flex w-full items-center justify-center rounded border border-white py-3 font-bold hover:bg-white hover:text-[#073b70]">
+              <Link to="/case-management" className="mt-8 flex w-full items-center justify-center rounded border border-white py-3 font-medium hover:bg-white hover:text-[#073b70]">
                 Contact Concierge
               </Link>
             </div>
@@ -342,8 +381,8 @@ function ManageBooking(): React.JSX.Element {
 function Info({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs font-black uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 font-bold text-[#073b70]">{value || "Not available"}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 font-medium text-[#073b70]">{value || "Not available"}</p>
     </div>
   );
 }

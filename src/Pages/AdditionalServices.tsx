@@ -72,8 +72,8 @@ function AdditionalServices(): React.JSX.Element {
       <section className="mx-auto max-w-7xl px-6 py-14">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-cyan-700">Post-booking services</p>
-            <h1 className="mt-2 text-5xl font-black text-[#073b70]">Additional Services</h1>
+            <p className="text-xs font-semibold uppercase tracking-widest text-cyan-700">Post-booking services</p>
+            <h1 className="mt-2 text-5xl font-semibold text-[#073b70]">Additional Services</h1>
             <p className="mt-4 max-w-2xl text-lg font-semibold text-slate-600">
               Continue after payment with trip management, check-in, travel documents, and support.
             </p>
@@ -82,7 +82,7 @@ function AdditionalServices(): React.JSX.Element {
           <Link
             to="/booking-confirmed"
             state={routeState}
-            className="inline-flex h-12 items-center justify-center rounded border border-[#073b70] px-6 text-sm font-black text-[#073b70] hover:bg-white"
+            className="inline-flex h-12 items-center justify-center rounded border border-[#073b70] px-6 text-sm font-semibold text-[#073b70] hover:bg-white"
           >
             Back to Booking
           </Link>
@@ -110,9 +110,9 @@ function AdditionalServices(): React.JSX.Element {
                   <div className="flex h-12 w-12 items-center justify-center rounded bg-blue-50 text-[#073b70]">
                     <Icon size={25} strokeWidth={2.2} />
                   </div>
-                  <h2 className="mt-6 text-2xl font-black text-[#073b70]">{service.title}</h2>
+                  <h2 className="mt-6 text-2xl font-semibold text-[#073b70]">{service.title}</h2>
                   <p className="mt-3 min-h-12 text-sm font-semibold leading-6 text-slate-600">{service.description}</p>
-                  <span className="mt-6 inline-block text-xs font-black uppercase tracking-widest text-cyan-700">Open</span>
+                  <span className="mt-6 inline-block text-xs font-semibold uppercase tracking-widest text-cyan-700">Open</span>
                 </Link>
               );
             })}
@@ -125,29 +125,29 @@ function AdditionalServices(): React.JSX.Element {
               <div className="flex h-12 w-12 items-center justify-center rounded bg-white text-purple-700">
                 <Sparkles size={25} strokeWidth={2.2} />
               </div>
-              <h2 className="mt-6 text-2xl font-black text-purple-800">Continue to Personalized Services</h2>
+              <h2 className="mt-6 text-2xl font-semibold text-purple-800">Continue to Personalized Services</h2>
               <p className="mt-3 text-sm font-semibold leading-6 text-purple-900/75">
                 Finish with travel reminders, flight updates, check-in notifications, and personalized recommendations for this booking.
               </p>
-              <span className="mt-6 inline-block text-xs font-black uppercase tracking-widest text-purple-700">Final step</span>
+              <span className="mt-6 inline-block text-xs font-semibold uppercase tracking-widest text-purple-700">Final step</span>
             </Link>
           </div>
 
           <aside className="space-y-6">
             <section className="overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm">
               <div className="bg-[#073b70] px-6 py-4 text-white">
-                <h2 className="text-lg font-black uppercase">Trip Summary</h2>
+                <h2 className="text-lg font-semibold uppercase">Trip Summary</h2>
               </div>
 
               <div className="space-y-5 p-6">
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                   <div>
-                    <p className="text-3xl font-black text-[#073b70]">{origin}</p>
+                    <p className="text-3xl font-semibold text-[#073b70]">{origin}</p>
                     <p className="text-sm font-semibold text-slate-500">From</p>
                   </div>
                   <Plane size={18} className="text-slate-400" />
                   <div className="text-right">
-                    <p className="text-3xl font-black text-[#073b70]">{destination}</p>
+                    <p className="text-3xl font-semibold text-[#073b70]">{destination}</p>
                     <p className="text-sm font-semibold text-slate-500">To</p>
                   </div>
                 </div>
@@ -161,7 +161,7 @@ function AdditionalServices(): React.JSX.Element {
 
                 <Link
                   to="/manage-booking"
-                  className="flex h-12 w-full items-center justify-center rounded bg-[#073b70] text-sm font-black text-white hover:bg-[#052f59]"
+                  className="flex h-12 w-full items-center justify-center rounded bg-[#073b70] text-sm font-semibold text-white hover:bg-[#052f59]"
                 >
                   Manage With PNR
                 </Link>
@@ -169,21 +169,21 @@ function AdditionalServices(): React.JSX.Element {
             </section>
 
             <section className="rounded-lg border border-purple-200 bg-purple-50 p-6 shadow-sm">
-              <h2 className="text-lg font-black text-purple-800">Next Step</h2>
+              <h2 className="text-lg font-semibold text-purple-800">Next Step</h2>
               <p className="mt-3 text-sm font-semibold leading-6 text-purple-900/75">
                 After choosing any needed post-booking services, continue to Personalized Services to set reminders and recommendations.
               </p>
-              <Link to="/personalized-services" state={routeState} className="mt-5 flex h-12 w-full items-center justify-center rounded bg-purple-700 text-sm font-black text-white hover:bg-purple-800">
+              <Link to="/personalized-services" state={routeState} className="mt-5 flex h-12 w-full items-center justify-center rounded bg-purple-700 text-sm font-semibold text-white hover:bg-purple-800">
                 Continue to Personalized
               </Link>
             </section>
 
             <section className="rounded-lg border border-slate-300 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-black text-[#073b70]">Need Help?</h2>
+              <h2 className="text-lg font-semibold text-[#073b70]">Need Help?</h2>
               <p className="mt-3 text-sm font-semibold leading-6 text-slate-600">
                 Our support team can help with booking, baggage, and service requests.
               </p>
-              <Link to="/case-management" className="mt-5 inline-block font-black text-cyan-700 hover:underline">
+              <Link to="/case-management" className="mt-5 inline-block font-semibold text-cyan-700 hover:underline">
                 Open Help Desk
               </Link>
             </section>
@@ -198,7 +198,7 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex justify-between gap-4">
       <span className="text-sm font-semibold text-slate-500">{label}</span>
-      <span className="text-right font-bold text-[#073b70]">{value}</span>
+      <span className="text-right font-medium text-[#073b70]">{value}</span>
     </div>
   );
 }

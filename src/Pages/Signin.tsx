@@ -95,7 +95,7 @@ function Signin(): React.JSX.Element {
             Back to website
           </Link>
 
-          <h1 className="max-w-md text-5xl font-black leading-tight tracking-normal sm:text-6xl">
+          <h1 className="max-w-md text-5xl font-semibold leading-tight tracking-normal sm:text-6xl">
             Welcome back to the skies.
           </h1>
           <p className="mt-8 max-w-lg text-xl leading-8 text-sky-100/95">
@@ -103,7 +103,7 @@ function Signin(): React.JSX.Element {
           </p>
 
           <div className="mt-24 border-t border-white/20 pt-10">
-            <p className="text-3xl font-black text-amber-300">Horizon Elite</p>
+            <p className="text-3xl font-semibold text-amber-300">Horizon Elite</p>
             <p className="mt-2 text-xs font-extrabold uppercase tracking-[.28em] text-sky-100/70">
               Global excellence in aviation
             </p>
@@ -113,7 +113,7 @@ function Signin(): React.JSX.Element {
 
       <section className="flex items-center justify-center px-8 py-14 sm:px-12">
         <div className="w-full max-w-[490px]">
-          <h2 className="text-5xl font-black tracking-normal text-[#063b70]">Sign In</h2>
+          <h2 className="text-5xl font-semibold tracking-normal text-[#063b70]">Sign In</h2>
           <p className="mt-4 text-lg text-slate-600">Continue your journey with your KrisFlyer account.</p>
 
           {error && (
@@ -124,7 +124,7 @@ function Signin(): React.JSX.Element {
 
           <form onSubmit={handleSubmit} className="mt-10 space-y-7">
             <label className="block">
-              <span className="mb-3 block text-xs font-black uppercase tracking-wide text-[#063b70]">Email Address<span className="text-red-500">*</span></span>
+              <span className="mb-3 block text-xs font-semibold uppercase tracking-wide text-[#063b70]">Email Address<span className="text-red-500">*</span></span>
               <input
                 type="email"
                 required
@@ -136,7 +136,7 @@ function Signin(): React.JSX.Element {
             </label>
 
             <label className="block">
-              <span className="mb-3 block text-xs font-black uppercase tracking-wide text-[#063b70]">Password<span className="text-red-500">*</span></span>
+              <span className="mb-3 block text-xs font-semibold uppercase tracking-wide text-[#063b70]">Password<span className="text-red-500">*</span></span>
               <input
                 type="password"
                 required
@@ -152,14 +152,14 @@ function Signin(): React.JSX.Element {
               Remember me for future travels
             </label>
 
-            <button disabled={loading} type="submit" className="h-16 w-full rounded bg-[#063b70] text-base font-black text-white transition hover:bg-[#052f59] disabled:opacity-70 disabled:cursor-not-allowed">
+            <button disabled={loading} type="submit" className="h-16 w-full rounded bg-[#063b70] text-base font-semibold text-white transition hover:bg-[#052f59] disabled:opacity-70 disabled:cursor-not-allowed">
               {loading ? 'Signing in...' : 'Sign In to My Account'}
             </button>
           </form>
 
           <div className="my-16 flex items-center gap-5">
             <span className="h-px flex-1 bg-slate-200" />
-            <span className="text-center text-xs font-black uppercase leading-4 tracking-widest text-slate-500">
+            <span className="text-center text-xs font-semibold uppercase leading-4 tracking-widest text-slate-500">
               Or
               <br />
               Connect
@@ -185,7 +185,7 @@ function Signin(): React.JSX.Element {
 
           <p className="mt-10 text-center text-base text-slate-600">
             New to Horizon Elite?{' '}
-            <Link to="/signup" className="font-black text-[#063b70] underline underline-offset-2">
+            <Link to="/signup" className="font-semibold text-[#063b70] underline underline-offset-2">
               Sign Up
             </Link>
           </p>

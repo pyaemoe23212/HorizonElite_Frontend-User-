@@ -62,7 +62,7 @@ const AppleIcon = () => (
 );
 
 const FieldLabel = ({ children }: { children: React.ReactNode }) => (
-  <span className="mb-2 flex min-h-8 items-end text-[11px] font-black uppercase tracking-wide text-[#063b70]">{children}</span>
+  <span className="mb-2 flex min-h-8 items-end text-[11px] font-semibold uppercase tracking-wide text-[#063b70]">{children}</span>
 );
 
 const isEmailStructureValid = (email: string): boolean =>
@@ -370,14 +370,14 @@ function Signup(): React.JSX.Element {
       <section className="flex min-h-[560px] flex-col justify-between bg-[#063b70] px-8 py-14 text-white sm:px-16 lg:min-h-screen lg:px-16">
         <div>
           <div className="h-px w-full bg-white/15" />
-          <Link to="/" className="mt-6 inline-block text-2xl font-black text-amber-300">Horizon Elite</Link>
-          <p className="mt-2 text-xs font-black uppercase tracking-[.26em] text-sky-100/65">
+          <Link to="/" className="mt-6 inline-block text-2xl font-semibold text-amber-300">Horizon Elite</Link>
+          <p className="mt-2 text-xs font-semibold uppercase tracking-[.26em] text-sky-100/65">
             Global excellence in aviation
           </p>
         </div>
 
         <div className="max-w-xl">
-          <h1 className="text-5xl font-black leading-tight tracking-normal">Join the Elite</h1>
+          <h1 className="text-5xl font-semibold leading-tight tracking-normal">Join the Elite</h1>
           <p className="mt-8 max-w-md text-lg leading-8 text-sky-100/60">
             Elevate your journey with personalized services, priority access, and rewards that transcend ordinary travel. Experience the horizon like never before.
           </p>
@@ -389,7 +389,7 @@ function Signup(): React.JSX.Element {
             alt="Luxury aircraft cabin"
             className="h-48 w-full max-w-[520px] rounded-lg object-cover"
           />
-          <p className="mt-8 text-xs font-black uppercase tracking-[.4em] text-sky-100/80">
+          <p className="mt-8 text-xs font-semibold uppercase tracking-[.4em] text-sky-100/80">
             Defining the future of luxury aviation.
           </p>
         </div>
@@ -397,7 +397,7 @@ function Signup(): React.JSX.Element {
 
       <section className="flex justify-center px-8 py-14 sm:px-12 lg:py-20">
         <div className="w-full max-w-[460px]">
-          <h2 className="text-4xl font-black tracking-normal text-[#063b70]">Create your account</h2>
+          <h2 className="text-4xl font-semibold tracking-normal text-[#063b70]">Create your account</h2>
           <p className="mt-3 text-base leading-6 text-slate-600">Please provide your details to join our membership program.</p>
 
           {error && (
@@ -415,18 +415,18 @@ function Signup(): React.JSX.Element {
           {verificationEmail ? (
             <div className="mt-8 space-y-5 rounded border border-slate-300 bg-slate-50 p-5">
               <p className="text-sm font-semibold leading-6 text-slate-700">
-                We sent a verification email to <span className="font-black text-[#063b70]">{verificationEmail}</span>.
+                We sent a verification email to <span className="font-semibold text-[#063b70]">{verificationEmail}</span>.
                 Open the email and click the Verify Email button to activate your account.
               </p>
               <button
                 disabled={resendLoading}
                 type="button"
                 onClick={handleResendVerificationEmail}
-                className="h-11 w-full rounded border border-slate-300 bg-white text-sm font-black text-[#063b70] transition hover:border-blue-600 disabled:opacity-70 disabled:cursor-not-allowed"
+                className="h-11 w-full rounded border border-slate-300 bg-white text-sm font-semibold text-[#063b70] transition hover:border-blue-600 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {resendLoading ? 'Sending...' : 'Resend Verification Email'}
               </button>
-              <Link to="/signin" className="flex h-11 w-full items-center justify-center rounded bg-[#063b70] text-sm font-black text-white transition hover:bg-[#052f59]">
+              <Link to="/signin" className="flex h-11 w-full items-center justify-center rounded bg-[#063b70] text-sm font-semibold text-white transition hover:bg-[#052f59]">
                 Go to Sign In
               </Link>
             </div>
@@ -581,12 +581,12 @@ function Signup(): React.JSX.Element {
                     className={`h-1 flex-1 rounded ${index < passwordStrength.activeBars ? passwordStrength.color : 'bg-slate-200'}`}
                   />
                 ))}
-                <span className={`ml-6 text-[10px] font-black uppercase ${passwordStrength.textColor}`}>{passwordStrength.label}</span>
+                <span className={`ml-6 text-[10px] font-semibold uppercase ${passwordStrength.textColor}`}>{passwordStrength.label}</span>
               </div>
               <div className="space-y-2 text-xs font-medium text-slate-600">
                 {passwordChecks.map(check => (
                   <div key={check.label} className={`flex items-center gap-3 ${check.isValid ? 'text-green-700' : 'text-slate-600'}`}>
-                    <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] font-black ${
+                    <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] font-semibold ${
                       check.isValid ? 'border-green-600 bg-green-600 text-white' : 'border-slate-400 text-transparent'
                     }`}>
                       ✓
@@ -611,12 +611,12 @@ function Signup(): React.JSX.Element {
               <label className="flex items-start gap-3">
                 <input required type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-[#063b70]" />
                 <span>
-                  I agree to the <a href="#" className="font-bold text-[#063b70] underline">Terms of Use</a> and <a href="#" className="font-bold text-[#063b70] underline">Privacy Policy</a>.
+                  I agree to the <a href="#" className="font-medium text-[#063b70] underline">Terms of Use</a> and <a href="#" className="font-medium text-[#063b70] underline">Privacy Policy</a>.
                 </span>
               </label>
             </div>
 
-            <button disabled={loading} type="submit" className="flex h-12 w-full items-center justify-center gap-2 rounded bg-[#063b70] text-sm font-black text-white transition hover:bg-[#052f59] disabled:opacity-70 disabled:cursor-not-allowed">
+            <button disabled={loading} type="submit" className="flex h-12 w-full items-center justify-center gap-2 rounded bg-[#063b70] text-sm font-semibold text-white transition hover:bg-[#052f59] disabled:opacity-70 disabled:cursor-not-allowed">
               {loading ? 'Sending verification email...' : 'Create Account'}
               {!loading && <ArrowRightIcon />}
             </button>
@@ -625,7 +625,7 @@ function Signup(): React.JSX.Element {
 
           <div className="my-7 flex items-center gap-4">
             <span className="h-px flex-1 bg-slate-200" />
-            <span className="text-[10px] font-black uppercase tracking-[.22em] text-slate-500">Or connect with</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[.22em] text-slate-500">Or connect with</span>
             <span className="h-px flex-1 bg-slate-200" />
           </div>
 
@@ -645,7 +645,7 @@ function Signup(): React.JSX.Element {
 
           <p className="mt-10 text-center text-sm text-slate-600">
             Already have an account?{' '}
-            <Link to="/signin" className="font-black text-[#063b70] underline underline-offset-2">
+            <Link to="/signin" className="font-semibold text-[#063b70] underline underline-offset-2">
               Sign In
             </Link>
           </p>

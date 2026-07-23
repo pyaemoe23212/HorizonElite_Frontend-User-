@@ -25,7 +25,7 @@ const isPassportNumberValid = (passportNumber: string): boolean =>
 
 const Label = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <label className="block">
-    <span className="mb-2 flex min-h-7 items-end text-[10px] font-black uppercase tracking-wide text-slate-500">
+    <span className="mb-2 flex min-h-7 items-end text-[10px] font-semibold uppercase tracking-wide text-slate-500">
       {label.includes('*') ? (
         <>
           {label.replace('*', '')}
@@ -39,7 +39,7 @@ const Label = ({ label, children }: { label: string; children: React.ReactNode }
 
 const Panel = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
   <section className="rounded-lg border border-slate-300 bg-white p-7 shadow-sm">
-    <h2 className="mb-7 flex items-center gap-3 text-2xl font-black text-[#073b70]">
+    <h2 className="mb-7 flex items-center gap-3 text-2xl font-semibold text-[#073b70]">
       <span className="text-lg text-[#073b70]">{icon}</span>
       {title}
     </h2>
@@ -57,7 +57,7 @@ const Stepper = () => (
         <div key={step} className="relative flex flex-col items-center gap-2 text-center">
           {index > 0 && <span className="absolute left-[-50%] top-4 h-px w-full bg-slate-300" />}
           <span
-            className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border text-sm font-black ${complete
+            className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold ${complete
                 ? 'border-blue-600 bg-blue-600 text-white'
                 : active
                   ? 'border-amber-400 bg-[#073b70] text-white'
@@ -66,7 +66,7 @@ const Stepper = () => (
           >
             {complete ? <BadgeCheck size={18} /> : index + 1}
           </span>
-          <span className={`text-[10px] font-black uppercase ${active || complete ? 'text-[#073b70]' : 'text-slate-400'}`}>{step}</span>
+          <span className={`text-[10px] font-semibold uppercase ${active || complete ? 'text-[#073b70]' : 'text-slate-400'}`}>{step}</span>
         </div>
       );
     })}
@@ -214,7 +214,7 @@ const TripSummary = ({
   return (
   <aside className="h-fit rounded border border-slate-300 bg-white shadow-sm">
     <div className="flex items-center justify-between bg-[#073b70] px-6 py-5 text-white">
-      <h2 className="text-2xl font-black text-amber-300">Horizon Elite</h2>
+      <h2 className="text-2xl font-semibold text-amber-300">Horizon Elite</h2>
       <Plane size={24} />
     </div>
 
@@ -222,25 +222,25 @@ const TripSummary = ({
       {flights.map(([title, flight]) => (
         <div key={title} className="border-b border-dashed border-slate-300 pb-5">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-[#073b70]"><Plane size={15} /> {title}</h3>
-            <span className="rounded bg-slate-200 px-2 py-1 text-[10px] font-black uppercase text-[#073b70]">{flight.cabin_class}</span>
+            <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[#073b70]"><Plane size={15} /> {title}</h3>
+            <span className="rounded bg-slate-200 px-2 py-1 text-[10px] font-semibold uppercase text-[#073b70]">{flight.cabin_class}</span>
           </div>
-          <p className="text-base font-black text-[#073b70]">{flight.origin_airport_code} to {flight.destination_airport_code}</p>
+          <p className="text-base font-semibold text-[#073b70]">{flight.origin_airport_code} to {flight.destination_airport_code}</p>
           <p className="mt-1 text-xs font-semibold text-slate-500">{formatFlightDate(flight.departure_datetime)}</p>
         </div>
       ))}
 
-      <div className="space-y-3 bg-slate-100 p-4 text-sm font-bold text-slate-600">
+      <div className="space-y-3 bg-slate-100 p-4 text-sm font-medium text-slate-600">
         <div className="flex justify-between"><span>Base Fare</span><span>{currencyCode} {total.toFixed(2)}</span></div>
         <div className="flex justify-between"><span>Taxes & Fees</span><span>Included</span></div>
-        <div className="flex justify-between border-t border-slate-300 pt-3 font-black text-[#073b70]"><span>Total</span><span>{currencyCode} {total.toFixed(2)}</span></div>
+        <div className="flex justify-between border-t border-slate-300 pt-3 font-semibold text-[#073b70]"><span>Total</span><span>{currencyCode} {total.toFixed(2)}</span></div>
       </div>
 
       <div className="rounded bg-blue-50 p-4 text-sm font-semibold text-[#073b70]">
         Add all passenger details to continue to add-ons.
       </div>
 
-      <div className="text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Secure Checkout</div>
+      <div className="text-center text-[10px] font-semibold uppercase tracking-widest text-slate-400">Secure Checkout</div>
     </div>
   </aside>
   );
@@ -418,18 +418,18 @@ function PassengerInformation(): React.JSX.Element {
       <main className="min-h-screen bg-slate-100 text-slate-800">
         <header className="bg-[#073b70] text-white">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-            <Link to="/" className="text-2xl font-black tracking-wide">
+            <Link to="/" className="text-2xl font-semibold tracking-wide">
               HORIZON<span className="text-amber-400">ELITE</span>
             </Link>
           </div>
         </header>
         <div className="mx-auto max-w-4xl px-6 py-24">
           <div className="rounded-lg border border-amber-300 bg-amber-50 p-8 text-center">
-            <p className="mb-3 text-lg font-black text-amber-800">No Flight Selection Found</p>
+            <p className="mb-3 text-lg font-semibold text-amber-800">No Flight Selection Found</p>
             <p className="mb-6 text-sm font-semibold text-amber-700">
               Please choose a flight before adding passenger information.
             </p>
-            <Link to="/" className="inline-flex h-11 items-center justify-center rounded bg-[#073b70] px-6 text-sm font-black text-white">
+            <Link to="/" className="inline-flex h-11 items-center justify-center rounded bg-[#073b70] px-6 text-sm font-semibold text-white">
               Back to Flight Search
             </Link>
           </div>
@@ -801,16 +801,16 @@ function PassengerInformation(): React.JSX.Element {
       <main className="min-h-screen bg-slate-100 text-slate-800">
         <header className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-center px-6">
-            <Link to="/" className="text-2xl font-black tracking-wide text-[#073b70]">
+            <Link to="/" className="text-2xl font-semibold tracking-wide text-[#073b70]">
               HORIZON<span className="text-amber-500">ELITE</span>
             </Link>
           </div>
         </header>
         <div className="mx-auto max-w-4xl px-6 py-24 text-center">
           <div className="rounded-lg border border-amber-300 bg-amber-50 p-8">
-            <h1 className="mb-3 text-2xl font-black text-amber-800">No Flight Selected</h1>
+            <h1 className="mb-3 text-2xl font-semibold text-amber-800">No Flight Selected</h1>
             <p className="mb-6 text-sm font-semibold text-amber-700">Please select a flight before entering passenger information.</p>
-            <Link to="/" className="inline-flex h-12 items-center justify-center rounded bg-[#073b70] px-6 text-sm font-black text-white">
+            <Link to="/" className="inline-flex h-12 items-center justify-center rounded bg-[#073b70] px-6 text-sm font-semibold text-white">
               Back to Search
             </Link>
           </div>
@@ -823,7 +823,7 @@ function PassengerInformation(): React.JSX.Element {
     <main className="min-h-screen bg-slate-100 text-slate-800">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-center px-6">
-          <Link to="/" className="text-2xl font-black tracking-wide text-[#073b70]">
+          <Link to="/" className="text-2xl font-semibold tracking-wide text-[#073b70]">
             HORIZON<span className="text-amber-500">ELITE</span>
           </Link>
         </div>
@@ -834,7 +834,7 @@ function PassengerInformation(): React.JSX.Element {
       <div className="mx-auto grid max-w-7xl gap-8 px-6 pb-16 lg:grid-cols-[1fr_360px]">
         <section>
           <div className="mb-7">
-            <h1 className="text-4xl font-black tracking-normal text-[#073b70]">Passenger Information</h1>
+            <h1 className="text-4xl font-semibold tracking-normal text-[#073b70]">Passenger Information</h1>
             <p className="mt-2 text-sm font-semibold text-slate-500">
               Add {requiredPassengerCount} passenger(s) for {selectedFlight.origin_airport_code} to {selectedFlight.destination_airport_code}.
             </p>
@@ -857,18 +857,18 @@ function PassengerInformation(): React.JSX.Element {
           {/* Passengers Added */}
           {passengers.length > 0 && (
             <div className="mb-8 rounded-lg border border-slate-300 bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-sm font-black uppercase tracking-wide text-[#073b70]">
+              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#073b70]">
                 Passengers Added ({passengers.length}/{requiredPassengerCount})
               </h2>
               <div className="space-y-3">
                 {passengers.map((passenger, index) => (
                   <div key={passenger.passenger_id} className="flex items-center justify-between rounded border border-green-200 bg-green-50 p-4">
                     <div className="flex items-center gap-4">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-green-600 text-sm font-black text-white">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-green-600 text-sm font-semibold text-white">
                         {index + 1}
                       </span>
                       <div>
-                        <p className="text-sm font-black text-[#073b70]">
+                        <p className="text-sm font-semibold text-[#073b70]">
                           {passenger.pi_title} {passenger.pi_first_name} {passenger.pi_last_name}
                         </p>
                         <p className="text-xs font-semibold text-slate-500">
@@ -893,10 +893,10 @@ function PassengerInformation(): React.JSX.Element {
           {passengers.length < requiredPassengerCount && (
             <div className="space-y-8">
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-5">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
                   Passenger {passengers.length + 1} of {requiredPassengerCount}
                 </p>
-                <p className="mt-2 text-2xl font-black text-[#073b70]">
+                <p className="mt-2 text-2xl font-semibold text-[#073b70]">
                   {getPassengerTypeLabel(formData.pi_passenger_type_code)} {nextPassengerTypeIndex}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-slate-600">
@@ -907,7 +907,7 @@ function PassengerInformation(): React.JSX.Element {
               <div className="rounded-lg border border-slate-300 bg-white p-6 shadow-sm">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                   <div className="flex-1">
-                    <p className="mb-2 text-sm font-black uppercase tracking-wide text-[#073b70]">Passenger Source</p>
+                    <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-[#073b70]">Passenger Source</p>
                     <p className="mb-4 text-xs font-semibold text-slate-500">
                       Select a saved passenger to auto-fill the form, or leave manual entry selected.
                     </p>
@@ -932,7 +932,7 @@ function PassengerInformation(): React.JSX.Element {
                   </div>
                   <Link
                     to="/profile#passenger-management"
-                    className="flex h-12 items-center justify-center rounded border border-[#073b70] px-5 text-xs font-black uppercase tracking-wide text-[#073b70]"
+                    className="flex h-12 items-center justify-center rounded border border-[#073b70] px-5 text-xs font-semibold uppercase tracking-wide text-[#073b70]"
                   >
                     Manage Saved Passengers
                   </Link>
@@ -1170,7 +1170,7 @@ function PassengerInformation(): React.JSX.Element {
                   onClick={handleAddPassenger}
                   disabled={isAddingPassenger}
                   type="button"
-                  className="h-12 rounded border-2 border-[#073b70] px-8 text-sm font-black uppercase tracking-wide text-[#073b70] disabled:opacity-50"
+                  className="h-12 rounded border-2 border-[#073b70] px-8 text-sm font-semibold uppercase tracking-wide text-[#073b70] disabled:opacity-50"
                 >
                   {isAddingPassenger ? '⏳ Adding...' : 'Add Passenger'}
                 </button>
@@ -1182,7 +1182,7 @@ function PassengerInformation(): React.JSX.Element {
           <div className="mt-16 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Link
               to="/flight-results"
-              className="flex h-12 w-48 items-center justify-center rounded border border-[#073b70] text-sm font-black text-[#073b70] transition hover:bg-slate-100"
+              className="flex h-12 w-48 items-center justify-center rounded border border-[#073b70] text-sm font-semibold text-[#073b70] transition hover:bg-slate-100"
             >
               ← Back to Flights
             </Link>
@@ -1191,7 +1191,7 @@ function PassengerInformation(): React.JSX.Element {
                 onClick={handleContinue}
                 disabled={isContinuing || passengers.length !== requiredPassengerCount}
                 type="button"
-                className="flex h-12 w-60 items-center justify-center rounded bg-[#073b70] text-sm font-black text-white shadow-md shadow-blue-950/20 transition hover:bg-[#0a2d51] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex h-12 w-60 items-center justify-center rounded bg-[#073b70] text-sm font-semibold text-white shadow-md shadow-blue-950/20 transition hover:bg-[#0a2d51] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isContinuing ? '⏳ Processing...' : 'Save & Continue →'}
               </button>

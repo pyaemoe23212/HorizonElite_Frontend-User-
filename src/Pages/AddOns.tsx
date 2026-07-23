@@ -152,10 +152,10 @@ const Stepper = () => (
       return (
         <div key={step} className="relative flex flex-col items-center gap-2 text-center">
           {index > 0 && <span className="absolute left-[-50%] top-4 h-px w-full bg-slate-300" />}
-          <span className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border text-sm font-black ${complete ? 'border-blue-600 bg-blue-600 text-white' : active ? 'border-amber-400 bg-[#073b70] text-white' : 'border-slate-300 bg-slate-100 text-slate-400'}`}>
+          <span className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold ${complete ? 'border-blue-600 bg-blue-600 text-white' : active ? 'border-amber-400 bg-[#073b70] text-white' : 'border-slate-300 bg-slate-100 text-slate-400'}`}>
             {complete ? <BadgeCheck size={18} /> : index + 1}
           </span>
-          <span className={`text-[10px] font-black uppercase ${complete || active ? 'text-[#073b70]' : 'text-slate-400'}`}>{step}</span>
+          <span className={`text-[10px] font-semibold uppercase ${complete || active ? 'text-[#073b70]' : 'text-slate-400'}`}>{step}</span>
         </div>
       );
     })}
@@ -278,30 +278,30 @@ const BookingSummary = ({
   return (
   <aside className="h-fit rounded border border-slate-300 bg-white shadow-sm">
     <div className={`${compact ? 'bg-[#073b70] text-white' : 'bg-white'} border-b border-slate-300 px-7 py-6`}>
-      <h2 className={`text-2xl font-black ${compact ? 'text-white' : 'text-[#073b70]'}`}>Booking Summary</h2>
-      {compact && <p className="mt-1 text-xs font-black uppercase tracking-widest text-blue-100">Reservation HE-202488</p>}
+      <h2 className={`text-2xl font-semibold ${compact ? 'text-white' : 'text-[#073b70]'}`}>Booking Summary</h2>
+      {compact && <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-blue-100">Reservation HE-202488</p>}
     </div>
     <div className="space-y-6 p-7">
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-xs font-black uppercase tracking-wide text-slate-500">Departing</span>
-          <a href="#" className="text-xs font-black uppercase text-cyan-600 underline">Flight Details</a>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Departing</span>
+          <a href="#" className="text-xs font-semibold uppercase text-cyan-600 underline">Flight Details</a>
         </div>
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <div><p className="text-sm font-semibold text-slate-600">{outboundFlight?.airline_name || 'Selected flight'}</p><p className="text-2xl font-black text-[#073b70]">{outboundFlight?.origin_airport_code || '--'} <span className="text-sm">{outboundFlight?.flight_number || ''}</span></p></div>
-          <div className="flex flex-col items-center gap-1 text-center text-xs font-bold text-slate-400"><Plane size={17} />4h 25m</div>
-          <div className="text-right"><p className="text-sm font-semibold text-slate-600">{outboundFlight?.cabin_class || 'Cabin'}</p><p className="text-2xl font-black text-[#073b70]">{outboundFlight?.destination_airport_code || '--'}</p></div>
+          <div><p className="text-sm font-semibold text-slate-600">{outboundFlight?.airline_name || 'Selected flight'}</p><p className="text-2xl font-semibold text-[#073b70]">{outboundFlight?.origin_airport_code || '--'} <span className="text-sm">{outboundFlight?.flight_number || ''}</span></p></div>
+          <div className="flex flex-col items-center gap-1 text-center text-xs font-medium text-slate-400"><Plane size={17} />4h 25m</div>
+          <div className="text-right"><p className="text-sm font-semibold text-slate-600">{outboundFlight?.cabin_class || 'Cabin'}</p><p className="text-2xl font-semibold text-[#073b70]">{outboundFlight?.destination_airport_code || '--'}</p></div>
         </div>
       </div>
       <div className="border-y border-slate-300 py-5">
-        <p className="mb-3 text-xs font-black uppercase tracking-wide text-slate-500">Passengers & Contact</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Passengers & Contact</p>
         <p className="font-semibold text-slate-700">{passengerSummary}</p>
       </div>
       <div>
-        <p className="mb-3 text-xs font-black uppercase tracking-wide text-slate-500">Selected Add-ons</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Selected Add-ons</p>
         <div className="space-y-2 text-sm font-semibold text-slate-700">
           {existingAddons.length > 0 && (
-            <div className="rounded border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-600">
+            <div className="rounded border border-slate-200 bg-slate-50 p-3 text-xs font-medium text-slate-600">
               Current paid add-ons: {paidMeals.length} meal(s)
               {paidBaggageWeight > 0 ? `, ${paidBaggageWeight}kg baggage` : ''}
               {newBaggageWeight > 0 ? ` -> ${paidBaggageWeight + newBaggageWeight}kg after payment` : ''}
@@ -325,8 +325,8 @@ const BookingSummary = ({
         <div className="flex justify-between"><span>Fare & Taxes</span><span>{formatMoney(fareTotal)}</span></div>
         <div className="flex justify-between"><span>Add-ons Total</span><span>{formatMoney(addOnsTotal)}</span></div>
         <div className="flex items-end justify-between pt-3">
-          <span className="text-xs font-black uppercase tracking-wide text-slate-500">Total Price</span>
-          <span className="text-3xl font-black text-[#073b70]">{formatMoney(fareTotal + addOnsTotal)}</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Price</span>
+          <span className="text-3xl font-semibold text-[#073b70]">{formatMoney(fareTotal + addOnsTotal)}</span>
         </div>
       </div>
       {errorMessage && (
@@ -337,11 +337,11 @@ const BookingSummary = ({
       <button
         onClick={onContinueToPayment}
         disabled={isCreatingBooking}
-        className="flex h-14 w-full items-center justify-center rounded bg-[#073b70] text-sm font-black text-white transition hover:bg-[#0a2d51] disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-14 w-full items-center justify-center rounded bg-[#073b70] text-sm font-semibold text-white transition hover:bg-[#0a2d51] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isCreatingBooking ? 'Creating Booking...' : 'Continue to Payment'}
       </button>
-      <Link to="/passenger-information" state={routeState} className="flex h-12 items-center justify-center rounded border border-slate-300 text-sm font-black text-slate-600">
+      <Link to="/passenger-information" state={routeState} className="flex h-12 items-center justify-center rounded border border-slate-300 text-sm font-semibold text-slate-600">
         Back
       </Link>
     </div>
@@ -373,21 +373,21 @@ const SeatContent = ({
 
     {!loading && error && (
       <div className="rounded border border-amber-300 bg-amber-50 p-6 text-center">
-        <p className="text-lg font-black text-amber-800">Seat map unavailable</p>
+        <p className="text-lg font-semibold text-amber-800">Seat map unavailable</p>
         <p className="mt-2 text-sm font-semibold text-amber-700">{error}</p>
       </div>
     )}
 
     {!loading && !error && options.length === 0 && (
       <div className="rounded border border-slate-300 bg-white p-6 text-center">
-        <p className="text-lg font-black text-[#073b70]">No selectable seats returned</p>
+        <p className="text-lg font-semibold text-[#073b70]">No selectable seats returned</p>
         <p className="mt-2 text-sm font-semibold text-slate-600">Seats may be assigned during check-in for this booking.</p>
       </div>
     )}
 
     {!loading && !error && options.length > 0 && (
       <div>
-        <p className="mb-5 text-xs font-black uppercase tracking-widest text-slate-500">Available Seats</p>
+        <p className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Available Seats</p>
         <div className="grid gap-3 sm:grid-cols-4 md:grid-cols-6">
           {options.map((seat) => (
             <button
@@ -402,9 +402,9 @@ const SeatContent = ({
               })}
               className={`min-h-24 rounded border bg-white p-3 text-center ${selectedCode === seat.id ? 'border-[#073b70] bg-blue-50' : 'border-slate-300'}`}
             >
-              <span className="block text-xl font-black text-[#073b70]">{seat.code}</span>
-              {seat.cabin && <span className="mt-1 block truncate text-[11px] font-bold text-slate-500">{seat.cabin}</span>}
-              <span className="mt-2 block text-xs font-black uppercase text-cyan-700">
+              <span className="block text-xl font-semibold text-[#073b70]">{seat.code}</span>
+              {seat.cabin && <span className="mt-1 block truncate text-[11px] font-medium text-slate-500">{seat.cabin}</span>}
+              <span className="mt-2 block text-xs font-semibold uppercase text-cyan-700">
                 {seat.price > 0 ? `${seat.currencyCode || currencyCode} ${seat.price.toLocaleString()}` : 'Free'}
               </span>
             </button>
@@ -427,7 +427,7 @@ const MealContent = ({
   onSelect: (addon: SelectedAddon) => void;
 }) => (
   <div className="border-t border-slate-300 p-7">
-    <p className="mb-5 text-xs font-black uppercase tracking-widest text-slate-500">Dietary & Medical</p>
+    <p className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Dietary & Medical</p>
     <div className="grid gap-4 md:grid-cols-3">
       {options.map((option) => {
         return (
@@ -437,12 +437,12 @@ const MealContent = ({
             onClick={() => onSelect({ type: 'MEAL', code: option.code, name: option.name, price: option.price, currencyCode: option.currencyCode })}
             className={`min-h-24 rounded border p-4 text-left ${selectedCode === option.code ? 'border-[#073b70] bg-blue-50' : 'border-slate-300 bg-white'}`}
           >
-            <span className="block text-sm font-black text-[#073b70]">{option.name}</span>
+            <span className="block text-sm font-semibold text-[#073b70]">{option.name}</span>
             <span className="mt-1 block text-xs font-semibold text-slate-500">{option.desc}</span>
-            <span className="mt-3 block text-xs font-black uppercase text-cyan-600">
+            <span className="mt-3 block text-xs font-semibold uppercase text-cyan-600">
               {option.price > 0 ? `${option.currencyCode || currencyCode} ${option.price.toLocaleString()}` : 'Free of charge'}
             </span>
-            {selectedCode === option.code && <span className="mt-3 block text-xs font-black uppercase text-[#073b70]">Selected - click again to remove</span>}
+            {selectedCode === option.code && <span className="mt-3 block text-xs font-semibold uppercase text-[#073b70]">Selected - click again to remove</span>}
           </button>
         );
       })}
@@ -470,10 +470,10 @@ const BaggageContent = ({
           onClick={() => onSelect({ type: 'BAGGAGE', code: option.code, name: option.name, price: option.price, currencyCode: option.currencyCode })}
           className={`h-36 border p-5 text-center ${selectedCode === option.code ? 'border-[#073b70] bg-blue-50' : 'border-slate-300 bg-white'}`}
         >
-          <span className="block text-2xl font-black text-[#073b70]">{option.weight}</span>
+          <span className="block text-2xl font-semibold text-[#073b70]">{option.weight}</span>
           <span className="mt-2 block text-sm font-semibold text-slate-500">{option.desc}</span>
-          <span className="mt-4 block text-sm font-black text-[#073b70]">{option.currencyCode || currencyCode} {option.price.toLocaleString()}</span>
-          {selectedCode === option.code && <span className="mt-2 block text-xs font-black uppercase text-[#073b70]">Selected</span>}
+          <span className="mt-4 block text-sm font-semibold text-[#073b70]">{option.currencyCode || currencyCode} {option.price.toLocaleString()}</span>
+          {selectedCode === option.code && <span className="mt-2 block text-xs font-semibold uppercase text-[#073b70]">Selected</span>}
         </button>
       ))}
     </div>
@@ -497,10 +497,10 @@ const AssistanceContent = ({
           onClick={() => onSelect({ type: 'ASSISTANCE', code: service.code, name: service.name, price: 0 })}
           className={`min-h-36 border p-6 text-center ${selectedCode === service.code ? 'border-[#073b70] bg-blue-50' : 'border-slate-300 bg-white'}`}
         >
-          <span className="block text-lg font-black text-[#073b70]">{service.name}</span>
+          <span className="block text-lg font-semibold text-[#073b70]">{service.name}</span>
           <span className="mt-2 block text-sm font-semibold text-slate-500">Personalized care during your journey.</span>
-          <span className="mt-4 block text-xs font-black uppercase text-cyan-600">Free of charge</span>
-          {selectedCode === service.code && <span className="mt-2 block text-xs font-black uppercase text-[#073b70]">Selected</span>}
+          <span className="mt-4 block text-xs font-semibold uppercase text-cyan-600">Free of charge</span>
+          {selectedCode === service.code && <span className="mt-2 block text-xs font-semibold uppercase text-[#073b70]">Selected</span>}
         </button>
       ))}
     </div>
@@ -521,10 +521,10 @@ const LoungeContent = ({
         <article key={option.code} className={`border bg-white ${selectedCode === option.code ? 'border-[#073b70]' : 'border-slate-300'}`}>
           <img src={option.image} alt={option.name} className="h-56 w-full object-cover" />
           <div className="p-6">
-            <h3 className="text-3xl font-black text-[#073b70]">{option.name}</h3>
-            <p className="mt-2 text-xs font-black uppercase tracking-widest text-slate-500">{option.meta}</p>
+            <h3 className="text-3xl font-semibold text-[#073b70]">{option.name}</h3>
+            <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-slate-500">{option.meta}</p>
             <p className="mt-4 min-h-20 text-base font-semibold leading-7 text-slate-600">A quiet sanctuary with premium dining, work spaces, and calm pre-flight service.</p>
-            <button type="button" onClick={() => onSelect({ type: 'LOUNGE', code: option.code, name: option.name, price: option.price })} className="mt-5 h-12 w-full border border-[#073b70] bg-[#073b70] text-sm font-black tracking-widest text-white">{selectedCode === option.code ? 'Selected - Click to Remove' : formatUsd(option.price)}</button>
+            <button type="button" onClick={() => onSelect({ type: 'LOUNGE', code: option.code, name: option.name, price: option.price })} className="mt-5 h-12 w-full border border-[#073b70] bg-[#073b70] text-sm font-semibold tracking-widest text-white">{selectedCode === option.code ? 'Selected - Click to Remove' : formatUsd(option.price)}</button>
           </div>
         </article>
       ))}
@@ -543,11 +543,11 @@ const InsuranceContent = ({
     <div className="grid gap-6 md:grid-cols-3">
       {insuranceOptions.map((option, index) => (
         <article key={option.code} className={`relative border p-6 text-center ${selectedCode === option.code ? 'border-[#073b70] bg-blue-50' : index === 1 ? 'border-amber-400' : 'border-slate-300'}`}>
-          {index === 1 && <span className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 bg-amber-300 px-4 py-1 text-[10px] font-black uppercase text-white">Recommended</span>}
-          <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">{option.name}</h3>
+          {index === 1 && <span className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 bg-amber-300 px-4 py-1 text-[10px] font-semibold uppercase text-white">Recommended</span>}
+          <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500">{option.name}</h3>
           <p className="mt-5 min-h-20 text-base font-semibold text-slate-600">{option.desc}</p>
-          <p className="mt-4 text-sm text-slate-500">USD <span className="text-4xl font-black text-[#073b70]">{option.price.toLocaleString()}</span></p>
-          <button type="button" onClick={() => onSelect({ type: 'INSURANCE', code: option.code, name: `${option.name} Insurance`, price: option.price })} className={`mt-5 h-11 w-full border border-[#073b70] text-sm font-black ${selectedCode === option.code || index === 1 ? 'bg-[#073b70] text-white' : 'text-[#073b70]'}`}>{selectedCode === option.code ? 'Selected - Remove' : 'Select'}</button>
+          <p className="mt-4 text-sm text-slate-500">USD <span className="text-4xl font-semibold text-[#073b70]">{option.price.toLocaleString()}</span></p>
+          <button type="button" onClick={() => onSelect({ type: 'INSURANCE', code: option.code, name: `${option.name} Insurance`, price: option.price })} className={`mt-5 h-11 w-full border border-[#073b70] text-sm font-semibold ${selectedCode === option.code || index === 1 ? 'bg-[#073b70] text-white' : 'text-[#073b70]'}`}>{selectedCode === option.code ? 'Selected - Remove' : 'Select'}</button>
         </article>
       ))}
     </div>
@@ -947,7 +947,7 @@ function AddOns(): React.JSX.Element {
     <main className="min-h-screen bg-slate-100 text-slate-800">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-center px-6">
-          <Link to="/" className="text-3xl font-black tracking-wide text-[#073b70]">HORIZON<span className="text-amber-500">ELITE</span></Link>
+          <Link to="/" className="text-3xl font-semibold tracking-wide text-[#073b70]">HORIZON<span className="text-amber-500">ELITE</span></Link>
         </div>
       </header>
       <Stepper />
@@ -955,7 +955,7 @@ function AddOns(): React.JSX.Element {
       <div className="mx-auto grid max-w-7xl gap-10 px-6 pb-20 lg:grid-cols-[1fr_390px]">
         <section>
           <div className="mb-8">
-            <h1 className="text-4xl font-black tracking-normal text-[#073b70]">{personalized ? 'Personalize Your Journey' : 'Elevate your travel experience'}</h1>
+            <h1 className="text-4xl font-semibold tracking-normal text-[#073b70]">{personalized ? 'Personalize Your Journey' : 'Elevate your travel experience'}</h1>
             <p className="mt-3 text-lg font-semibold text-slate-600">Personalize your journey with our premium selection of flight services.</p>
           </div>
 
@@ -968,14 +968,14 @@ function AddOns(): React.JSX.Element {
                     {item.image ? (
                       <img src={item.image} alt={item.title} className="h-16 w-16 rounded object-cover" />
                     ) : (
-                      <span className="flex h-16 w-16 items-center justify-center rounded bg-slate-100 text-2xl font-black text-[#073b70]">{item.title.slice(0, 1)}</span>
+                      <span className="flex h-16 w-16 items-center justify-center rounded bg-slate-100 text-2xl font-semibold text-[#073b70]">{item.title.slice(0, 1)}</span>
                     )}
                     <span className="min-w-0 flex-1">
-                      <span className="block text-2xl font-black text-[#073b70]">{item.title}</span>
+                      <span className="block text-2xl font-semibold text-[#073b70]">{item.title}</span>
                       <span className="mt-1 block text-sm font-semibold text-slate-600">{item.subtitle}</span>
-                      <span className="mt-1 block text-xs font-black uppercase text-cyan-600">{getAddOnPriceLabel(item.key, item.price)}</span>
+                      <span className="mt-1 block text-xs font-semibold uppercase text-cyan-600">{getAddOnPriceLabel(item.key, item.price)}</span>
                     </span>
-                    <span className="text-2xl font-black text-[#073b70]">{open ? '^' : '+'}</span>
+                    <span className="text-2xl font-semibold text-[#073b70]">{open ? '^' : '+'}</span>
                   </button>
                   {open && renderContent(item.key)}
                 </article>

@@ -141,7 +141,7 @@ function Navbar(): React.JSX.Element {
         <div className="flex items-center gap-12">
           <Link
             to="/"
-            className="text-xl font-black tracking-wide text-[#083b74]"
+            className="text-xl font-semibold tracking-wide text-[#083b74]"
           >
             HORIZON<span className="text-amber-500">ELITE</span>
           </Link>
@@ -166,7 +166,7 @@ function Navbar(): React.JSX.Element {
             <button
               type="button"
               onClick={() => setLanguageDropdownOpen(!languageDropdownOpen)}
-              className="hidden items-center gap-1.5 text-sm font-bold text-slate-800 transition hover:text-blue-600 sm:flex"
+              className="hidden items-center gap-1.5 text-sm font-medium text-slate-800 transition hover:text-blue-600 sm:flex"
               aria-label="Select language"
               aria-expanded={languageDropdownOpen}
             >
@@ -230,7 +230,7 @@ function Navbar(): React.JSX.Element {
                 <div className="absolute right-0 top-14 w-52 rounded-xl border border-slate-200 bg-white shadow-lg shadow-slate-200/60">
                   {/* User info */}
                   <div className="border-b border-slate-100 px-4 py-3">
-                    <p className="text-xs font-black uppercase tracking-wide text-[#063b70]">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#063b70]">
                       {user?.first_name} {user?.last_name}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-slate-500">
