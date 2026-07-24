@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Bell, CalendarDays, CheckSquare, ClipboardList, Mail, MessageCircle } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import PageHeader from '../components/PageHeader';
+import PostBookingFlowSteps from '../components/PostBookingFlowSteps';
 import { checkInApi, type SelectedFlightResponse } from '../Services/api';
 
 const services = [
@@ -225,26 +226,43 @@ function PersonalizedServices(): React.JSX.Element {
     }
 
     setIsFinishing(false);
-    navigate('/booking-confirmed', { state });
+    navigate('/booking-confirmed', { state: { ...routeState, personalizationComplete: true } });
   };
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-800">
+    <main className="min-h-screen bg-[#eef3f7] text-slate-800">
       <PageHeader rightLink={{ label: 'Services', to: '/additional-services' }} />
 
-      <section className="mx-auto max-w-4xl px-6 py-20">
-        <div className="text-center">
-          <h1 className="text-4xl font-semibold text-[#073b70]">Personalized Flight Services</h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base font-semibold leading-7 text-slate-600">Enhance your travel experience with our automated notification and reminder suite. Horizon Elite ensures you're prepared at every step of your journey.</p>
+      <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-10">
+        <PostBookingFlowSteps currentStep={3} />
+
+        <div className="rounded-lg border border-slate-300 bg-white p-5 shadow-sm sm:p-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-cyan-700">Step 3 of 3</p>
+              <h1 className="mt-2 text-3xl font-semibold text-[#073b70] sm:text-4xl">Personalize Your Trip</h1>
+              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600 sm:text-base">
+                Choose the reminders you want. Everything is optional, and you can finish with one click.
+              </p>
+            </div>
+
+            <Link
+              to="/booking-confirmed"
+              state={routeState}
+              className="inline-flex h-12 items-center justify-center rounded border border-[#073b70] px-6 text-sm font-semibold text-[#073b70] hover:bg-blue-50"
+            >
+              Back to Booking
+            </Link>
+          </div>
         </div>
 
-        <div className="mt-12 grid gap-8 md:grid-cols-2">
+        <div className="mt-8 grid gap-5 md:grid-cols-2">
           {services.map((service, index) => (
-            <article key={service.title} className="min-h-52 border border-slate-200 bg-white p-8 shadow-sm">
+            <article key={service.title} className="rounded-lg border border-slate-300 bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex gap-2">
                   {service.icons.map((Icon) => (
-                    <span key={Icon.displayName ?? Icon.name} className="flex h-9 w-9 items-center justify-center bg-slate-100 text-[#073b70]">
+                    <span key={Icon.displayName ?? Icon.name} className="flex h-10 w-10 items-center justify-center rounded bg-blue-50 text-[#073b70]">
                       <Icon size={18} />
                     </span>
                   ))}
@@ -258,37 +276,52 @@ function PersonalizedServices(): React.JSX.Element {
                   <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${enabled[index] ? 'left-6' : 'left-1'}`} />
                 </button>
               </div>
-              <h2 className="mt-9 text-2xl font-semibold text-[#073b70]">{service.title}</h2>
+              <h2 className="mt-5 text-xl font-semibold text-[#073b70]">{service.title}</h2>
               <p className="mt-3 text-sm font-semibold leading-6 text-slate-600">{service.description}</p>
             </article>
           ))}
         </div>
 
-        <div className="mt-14 flex flex-col items-center gap-5">
+        <div className="mt-8 rounded-lg border border-slate-300 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-[#073b70]">Finish Setup</h2>
+              <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                Enabled reminders will be created now. Turn off anything you do not want before finishing.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link to="/booking-confirmed" state={{ ...routeState, personalizationComplete: true }} className="flex h-12 items-center justify-center rounded border border-slate-300 px-6 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                Skip and Finish
+              </Link>
+              <button
+                type="button"
+                onClick={finishBooking}
+                disabled={isFinishing}
+                className="flex h-12 items-center justify-center rounded bg-[#073b70] px-6 text-sm font-semibold text-white shadow-lg shadow-blue-950/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isFinishing ? 'Setting Reminders...' : 'Finish Booking'}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5 space-y-3">
           {calendarMessage && (
-            <p className={`max-w-md text-center text-sm font-semibold ${calendarMessage.includes('could not') ? 'text-red-600' : 'text-emerald-700'}`}>
+            <p className={`text-sm font-semibold ${calendarMessage.includes('could not') ? 'text-red-600' : 'text-emerald-700'}`}>
               {calendarMessage}
             </p>
           )}
           {checkInReminderMessage && (
-            <p className={`max-w-md text-center text-sm font-semibold ${checkInReminderMessage.includes('could not') ? 'text-red-600' : 'text-emerald-700'}`}>
+            <p className={`text-sm font-semibold ${checkInReminderMessage.includes('could not') ? 'text-red-600' : 'text-emerald-700'}`}>
               {checkInReminderMessage}
             </p>
           )}
           {whatsAppReminderMessage && (
-            <p className={`max-w-md text-center text-sm font-semibold ${whatsAppReminderMessage.includes('could not') ? 'text-red-600' : 'text-emerald-700'}`}>
+            <p className={`text-sm font-semibold ${whatsAppReminderMessage.includes('could not') ? 'text-red-600' : 'text-emerald-700'}`}>
               {whatsAppReminderMessage}
             </p>
           )}
-          <button
-            type="button"
-            onClick={finishBooking}
-            disabled={isFinishing}
-            className="flex h-14 w-56 items-center justify-center rounded bg-[#073b70] text-sm font-semibold text-white shadow-lg shadow-blue-950/20 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isFinishing ? 'Setting Reminders...' : 'Finish Booking'}
-          </button>
-          <Link to="/booking-confirmed" state={state} className="text-sm font-semibold text-slate-600 underline">Skip for now</Link>
+          </div>
         </div>
       </section>
     </main>

@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Plane } from 'lucide-react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
+import { CircleDollarSign, Plane } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import type { FlightResultItem, SelectedFlightResponse, SelectFlightRequest } from '../Services/api';
 import type { FlightSegment, SearchFlightRequest } from '../Services/api';
@@ -7,6 +7,8 @@ import { api } from '../Services/api';
 import { FlightCard } from '../components/FlightCard';
 import { Stepper } from '../components/Stepper';
 import { ModifySearch, type ModifySearchValues } from '../components/ModifySearch';
+import { convertCurrency, currencyNames, currencySymbols, formatConvertedCurrency, formatUsdExchangeRate, normalizeCurrencyCode } from '../utils/currency';
+import { useCurrency } from '../contexts/useCurrency';
 
 type FlightPhase = 'outbound' | 'inbound';
 type TripType = 'ONE_WAY' | 'ROUND_TRIP';
@@ -73,6 +75,7 @@ function FlightResults(): React.JSX.Element {
   const { state } = useLocation();
   const navigate = useNavigate();
   const searchState = (state ?? {}) as SearchState;
+  const { selectedCurrency: displayCurrency, setSelectedCurrency, currencies, exchangeRates, status: currencyRateStatus } = useCurrency();
 
   const flightSearchId = searchState.flightSearchId || '';
   const flightResults = searchState.flightResults || [];
@@ -90,6 +93,13 @@ function FlightResults(): React.JSX.Element {
   const [sortBy, setSortBy] = useState<SortOption>('recommended');
   const [stopsFilter, setStopsFilter] = useState<'all' | 'direct'>('all');
   const [refundableOnly, setRefundableOnly] = useState(false);
+  const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
+  const [currencySearch, setCurrencySearch] = useState('');
+  const currencyRef = useRef<HTMLDivElement>(null);
+  const filteredCurrencies = currencies.filter((currency) =>
+    currency.toLowerCase().includes(currencySearch.trim().toLowerCase()) ||
+    (currencyNames[currency] || '').toLowerCase().includes(currencySearch.trim().toLowerCase())
+  );
 
   const isRoundTrip = searchData.tripType === 'Return';
   const tripType: TripType = isRoundTrip ? 'ROUND_TRIP' : 'ONE_WAY';
@@ -97,6 +107,9 @@ function FlightResults(): React.JSX.Element {
   const totalPrice =
     (selectedOutboundFlight ? Number(selectedOutboundFlight.total_price) : 0) +
     (selectedInboundFlight ? Number(selectedInboundFlight.total_price) : 0);
+  const totalDisplayPrice =
+    (selectedOutboundFlight ? convertCurrency(selectedOutboundFlight.total_price, selectedOutboundFlight.currency_code, displayCurrency, exchangeRates) : 0) +
+    (selectedInboundFlight ? convertCurrency(selectedInboundFlight.total_price, selectedInboundFlight.currency_code, displayCurrency, exchangeRates) : 0);
   const visibleFlights = useMemo(() => {
     const filtered = flightResults.filter((flight) => {
       if (stopsFilter === 'direct' && flight.total_stop_count !== 0) return false;
@@ -111,6 +124,24 @@ function FlightResults(): React.JSX.Element {
       return 0;
     });
   }, [flightResults, refundableOnly, sortBy, stopsFilter]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (currencyRef.current && !currencyRef.current.contains(event.target as Node)) {
+        setCurrencyDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectDisplayCurrency = (currency: string) => {
+    setSelectedCurrency(currency);
+    setCurrencyDropdownOpen(false);
+    setCurrencySearch('');
+  };
+
 
   const selectFlight = (flight: FlightResultItem) => {
     setErrorMessage('');
@@ -419,6 +450,49 @@ function FlightResults(): React.JSX.Element {
                 </h2>
               </div>
               <div className="flex flex-wrap gap-3">
+                <div className="relative" ref={currencyRef}>
+                  <button
+                    type="button"
+                    onClick={() => setCurrencyDropdownOpen(open => !open)}
+                    className="flex h-10 items-center gap-2 rounded-xl border border-[#073b70] bg-white px-4 text-sm font-semibold text-[#073b70] transition duration-200 hover:-translate-y-0.5 hover:bg-blue-50 hover:shadow-sm"
+                  >
+                    <CircleDollarSign size={17} />
+                    {currencySymbols[displayCurrency]} {displayCurrency}
+                  </button>
+                  {currencyDropdownOpen && (
+                    <div className="absolute right-0 top-12 z-30 w-80 animate-[fadeIn_160ms_ease-out] rounded-xl border border-slate-200 bg-white p-4 shadow-xl">
+                      <p className="flex items-center gap-2 text-sm font-semibold text-[#073b70]">
+                        <CircleDollarSign size={17} />
+                        Change Currency
+                      </p>
+                      <p className="mt-1 text-xs font-semibold text-slate-500">
+                        {currencyRateStatus === 'live' ? 'Live exchange rates' : currencyRateStatus === 'loading' ? 'Loading live rates' : 'Fallback rates'}
+                      </p>
+                      <input
+                        value={currencySearch}
+                        onChange={(event) => setCurrencySearch(event.target.value)}
+                        className="mt-3 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-semibold outline-none focus:border-[#073b70]"
+                        placeholder="Search currency"
+                      />
+                      <div className="mt-3 grid max-h-72 grid-cols-2 gap-2 overflow-y-auto">
+                        {filteredCurrencies.map((currency) => (
+                          <button
+                            key={currency}
+                            type="button"
+                            onClick={() => selectDisplayCurrency(currency)}
+                            className={`rounded-lg border px-3 py-2 text-left transition duration-150 hover:-translate-y-0.5 ${displayCurrency === currency ? 'border-[#073b70] bg-[#073b70] text-white shadow-sm' : 'border-slate-200 hover:bg-blue-50'}`}
+                          >
+                            <span className="block text-sm font-semibold">{currencySymbols[currency]} {currency}</span>
+                            <span className={`block text-xs font-semibold ${displayCurrency === currency ? 'text-blue-100' : 'text-slate-400'}`}>{currencyNames[currency]}</span>
+                            <span className={`mt-1 block text-[11px] font-semibold ${displayCurrency === currency ? 'text-blue-100' : 'text-slate-500'}`}>
+                              {formatUsdExchangeRate(currency, exchangeRates)}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <select
                   value={sortBy}
                   onChange={(event) => setSortBy(event.target.value as SortOption)}
@@ -457,11 +531,13 @@ function FlightResults(): React.JSX.Element {
 
                 return (
                   <div key={flight.flight_result_id}>
-                    <FlightCard
-                      flight={flight}
-                      selected={selected}
-                      onSelect={() => selectFlight(flight)}
-                    />
+                      <FlightCard
+                        flight={flight}
+                        selected={selected}
+                        onSelect={() => selectFlight(flight)}
+                        displayCurrency={displayCurrency}
+                        exchangeRates={exchangeRates}
+                      />
                   </div>
                 );
               })}
@@ -476,7 +552,17 @@ function FlightResults(): React.JSX.Element {
 
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Total Price</p>
             <p className="mb-8 border-b border-slate-200 pb-6 text-3xl font-semibold text-[#073b70]">
-              {flightResults[0]?.currency_code || 'USD'} {totalPrice.toFixed(2)}
+              {formatConvertedCurrency(totalDisplayPrice, displayCurrency, displayCurrency, exchangeRates)}
+              {displayCurrency !== normalizeCurrencyCode(flightResults[0]?.currency_code) && (
+                <span className="mt-1 block text-xs font-semibold text-slate-400">
+                  API total approx. {flightResults[0]?.currency_code || 'USD'} {totalPrice.toFixed(2)}
+                </span>
+              )}
+            </p>
+            <p className="mb-5 rounded-xl bg-slate-50 p-3 text-xs font-semibold text-slate-500">
+              {currencyRateStatus === 'live' && 'Using live exchange rates.'}
+              {currencyRateStatus === 'loading' && 'Loading live exchange rates...'}
+              {currencyRateStatus === 'fallback' && 'Using fallback exchange rates while live rates are unavailable.'}
             </p>
 
             <p className="mb-5 text-sm font-semibold uppercase tracking-wide text-[#073b70]">Trip Summary</p>

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { BadgeCheck, Plane } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { BadgeCheck, CreditCard, Plane } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router';
-import { addonApi, duffelOrderApi, paymentApi, type CreatePaymentRequest } from '../Services/api';
+import { addonApi, duffelOrderApi, paymentApi, profileApi, type CreatePaymentRequest, type SavedPaymentMethod } from '../Services/api';
 import { useAuth } from '../contexts/useAuth';
 
 type PaymentMethod = 'card' | 'qr' | 'banking' | 'wallet';
@@ -154,7 +154,8 @@ const getTicketingIssueMessage = (error: any): string => {
 
 const OFFER_UNAVAILABLE_MESSAGE =
   'This flight price is no longer available. Please run a new flight search and choose another flight.';
-const steps = ['Flight', 'Passenger', 'Services', 'Payment', 'Confirm'];
+const newBookingSteps = ['Flight', 'Passenger', 'Services', 'Payment', 'Confirm'];
+const addOnPaymentSteps = ['Manage', 'Add-ons', 'Payment', 'Done'];
 
 const methods: Array<{ id: PaymentMethod; title: string; subtitle: string; icon: string }> = [
   { id: 'card', title: 'Credit / Debit Card', subtitle: 'Mastercard / Visa', icon: 'CARD' },
@@ -183,6 +184,12 @@ const getCardBrand = (cardNumber: string) => {
   if (/^3[47]/.test(digits)) return 'American Express';
   if (/^(6011|65|64[4-9])/.test(digits)) return 'Discover';
   return 'Card';
+};
+
+const formatSavedCardExpiry = (method: SavedPaymentMethod) => {
+  const month = String(method.expiry_month).padStart(2, '0');
+  const year = String(method.expiry_year).slice(-2);
+  return `${month}/${year}`;
 };
 
 const CardBrandLogo = ({ brand, compact = false }: { brand: string; compact?: boolean }) => {
@@ -296,11 +303,15 @@ const validateCardDetails = (cardDetails: CardDetails): CardErrors => {
   return errors;
 };
 
-const Stepper = () => (
-  <div className="mx-auto grid max-w-5xl grid-cols-5 items-start gap-2 px-4 py-10">
+const Stepper = ({ isPostBookingAddonPayment }: { isPostBookingAddonPayment: boolean }) => {
+  const steps = isPostBookingAddonPayment ? addOnPaymentSteps : newBookingSteps;
+  const activeIndex = isPostBookingAddonPayment ? 2 : 3;
+
+  return (
+  <div className={`mx-auto grid max-w-5xl items-start gap-2 px-4 py-10 ${isPostBookingAddonPayment ? 'grid-cols-4' : 'grid-cols-5'}`}>
     {steps.map((step, index) => {
-      const complete = index < 3;
-      const active = index === 3;
+      const complete = index < activeIndex;
+      const active = index === activeIndex;
       return (
         <div key={step} className="relative flex flex-col items-center gap-2 text-center">
           {index > 0 && <span className="absolute left-[-50%] top-4 h-px w-full bg-slate-300" />}
@@ -312,7 +323,8 @@ const Stepper = () => (
       );
     })}
   </div>
-);
+  );
+};
 
 const TripSummary = ({ 
   method, 
@@ -322,6 +334,7 @@ const TripSummary = ({
   errorMessage,
   offerUnavailable,
   isMissingCheckoutState,
+  isPostBookingAddonPayment,
 }: { 
   method: PaymentMethod; 
   isProcessing: boolean; 
@@ -330,6 +343,7 @@ const TripSummary = ({
   errorMessage?: string;
   offerUnavailable?: boolean;
   isMissingCheckoutState?: boolean;
+  isPostBookingAddonPayment?: boolean;
 }) => {
   const pnrReference = routeState?.pnrReference || 'Not available';
   const outboundFlight = routeState?.outboundFlight || routeState?.selectedFlight;
@@ -351,7 +365,7 @@ const TripSummary = ({
 
   return (
     <aside className="h-fit border border-slate-300 bg-white p-8 shadow-md">
-      <h2 className="text-3xl font-semibold text-[#073b70]">Trip Summary</h2>
+      <h2 className="text-3xl font-semibold text-[#073b70]">{isPostBookingAddonPayment ? 'Add-ons Summary' : 'Trip Summary'}</h2>
       <div className="my-7 h-px bg-slate-200" />
       {/* PNR Reference Display */}
       <div className="mb-6 rounded bg-blue-50 p-4 border border-blue-200">
@@ -394,7 +408,7 @@ const TripSummary = ({
         disabled={isProcessing}
         className="mt-9 flex h-16 w-full items-center justify-center rounded bg-[#073b70] text-base font-semibold text-white shadow-lg shadow-blue-950/20 transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-500"
       >
-        {offerUnavailable ? 'Search Again' : isMissingCheckoutState ? 'Return to Booking' : isProcessing ? 'Creating Payment...' : method === 'qr' ? 'Complete QR Payment' : `Pay ${currencyCode} ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+        {offerUnavailable ? 'Search Again' : isMissingCheckoutState ? 'Return to Booking' : isProcessing ? (isPostBookingAddonPayment ? 'Completing Add-ons...' : 'Creating Payment...') : method === 'qr' ? 'Complete QR Payment' : `Pay ${currencyCode} ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
       </button>
       {isProcessing && <p className="mt-4 text-center text-xs font-semibold uppercase tracking-widest text-cyan-700">Processing...</p>}
       <div className="mt-7 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">SSL 256-bit encrypted</div>
@@ -406,17 +420,76 @@ const CardPanel = ({
   cardDetails,
   cardErrors,
   onCardChange,
+  savedPaymentMethods,
+  savedPaymentsLoading,
+  selectedSavedPaymentId,
+  onUseSavedPayment,
 }: {
   cardDetails: CardDetails;
   cardErrors: CardErrors;
   onCardChange: (field: keyof CardDetails, value: string | boolean) => void;
+  savedPaymentMethods: SavedPaymentMethod[];
+  savedPaymentsLoading: boolean;
+  selectedSavedPaymentId: string;
+  onUseSavedPayment: (method: SavedPaymentMethod) => void;
 }) => {
   const cardBrand = getCardBrand(cardDetails.cardNumber);
+  const selectedSavedPayment = savedPaymentMethods.find(method => method.payment_method_id === selectedSavedPaymentId);
 
   return (
   <section>
     <h1 className="text-3xl font-semibold text-[#073b70]">Credit / Debit Card</h1>
     <p className="mt-3 text-base font-semibold text-slate-600">Enter your card details for secure payment processing.</p>
+
+    <div className="mt-8 rounded border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-[#073b70]">Saved Payment Methods</h2>
+          <p className="mt-1 text-sm font-medium text-slate-500">Tap a saved card to prefill safe details. Tap again to clear it.</p>
+        </div>
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-[#073b70]">
+          <CreditCard className="h-5 w-5" aria-hidden="true" />
+        </span>
+      </div>
+
+      {savedPaymentsLoading ? (
+        <p className="mt-5 rounded border border-dashed border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-500">Loading saved payment methods...</p>
+      ) : savedPaymentMethods.length > 0 ? (
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {savedPaymentMethods.map((method) => {
+            const isSelected = selectedSavedPaymentId === method.payment_method_id;
+            return (
+              <button
+                key={method.payment_method_id}
+                type="button"
+                onClick={() => onUseSavedPayment(method)}
+                className={`he-action rounded border p-4 text-left transition ${isSelected ? 'border-[#073b70] bg-blue-50 shadow-sm ring-2 ring-[#073b70]/10' : 'border-slate-200 bg-slate-50 hover:border-[#073b70] hover:bg-white'}`}
+              >
+                <span className="flex items-start justify-between gap-3">
+                  <span>
+                    <span className="block text-base font-semibold text-slate-800">{method.card_brand || method.payment_type || 'Card'} ending {method.last_four}</span>
+                    <span className="mt-1 block text-xs font-semibold uppercase tracking-widest text-slate-500">Expires {formatSavedCardExpiry(method)}</span>
+                  </span>
+                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-widest ${isSelected ? 'bg-[#073b70] text-white' : method.is_default ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-500'}`}>
+                    {isSelected ? 'Using' : method.is_default ? 'Default' : 'Use'}
+                  </span>
+                </span>
+                <span className="mt-3 block text-sm font-medium text-slate-500">{method.cardholder_name}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="mt-5 rounded border border-dashed border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-500">No saved payment methods yet. You can still enter a card below.</p>
+      )}
+
+      {selectedSavedPayment && (
+        <p className="mt-4 rounded bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">
+          Selected reference: {selectedSavedPayment.card_brand || 'Card'} ending {selectedSavedPayment.last_four}. For security, the full card number and CVV are not saved, so they are still required.
+        </p>
+      )}
+    </div>
+
     <div className="mt-8 flex items-center gap-5">
       <CardBrandLogo brand={cardBrand} />
       <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">{cardBrand === 'Card' ? 'Card type will appear as you type' : `${cardBrand} detected`}</p>
@@ -593,6 +666,7 @@ function Payment(): React.JSX.Element {
   const paymentCurrencyCode = routeState.currency_code || PRIMARY_CURRENCY_CODE;
   const paymentAmount = calculateTotalAmount(routeState);
   const isMissingCheckoutState = !hasUsablePaymentState(routeState);
+  const isPostBookingAddonPayment = Boolean(routeState.postBookingAddonPayment);
   
   const [method, setMethod] = useState<PaymentMethod>('card');
   const [selectedBank, setSelectedBank] = useState<PaymentProvider>('K PLUS');
@@ -600,6 +674,9 @@ function Payment(): React.JSX.Element {
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [offerUnavailable, setOfferUnavailable] = useState(false);
+  const [savedPaymentMethods, setSavedPaymentMethods] = useState<SavedPaymentMethod[]>([]);
+  const [savedPaymentsLoading, setSavedPaymentsLoading] = useState(false);
+  const [selectedSavedPaymentId, setSelectedSavedPaymentId] = useState('');
   const [cardDetails, setCardDetails] = useState<CardDetails>({
     cardNumber: '',
     expiryDate: '',
@@ -608,14 +685,72 @@ function Payment(): React.JSX.Element {
     acceptedTerms: false,
   });
   const [cardErrors, setCardErrors] = useState<CardErrors>({});
+  const selectedSavedPayment = savedPaymentMethods.find(savedMethod => savedMethod.payment_method_id === selectedSavedPaymentId);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSavedPaymentMethods = async () => {
+      if (!user?.email_address && !localStorage.getItem('jwt_token')) return;
+
+      setSavedPaymentsLoading(true);
+      try {
+        const methods = await profileApi.getSummary().then(summary => summary.paymentMethods || []);
+        if (cancelled) return;
+
+        setSavedPaymentMethods(methods);
+        setSelectedSavedPaymentId('');
+      } catch (error) {
+        console.warn('Could not load saved payment methods:', error);
+      } finally {
+        if (!cancelled) setSavedPaymentsLoading(false);
+      }
+    };
+
+    loadSavedPaymentMethods();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.email_address]);
 
   const handleCardChange = (field: keyof CardDetails, value: string | boolean) => {
     setCardDetails(prev => ({ ...prev, [field]: value }));
+    setSelectedSavedPaymentId('');
     setCardErrors(prev => {
       const nextErrors = { ...prev };
       delete nextErrors[field];
       return nextErrors;
     });
+    setErrorMessage('');
+  };
+
+  const handleUseSavedPayment = (savedMethod: SavedPaymentMethod) => {
+    setMethod('card');
+
+    if (selectedSavedPaymentId === savedMethod.payment_method_id) {
+      setSelectedSavedPaymentId('');
+      setCardDetails(prev => ({
+        ...prev,
+        cardNumber: '',
+        cvv: '',
+        expiryDate: '',
+        cardholderName: '',
+      }));
+      setCardErrors({});
+      setErrorMessage('');
+      return;
+    }
+
+    setSelectedSavedPaymentId(savedMethod.payment_method_id);
+    setCardDetails(prev => ({
+      ...prev,
+      cardNumber: '',
+      cvv: '',
+      expiryDate: formatSavedCardExpiry(savedMethod),
+      cardholderName: savedMethod.cardholder_name.toUpperCase(),
+    }));
+    setCardErrors({});
     setErrorMessage('');
   };
 
@@ -648,13 +783,13 @@ function Payment(): React.JSX.Element {
       setErrorMessage('');
       setOfferUnavailable(false);
 
-      const contactEmail =
-        routeState.user_email_address ||
+      const bookingOwnerEmail =
         routeState.booking?.user_email_address ||
+        routeState.user_email_address ||
         routeState.passengers?.find(passenger => passenger.pi_contact_email)?.pi_contact_email;
-      const userEmail = user?.email_address || contactEmail;
+      const payerEmail = user?.email_address || bookingOwnerEmail;
 
-      if (!userEmail) {
+      if (!bookingOwnerEmail) {
         throw new Error('Passenger contact email is required for guest payment.');
       }
       if (method === 'banking' && !selectedBank) {
@@ -666,7 +801,7 @@ function Payment(): React.JSX.Element {
         return;
       }
       
-      console.log('📧 Using payment contact email:', userEmail);
+      console.log('📧 Using payment contact email:', bookingOwnerEmail);
       console.log('📊 Route state received:', routeState);
       console.log('💰 Total Payment Amount from state:', routeState.totalPaymentAmount, typeof routeState.totalPaymentAmount);
       
@@ -697,8 +832,9 @@ function Payment(): React.JSX.Element {
       };
 
       const createPaymentRequest: CreatePaymentRequest = {
+        booking_id: bookingIdForPayment,
         pnr_reference: routeState.pnrReference,
-        user_email_address: userEmail,
+        user_email_address: bookingOwnerEmail,
         payment_method: paymentMethodMap[method],
         payment_region: 'ASIA',
         currency_code: routeState.currency_code || PRIMARY_CURRENCY_CODE,
@@ -751,9 +887,11 @@ function Payment(): React.JSX.Element {
           description: `Flight booking ${routeState.pnrReference}`,
           metadata: {
             pnr_reference: routeState.pnrReference,
-            user_email_address: userEmail,
+            user_email_address: bookingOwnerEmail,
+            payer_email_address: payerEmail,
             payment_purpose: routeState.postBookingAddonPayment ? 'ADD_ONS' : 'TICKET',
             pending_addon_ids: routeState.pendingAddonIds || [],
+            saved_payment_method_id: method === 'card' ? selectedSavedPayment?.payment_method_id : undefined,
           },
         });
 
@@ -827,8 +965,11 @@ function Payment(): React.JSX.Element {
       }
 
       // Navigate to confirm payment or next step with payment_id
+      window.sessionStorage.removeItem(PAYMENT_CHECKOUT_STATE_KEY);
+
       window.setTimeout(() => {
         navigate('/booking-confirmed', {
+          replace: true,
           state: {
             ...routeState,
             totalPaymentAmount: totalAmount,
@@ -840,6 +981,7 @@ function Payment(): React.JSX.Element {
             ticketingStatus: routeState.postBookingAddonPayment ? 'ADD_ONS_PAID' : duffelOrderResult ? 'ORDER_CREATED' : ticketingIssue ? 'ORDER_FAILED' : 'ORDER_PENDING',
             ticketingIssue,
             postBookingAddonPayment: routeState.postBookingAddonPayment,
+            checkoutComplete: true,
           },
         });
       }, 1200);
@@ -861,7 +1003,7 @@ function Payment(): React.JSX.Element {
       <header className="bg-slate-100 pt-10 text-center">
         <Link to="/" className="text-4xl font-semibold tracking-wide text-[#073b70]">HORIZON<span className="text-amber-500">ELITE</span></Link>
       </header>
-      <Stepper />
+      <Stepper isPostBookingAddonPayment={isPostBookingAddonPayment} />
 
       <div className="mx-auto grid max-w-7xl gap-8 px-6 pb-28 lg:grid-cols-[310px_1fr_310px]">
         <aside>
@@ -885,6 +1027,10 @@ function Payment(): React.JSX.Element {
               cardDetails={cardDetails}
               cardErrors={cardErrors}
               onCardChange={handleCardChange}
+              savedPaymentMethods={savedPaymentMethods}
+              savedPaymentsLoading={savedPaymentsLoading}
+              selectedSavedPaymentId={selectedSavedPaymentId}
+              onUseSavedPayment={handleUseSavedPayment}
             />
           ) : method === 'qr' ? (
             <QrPanel amount={paymentAmount} currencyCode={paymentCurrencyCode} />
@@ -903,6 +1049,7 @@ function Payment(): React.JSX.Element {
           errorMessage={errorMessage}
           offerUnavailable={offerUnavailable}
           isMissingCheckoutState={isMissingCheckoutState}
+          isPostBookingAddonPayment={isPostBookingAddonPayment}
         />
       </div>
 

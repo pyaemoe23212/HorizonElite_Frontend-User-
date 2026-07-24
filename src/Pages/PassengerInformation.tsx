@@ -6,13 +6,14 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import type { SelectedFlightResponse, CreatePassengerRequest, Passenger, SavedPassenger } from '../Services/api';
 import { passengerApi, profileApi } from '../Services/api';
 import CountrySelect from '../components/CountrySelect';
+import { FormLabel as Label } from '../components/forms/FormPrimitives';
+import { getPassportExpiryValidation } from '../utils/passportValidation';
 import {
   isValidPhoneNumber,
   parsePhoneNumber,
   AsYouType,
   getCountries,
   getCountryCallingCode,
-  type PhoneNumber,
 } from 'libphonenumber-js';
 
 const steps = ['Flight', 'Passenger', 'Services', 'Payment', 'Confirm'];
@@ -22,20 +23,6 @@ const isEmailStructureValid = (email: string): boolean =>
   /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 const isPassportNumberValid = (passportNumber: string): boolean =>
   /^[A-Za-z0-9]{6,12}$/.test(passportNumber.trim());
-
-const Label = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <label className="block">
-    <span className="mb-2 flex min-h-7 items-end text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-      {label.includes('*') ? (
-        <>
-          {label.replace('*', '')}
-          <span className="text-red-500">*</span>
-        </>
-      ) : label}
-    </span>
-    {children}
-  </label>
-);
 
 const Panel = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
   <section className="rounded-lg border border-slate-300 bg-white p-7 shadow-sm">
@@ -281,14 +268,12 @@ function PassengerInformation(): React.JSX.Element {
   const [isAddingPassenger, setIsAddingPassenger] = useState(false);
   const [isContinuing, setIsContinuing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
   const [savedPassengers, setSavedPassengers] = useState<SavedPassenger[]>([]);
   const [savedPassengerId, setSavedPassengerId] = useState('');
   const [savedPassengersLoading, setSavedPassengersLoading] = useState(false);
   const [phoneCountry, setPhoneCountry] = useState('TH');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneError, setPhoneError] = useState('');
-  const [parsedPhone, setParsedPhone] = useState<PhoneNumber | null>(null);
   const [isCountryListOpen, setIsCountryListOpen] = useState(false);
 
   // Required passenger count based on search data
@@ -345,6 +330,10 @@ function PassengerInformation(): React.JSX.Element {
   const birthDateRange = React.useMemo(
     () => getBirthDateRangeForType(formData.pi_passenger_type_code),
     [formData.pi_passenger_type_code]
+  );
+  const passportExpiryValidation = React.useMemo(
+    () => getPassportExpiryValidation(formData.pi_passport_expiry_date),
+    [formData.pi_passport_expiry_date]
   );
   const compatibleSavedPassengers = React.useMemo(
     () => savedPassengers.filter(savedPassenger => (
@@ -441,22 +430,18 @@ function PassengerInformation(): React.JSX.Element {
   const validatePhone = (number: string, iso: string): boolean => {
     if (!number.trim()) {
       setPhoneError('Phone number is required');
-      setParsedPhone(null);
       return false;
     }
 
     const dialCode = countryOptions.find(c => c.iso === iso)?.dialCode ?? '';
     if (!isValidPhoneNumber(dialCode + number, iso as any)) {
       setPhoneError('Please enter a valid phone number for the selected country');
-      setParsedPhone(null);
       return false;
     }
 
     try {
-      const parsed = parsePhoneNumber(number, iso as any);
-      setParsedPhone(parsed);
+      parsePhoneNumber(number, iso as any);
     } catch {
-      setParsedPhone(null);
     }
 
     setPhoneError('');
@@ -467,14 +452,12 @@ function PassengerInformation(): React.JSX.Element {
     const formatted = new AsYouType(phoneCountry as any).input(e.target.value);
     setPhoneNumber(formatted);
     setPhoneError('');
-    setParsedPhone(null);
   };
 
   const handleCountryChange = (iso: string) => {
     setPhoneCountry(iso);
     setPhoneNumber('');
     setPhoneError('');
-    setParsedPhone(null);
     setIsCountryListOpen(false);
     setFormData(prev => ({ ...prev, pi_contact_phone: '' }));
   };
@@ -482,7 +465,6 @@ function PassengerInformation(): React.JSX.Element {
   const applySavedPassenger = (passengerId: string) => {
     setSavedPassengerId(passengerId);
     setErrorMessage('');
-    setSuccessMessage('');
 
     if (!passengerId) {
       setFormData(prev => ({
@@ -502,7 +484,6 @@ function PassengerInformation(): React.JSX.Element {
       }));
       setPhoneCountry('TH');
       setPhoneNumber('');
-      setParsedPhone(null);
       setPhoneError('');
       return;
     }
@@ -542,15 +523,12 @@ function PassengerInformation(): React.JSX.Element {
         const parsed = parsePhoneNumber(savedPassenger.contact_phone);
         setPhoneCountry((parsed.country || 'TH') as string);
         setPhoneNumber(parsed.nationalNumber);
-        setParsedPhone(parsed);
         setPhoneError('');
       } catch {
         setPhoneNumber(savedPassenger.contact_phone);
-        setParsedPhone(null);
       }
     }
 
-    setSuccessMessage(`${savedPassenger.first_name} ${savedPassenger.last_name} loaded from your profile. You can edit the details before adding.`);
   };
 
   const validateForm = (): boolean => {
@@ -645,7 +623,6 @@ function PassengerInformation(): React.JSX.Element {
 
   const handleAddPassenger = async () => {
     setErrorMessage('');
-    setSuccessMessage('');
 
     if (!validateForm()) return;
 
@@ -701,7 +678,6 @@ function PassengerInformation(): React.JSX.Element {
         console.log(`   ${idx + 1}. ${p.pi_title} ${p.pi_first_name} ${p.pi_last_name} (ID: ${p.passenger_id})`);
       });
 
-      setSuccessMessage(`${response.passenger.pi_first_name} ${response.passenger.pi_last_name} added successfully`);
 
       // Reset form
       setFormData({
@@ -721,13 +697,11 @@ function PassengerInformation(): React.JSX.Element {
       });
       setPhoneNumber('');
       setPhoneError('');
-      setParsedPhone(null);
       setSavedPassengerId('');
 
       // ✈️ LOG: Form reset
       console.log('🔄 [PassengerInformation] Form reset for next passenger');
 
-      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       // ✈️ LOG: Error with passenger data
       console.error('❌ [PassengerInformation] Failed to add passenger #' + (passengers.length + 1));
@@ -843,28 +817,31 @@ function PassengerInformation(): React.JSX.Element {
           {/* Error Message */}
           {errorMessage && (
             <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-700">
-              ⚠️ {errorMessage}
-            </div>
-          )}
-
-          {/* Success Message */}
-          {successMessage && (
-            <div className="mb-6 rounded-lg border border-green-300 bg-green-50 p-4 text-sm font-semibold text-green-700">
-              ✅ {successMessage}
+              {errorMessage}
             </div>
           )}
 
           {/* Passengers Added */}
           {passengers.length > 0 && (
-            <div className="mb-8 rounded-lg border border-slate-300 bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#073b70]">
-                Passengers Added ({passengers.length}/{requiredPassengerCount})
-              </h2>
+            <div className="mb-8 rounded-lg border border-blue-200 bg-white p-6 shadow-sm">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-[#073b70]">Passenger List</h2>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    {passengers.length}/{requiredPassengerCount} passenger{requiredPassengerCount === 1 ? '' : 's'} added on this page.
+                  </p>
+                </div>
+                {passengers.length === requiredPassengerCount && (
+                  <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#073b70]">
+                    Ready to continue
+                  </span>
+                )}
+              </div>
               <div className="space-y-3">
                 {passengers.map((passenger, index) => (
-                  <div key={passenger.passenger_id} className="flex items-center justify-between rounded border border-green-200 bg-green-50 p-4">
+                  <div key={passenger.passenger_id} className="flex items-center justify-between rounded border border-slate-200 bg-slate-50 p-4">
                     <div className="flex items-center gap-4">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-green-600 text-sm font-semibold text-white">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#073b70] text-sm font-semibold text-white">
                         {index + 1}
                       </span>
                       <div>
@@ -872,7 +849,7 @@ function PassengerInformation(): React.JSX.Element {
                           {passenger.pi_title} {passenger.pi_first_name} {passenger.pi_last_name}
                         </p>
                         <p className="text-xs font-semibold text-slate-500">
-                          DOB: {new Date(passenger.pi_date_of_birth).toLocaleDateString()} • {passenger.pi_nationality}
+                          DOB: {new Date(passenger.pi_date_of_birth).toLocaleDateString()} | {passenger.pi_nationality}
                         </p>
                       </div>
                     </div>
@@ -1121,9 +1098,6 @@ function PassengerInformation(): React.JSX.Element {
                     {phoneError && (
                       <p className="mt-1 text-xs font-semibold text-red-500">{phoneError}</p>
                     )}
-                    {parsedPhone && !phoneError && (
-                      <p className="mt-1 text-xs font-semibold text-green-600">{parsedPhone.formatInternational()}</p>
-                    )}
                   </Label>
                 </div>
               </Panel>
@@ -1153,7 +1127,7 @@ function PassengerInformation(): React.JSX.Element {
                     <DatePicker
                       selected={fromDateString(formData.pi_passport_expiry_date)}
                       onChange={(date: Date | null) => setFormData({ ...formData, pi_passport_expiry_date: toDateString(date) })}
-                      className={inputClass}
+                      className={`${inputClass} ${passportExpiryValidation.tone === 'error' ? 'border-red-500 bg-red-50 focus:border-red-600' : passportExpiryValidation.tone === 'warning' ? 'border-amber-400 bg-amber-50 focus:border-amber-500' : ''}`}
                       placeholderText="Select expiry date"
                       dateFormat="dd MMM yyyy"
                       minDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
@@ -1161,6 +1135,11 @@ function PassengerInformation(): React.JSX.Element {
                       showYearDropdown
                       dropdownMode="select"
                     />
+                    {passportExpiryValidation.message && passportExpiryValidation.tone !== 'success' && (
+                      <p className={`mt-1 text-xs font-semibold ${passportExpiryValidation.tone === 'error' ? 'text-red-500' : 'text-amber-700'}`}>
+                        {passportExpiryValidation.message}
+                      </p>
+                    )}
                   </Label>
                 </div>
               </Panel>
@@ -1172,9 +1151,18 @@ function PassengerInformation(): React.JSX.Element {
                   type="button"
                   className="h-12 rounded border-2 border-[#073b70] px-8 text-sm font-semibold uppercase tracking-wide text-[#073b70] disabled:opacity-50"
                 >
-                  {isAddingPassenger ? '⏳ Adding...' : 'Add Passenger'}
+                  {isAddingPassenger ? 'Adding...' : 'Add Passenger'}
                 </button>
               </div>
+            </div>
+          )}
+
+          {passengers.length === requiredPassengerCount && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-6 text-center">
+              <p className="text-sm font-semibold uppercase tracking-wide text-[#073b70]">Passenger details complete</p>
+              <p className="mt-2 text-sm font-semibold text-slate-600">
+                Review the passenger list above. You can remove a passenger to edit the list, or continue to the next step.
+              </p>
             </div>
           )}
 
@@ -1184,7 +1172,7 @@ function PassengerInformation(): React.JSX.Element {
               to="/flight-results"
               className="flex h-12 w-48 items-center justify-center rounded border border-[#073b70] text-sm font-semibold text-[#073b70] transition hover:bg-slate-100"
             >
-              ← Back to Flights
+              Back to Flights
             </Link>
             <div className="flex flex-col items-end gap-2">
               <button
@@ -1193,7 +1181,7 @@ function PassengerInformation(): React.JSX.Element {
                 type="button"
                 className="flex h-12 w-60 items-center justify-center rounded bg-[#073b70] text-sm font-semibold text-white shadow-md shadow-blue-950/20 transition hover:bg-[#0a2d51] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isContinuing ? '⏳ Processing...' : 'Save & Continue →'}
+                {isContinuing ? 'Processing...' : 'Save & Continue'}
               </button>
               {passengers.length !== requiredPassengerCount && (
                 <span className="text-xs font-semibold text-slate-500">
@@ -1211,3 +1199,5 @@ function PassengerInformation(): React.JSX.Element {
 }
 
 export default PassengerInformation;
+
+

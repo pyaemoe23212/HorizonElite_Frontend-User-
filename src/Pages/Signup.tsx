@@ -558,7 +558,7 @@ function Signup(): React.JSX.Element {
               )}
               {parsedPhone && !phoneError && (
                 <p className="mt-1 text-xs text-green-600">
-                  ✓ {parsedPhone.formatInternational()}
+                  {parsedPhone.formatInternational()}
                 </p>
               )}
             </label>
@@ -589,7 +589,7 @@ function Signup(): React.JSX.Element {
                     <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] font-semibold ${
                       check.isValid ? 'border-green-600 bg-green-600 text-white' : 'border-slate-400 text-transparent'
                     }`}>
-                      ✓
+                      OK
                     </span>
                     <span>{check.label}</span>
                   </div>

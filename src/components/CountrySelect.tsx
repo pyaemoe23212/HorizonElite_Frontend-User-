@@ -12,6 +12,7 @@ interface CountrySelectProps {
   onChange: (countryName: string) => void;
   className?: string;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 const countryOptions: CountryOption[] = (() => {
@@ -34,6 +35,7 @@ function CountrySelect({
   onChange,
   className = '',
   placeholder = 'Select country',
+  disabled = false,
 }: CountrySelectProps): React.JSX.Element {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
@@ -60,7 +62,8 @@ function CountrySelect({
     <div ref={wrapperRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen(current => !current)}
+        onClick={() => !disabled && setOpen(current => !current)}
+        disabled={disabled}
         className={`${className} flex items-center justify-between gap-3 text-left`}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -72,8 +75,8 @@ function CountrySelect({
         <span className="shrink-0 text-xs text-slate-500">▼</span>
       </button>
 
-      {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 rounded border border-slate-300 bg-white p-2 shadow-2xl">
+      {open && !disabled && (
+        <div className="he-pop absolute left-0 right-0 top-[calc(100%+8px)] z-50 rounded border border-slate-300 bg-white p-2 shadow-2xl">
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -93,7 +96,7 @@ function CountrySelect({
                   setOpen(false);
                   setQuery('');
                 }}
-                className={`flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm font-semibold text-slate-800 outline-none transition hover:bg-slate-100 ${
+                className={`he-action flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm font-semibold text-slate-800 outline-none transition hover:bg-slate-100 ${
                   country.name === value ? 'bg-slate-100' : ''
                 }`}
               >

@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { BadgeCheck, CircleHelp, Download, Luggage, Plane, Sparkles, TicketCheck } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import PageHeader from "../components/PageHeader";
+import PostBookingFlowSteps from "../components/PostBookingFlowSteps";
 
 const postBookingServices = [
   {
@@ -67,16 +68,35 @@ function AdditionalServices(): React.JSX.Element {
   }, [hash]);
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-800">
+    <main className="min-h-screen bg-[#eef3f7] text-slate-800">
       <PageHeader rightLink={{ label: "Manage Booking", to: "/manage-booking" }} />
-      <section className="mx-auto max-w-7xl px-6 py-14">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-10">
+        <PostBookingFlowSteps currentStep={2} />
+
+        <div className="he-soft-card rounded-lg border border-slate-300 bg-white p-5 shadow-sm sm:p-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-cyan-700">Step 2 of 3</p>
+              <h1 className="mt-2 text-3xl font-semibold text-[#073b70] sm:text-4xl">Choose Travel Services</h1>
+              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600 sm:text-base">
+                Add only what you need now. You can skip this step and manage services later with your booking reference.
+              </p>
+            </div>
+
+            <Link
+              to="/personalized-services"
+              state={routeState}
+              className="inline-flex h-12 items-center justify-center rounded bg-[#073b70] px-6 text-sm font-semibold text-white hover:bg-[#052f59]"
+            >
+              Continue to Personalize
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-cyan-700">Post-booking services</p>
-            <h1 className="mt-2 text-5xl font-semibold text-[#073b70]">Additional Services</h1>
-            <p className="mt-4 max-w-2xl text-lg font-semibold text-slate-600">
-              Continue after payment with trip management, check-in, travel documents, and support.
-            </p>
+            <h2 className="text-xl font-semibold text-[#073b70]">Optional services</h2>
+            <p className="mt-2 text-sm font-semibold text-slate-600">Pick a service to open it, or continue if you are finished.</p>
           </div>
 
           <Link
@@ -94,7 +114,7 @@ function AdditionalServices(): React.JSX.Element {
           </div>
         )}
 
-        <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_360px]">
+        <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_340px]">
           <div className="grid gap-5 md:grid-cols-2">
             {postBookingServices.map((service) => {
               const Icon = service.icon;
@@ -105,14 +125,14 @@ function AdditionalServices(): React.JSX.Element {
                   key={service.title}
                   to={service.action}
                   state={{ ...routeState, selectedService: service.title }}
-                  className="rounded-lg border border-slate-300 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-[#073b70] hover:shadow-lg"
+                  className="he-soft-card rounded-lg border border-slate-300 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-[#073b70] hover:shadow-lg"
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded bg-blue-50 text-[#073b70]">
                     <Icon size={25} strokeWidth={2.2} />
                   </div>
-                  <h2 className="mt-6 text-2xl font-semibold text-[#073b70]">{service.title}</h2>
+                  <h2 className="mt-5 text-xl font-semibold text-[#073b70]">{service.title}</h2>
                   <p className="mt-3 min-h-12 text-sm font-semibold leading-6 text-slate-600">{service.description}</p>
-                  <span className="mt-6 inline-block text-xs font-semibold uppercase tracking-widest text-cyan-700">Open</span>
+                  <span className="mt-5 inline-block text-xs font-semibold uppercase tracking-widest text-cyan-700">Open service</span>
                 </Link>
               );
             })}
@@ -120,16 +140,16 @@ function AdditionalServices(): React.JSX.Element {
             <Link
               to="/personalized-services"
               state={routeState}
-              className="rounded-lg border border-purple-300 bg-purple-50 p-6 shadow-sm transition hover:-translate-y-1 hover:border-purple-700 hover:shadow-lg md:col-span-2"
+              className="he-soft-card rounded-lg border border-[#073b70] bg-[#073b70] p-5 text-white shadow-sm transition hover:-translate-y-1 hover:bg-[#052f59] hover:shadow-lg md:col-span-2"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded bg-white text-purple-700">
+              <div className="flex h-12 w-12 items-center justify-center rounded bg-white text-[#073b70]">
                 <Sparkles size={25} strokeWidth={2.2} />
               </div>
-              <h2 className="mt-6 text-2xl font-semibold text-purple-800">Continue to Personalized Services</h2>
-              <p className="mt-3 text-sm font-semibold leading-6 text-purple-900/75">
-                Finish with travel reminders, flight updates, check-in notifications, and personalized recommendations for this booking.
+              <h2 className="mt-5 text-xl font-semibold">Continue to Personalize</h2>
+              <p className="mt-3 text-sm font-semibold leading-6 text-blue-100">
+                Final step: choose reminders and travel updates for this booking.
               </p>
-              <span className="mt-6 inline-block text-xs font-semibold uppercase tracking-widest text-purple-700">Final step</span>
+              <span className="mt-5 inline-block text-xs font-semibold uppercase tracking-widest text-cyan-100">Step 3</span>
             </Link>
           </div>
 
@@ -168,13 +188,13 @@ function AdditionalServices(): React.JSX.Element {
               </div>
             </section>
 
-            <section className="rounded-lg border border-purple-200 bg-purple-50 p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-purple-800">Next Step</h2>
-              <p className="mt-3 text-sm font-semibold leading-6 text-purple-900/75">
-                After choosing any needed post-booking services, continue to Personalized Services to set reminders and recommendations.
+            <section className="rounded-lg border border-[#073b70] bg-[#073b70] p-6 text-white shadow-sm">
+              <h2 className="text-lg font-semibold">Next Step</h2>
+              <p className="mt-3 text-sm font-semibold leading-6 text-blue-100">
+                Continue when you are done choosing optional services.
               </p>
-              <Link to="/personalized-services" state={routeState} className="mt-5 flex h-12 w-full items-center justify-center rounded bg-purple-700 text-sm font-semibold text-white hover:bg-purple-800">
-                Continue to Personalized
+              <Link to="/personalized-services" state={routeState} className="mt-5 flex h-12 w-full items-center justify-center rounded bg-white text-sm font-semibold text-[#073b70] hover:bg-blue-50">
+                Continue to Personalize
               </Link>
             </section>
 

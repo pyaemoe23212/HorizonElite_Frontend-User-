@@ -111,6 +111,17 @@ export interface FlightStatusResponse {
   data: FlightStatusRecord[] | FlightStatusRecord;
 }
 
+export interface CurrencyRatesResponse {
+  message: string;
+  data: {
+    base: string;
+    date: string;
+    provider: string;
+    cached: boolean;
+    rates: Record<string, number>;
+  };
+}
+
 // ─── Translation Types ───────────────────────────────────────────────────────
 export interface Language {
   code: string;
@@ -446,6 +457,9 @@ export const api = {
   getProfile: (): Promise<ProfileResponse> =>
     axiosInstance.get('/auth/profile'),
 
+  getCurrencyRates: (base = 'USD'): Promise<CurrencyRatesResponse> =>
+    axiosInstance.get('/currency/rates', { params: { base } }),
+
   /**
    * Logout user and clear session
    */
@@ -723,6 +737,7 @@ export interface CreateBookingResponse {
 // ─── Payment Types ───────────────────────────────────────────────────────────
 
 export interface CreatePaymentRequest {
+  booking_id?: string;
   pnr_reference: string;
   user_email_address: string;
   payment_method: 'CREDIT_CARD' | 'DEBIT_CARD' | 'BANK_TRANSFER' | 'THAI_QR' | 'MOBILE_BANKING' | 'EWALLET';

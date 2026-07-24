@@ -55,7 +55,7 @@ function VerifyEmail(): React.JSX.Element {
         <div className={`mx-auto mt-8 flex h-14 w-14 items-center justify-center rounded-full text-2xl font-semibold ${
           status === 'success' ? 'bg-green-100 text-green-700' : status === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-[#073b70]'
         }`}>
-          {status === 'success' ? '✓' : status === 'error' ? '!' : '...'}
+          {status === 'success' ? 'OK' : status === 'error' ? '!' : '...'}
         </div>
 
         <h1 className="mt-6 text-3xl font-semibold text-[#073b70]">

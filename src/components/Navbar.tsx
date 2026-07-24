@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { CircleDollarSign } from 'lucide-react';
 import { useAuth } from '../contexts/useAuth';
 import { useTranslation } from '../contexts/useTranslation';
+import { useCurrency } from '../contexts/useCurrency';
 import { api } from '../Services/api';
 import type { Language } from '../Services/api';
+import { currencyNames, currencySymbols, formatUsdExchangeRate } from '../utils/currency';
 
 const GlobeIcon = () => (
   <svg
@@ -75,13 +78,21 @@ function Navbar(): React.JSX.Element {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { currentLanguage, setLanguage } = useTranslation();  // ← Get from context
+  const { selectedCurrency, setSelectedCurrency, currencies, exchangeRates, status: currencyStatus } = useCurrency();
   const [menuOpen, setMenuOpen] = useState(false);
   const [languageDropdownOpen, setLanguageDropdownOpen] = useState(false);
+  const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
+  const [currencySearch, setCurrencySearch] = useState('');
   const [languages, setLanguages] = useState<Language[]>([]);
   const [isLoadingLanguages, setIsLoadingLanguages] = useState(false);
   
   const menuRef = useRef<HTMLDivElement>(null);
   const languageRef = useRef<HTMLDivElement>(null);
+  const currencyRef = useRef<HTMLDivElement>(null);
+  const filteredCurrencies = currencies.filter((currency) =>
+    currency.toLowerCase().includes(currencySearch.trim().toLowerCase()) ||
+    (currencyNames[currency] || '').toLowerCase().includes(currencySearch.trim().toLowerCase())
+  );
 
   // Fetch supported languages when component mounts
   useEffect(() => {
@@ -114,6 +125,12 @@ function Navbar(): React.JSX.Element {
     console.log('Language changed to:', languageCode);
   };
 
+  const handleCurrencyChange = (currency: string) => {
+    setSelectedCurrency(currency);
+    setCurrencyDropdownOpen(false);
+    setCurrencySearch('');
+  };
+
   const handleLogout = () => {
     setMenuOpen(false);
     logout();
@@ -128,6 +145,9 @@ function Navbar(): React.JSX.Element {
       }
       if (languageRef.current && !languageRef.current.contains(e.target as Node)) {
         setLanguageDropdownOpen(false);
+      }
+      if (currencyRef.current && !currencyRef.current.contains(e.target as Node)) {
+        setCurrencyDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -207,6 +227,64 @@ function Navbar(): React.JSX.Element {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+
+          <div className="relative" ref={currencyRef}>
+            <button
+              type="button"
+              onClick={() => setCurrencyDropdownOpen(open => !open)}
+              className="hidden h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-600 hover:shadow-sm sm:flex"
+              aria-label="Select currency"
+              aria-expanded={currencyDropdownOpen}
+            >
+              <CircleDollarSign size={17} />
+              {selectedCurrency}
+              <ChevronDownIcon />
+            </button>
+
+            {currencyDropdownOpen && (
+              <div className="absolute right-0 top-12 w-[22rem] animate-[fadeIn_160ms_ease-out] rounded-xl border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/70">
+                <div className="mb-3 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="flex items-center gap-2 text-sm font-semibold text-[#073b70]">
+                      <CircleDollarSign size={17} />
+                      Select Currency
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-slate-500">
+                      {currencyStatus === 'live' ? 'Live exchange rates' : currencyStatus === 'loading' ? 'Loading live rates' : 'Fallback rates'}
+                    </p>
+                  </div>
+                  <span className="rounded bg-blue-50 px-2 py-1 text-xs font-semibold text-[#073b70]">{currencySymbols[selectedCurrency]} {selectedCurrency}</span>
+                </div>
+
+                <input
+                  value={currencySearch}
+                  onChange={(event) => setCurrencySearch(event.target.value)}
+                  className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#073b70]"
+                  placeholder="Search currency code"
+                />
+
+                <div className="mt-3 grid max-h-80 grid-cols-2 gap-2 overflow-y-auto pr-1">
+                  {filteredCurrencies.map((currency) => (
+                    <button
+                      key={currency}
+                      type="button"
+                      onClick={() => handleCurrencyChange(currency)}
+                      className={`rounded-lg border px-3 py-2 text-left transition duration-150 hover:-translate-y-0.5 ${selectedCurrency === currency ? 'border-[#073b70] bg-[#073b70] text-white shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50'}`}
+                    >
+                      <span className="block text-sm font-semibold">{currencySymbols[currency]} {currency}</span>
+                      <span className={`block text-xs font-semibold ${selectedCurrency === currency ? 'text-blue-100' : 'text-slate-400'}`}>{currencyNames[currency]}</span>
+                      <span className={`mt-1 block text-[11px] font-semibold ${selectedCurrency === currency ? 'text-blue-100' : 'text-slate-500'}`}>
+                        {formatUsdExchangeRate(currency, exchangeRates)}
+                      </span>
+                    </button>
+                  ))}
+                  {filteredCurrencies.length === 0 && (
+                    <p className="col-span-3 py-5 text-center text-sm font-semibold text-slate-500">No currency found.</p>
+                  )}
+                </div>
               </div>
             )}
           </div>

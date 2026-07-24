@@ -75,7 +75,7 @@ function Services(): React.JSX.Element {
                 key={service.title}
                 to={service.action}
                 state={"state" in service ? service.state : undefined}
-                className="rounded-lg border border-slate-300 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-[#073b70] hover:shadow-lg"
+                className="he-soft-card rounded-lg border border-slate-300 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-[#073b70] hover:shadow-lg"
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded bg-blue-50 text-[#073b70]">
                   <Icon size={25} strokeWidth={2.2} />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router';
-import { AlertCircle, CreditCard, Eye, IdCard, Mail, Phone, Plane, Plus, Save, ShieldCheck, Trash2, UserRound, Users, WalletCards } from 'lucide-react';
+import { AlertCircle, ChevronDown, CreditCard, Eye, IdCard, Mail, Phone, Plane, Plus, ShieldCheck, Trash2, UserRound, Users, WalletCards, PencilLine, X } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import {
@@ -23,9 +23,14 @@ import {
   type SavedPaymentMethodPayload,
 } from '../Services/api';
 import CountrySelect from '../components/CountrySelect';
+import { FormLabel as Label, FormSection as Section, SaveButton } from '../components/forms/FormPrimitives';
+import { getPassportExpiryValidation } from '../utils/passportValidation';
 
 const inputClass = 'h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#073b70] focus:ring-2 focus:ring-blue-100';
 const textAreaClass = 'min-h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#073b70] focus:ring-2 focus:ring-blue-100';
+const viewInputClass = `${inputClass} bg-slate-50 text-slate-700 focus:border-slate-300 focus:ring-0`;
+const viewTextAreaClass = `${textAreaClass} bg-slate-50 text-slate-700 focus:border-slate-300 focus:ring-0`;
+type ProfileSectionKey = 'account' | 'personal' | 'contact';
 
 const menuItems = [
   { label: 'Account', href: 'sign-up-details', icon: UserRound },
@@ -155,6 +160,13 @@ const getProfileEmail = (profile: Partial<ProfileResponse> | null) => profile?.e
 const fullName = (profile: Partial<ProfileResponse> | null) =>
   `${profile?.title ? `${profile.title} ` : ''}${profile?.first_name || ''} ${profile?.last_name || ''}`.trim();
 
+const savedPassengerName = (passenger: Pick<SavedPassengerPayload, 'title' | 'first_name' | 'middle_name' | 'last_name'>) => [
+  passenger.title,
+  passenger.first_name,
+  passenger.middle_name,
+  passenger.last_name,
+].filter(Boolean).join(' ');
+
 const getInitials = (profile: Partial<ProfileResponse> | null) => {
   const initials = `${profile?.first_name?.[0] || ''}${profile?.last_name?.[0] || ''}`.toUpperCase();
   return initials || 'HE';
@@ -202,34 +214,6 @@ const isFutureDate = (value?: string | null) => {
   return Boolean(parsed && parsed > todayAtStart());
 };
 
-const Label = ({ label, children, className = '' }: { label: string; children: React.ReactNode; className?: string }) => (
-  <label className={`block ${className}`}>
-    <span className="mb-2 flex min-h-7 items-end text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</span>
-    {children}
-  </label>
-);
-
-const Section = ({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) => (
-  <section id={id} className="scroll-mt-28 rounded-xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/70">
-    <div className="mb-6 border-b border-slate-100 pb-5">
-      <h2 className="text-2xl font-semibold text-[#073b70]">{title}</h2>
-      {description && <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">{description}</p>}
-    </div>
-    {children}
-  </section>
-);
-
-const SaveButton = ({ children, disabled = false }: { children: React.ReactNode; disabled?: boolean }) => (
-  <button
-    type="submit"
-    disabled={disabled}
-    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#073b70] px-6 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-[#052f59] disabled:opacity-50"
-  >
-    <Save size={15} />
-    {children}
-  </button>
-);
-
 const StatCard = ({ icon: Icon, label, value, tone = 'blue' }: { icon: React.ElementType; label: string; value: string | number; tone?: 'blue' | 'amber' | 'emerald' }) => {
   const tones = {
     blue: 'bg-blue-50 text-[#073b70]',
@@ -260,11 +244,13 @@ const PhoneInput = ({
   onChange,
   required = false,
   placeholder = 'Phone number',
+  disabled = false,
 }: {
   value?: string | null;
   onChange: (value: string) => void;
   required?: boolean;
   placeholder?: string;
+  disabled?: boolean;
 }) => {
   const [phoneCountry, setPhoneCountry] = React.useState('TH');
   const [phoneNumber, setPhoneNumber] = React.useState(value || '');
@@ -368,8 +354,9 @@ const PhoneInput = ({
         <div className="relative">
           <button
             type="button"
-            onClick={() => setIsCountryListOpen(open => !open)}
-            className="flex h-11 w-full items-center justify-between border border-slate-300 bg-white px-3 text-left text-sm font-semibold text-slate-800 outline-none transition focus:border-[#073b70]"
+            onClick={() => !disabled && setIsCountryListOpen(open => !open)}
+            disabled={disabled}
+            className={`flex h-11 w-full items-center justify-between border border-slate-300 px-3 text-left text-sm font-semibold outline-none transition focus:border-[#073b70] ${disabled ? 'bg-slate-50 text-slate-700' : 'bg-white text-slate-800'}`}
             aria-haspopup="listbox"
             aria-expanded={isCountryListOpen}
           >
@@ -380,7 +367,7 @@ const PhoneInput = ({
             <span className="ml-2 text-xs text-slate-500">▼</span>
           </button>
 
-          {isCountryListOpen && (
+          {isCountryListOpen && !disabled && (
             <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-40 max-h-72 overflow-y-auto border border-slate-300 bg-white p-2 shadow-2xl" role="listbox">
               {countryOptions.map(country => (
                 <button
@@ -404,7 +391,8 @@ const PhoneInput = ({
           value={phoneNumber}
           onChange={handlePhoneChange}
           onBlur={() => validatePhone(phoneNumber, phoneCountry)}
-          className={`${inputClass} ${phoneError ? 'border-red-500 focus:border-red-600' : ''}`}
+          disabled={disabled}
+          className={`${disabled ? viewInputClass : inputClass} ${phoneError ? 'border-red-500 focus:border-red-600' : ''}`}
           placeholder={placeholder}
         />
       </div>
@@ -426,10 +414,15 @@ function Profile(): React.JSX.Element {
   const [editingEmergencyId, setEditingEmergencyId] = React.useState<string | null>(null);
   const [paymentForm, setPaymentForm] = React.useState<SavedPaymentMethodPayload>(emptyPaymentMethod);
   const [editingPaymentId, setEditingPaymentId] = React.useState<string | null>(null);
+  const [passengerFormOpen, setPassengerFormOpen] = React.useState(false);
+  const [emergencyFormOpen, setEmergencyFormOpen] = React.useState(false);
+  const [paymentFormOpen, setPaymentFormOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
+  const [editingProfileSection, setEditingProfileSection] = React.useState<ProfileSectionKey | null>(null);
+  const [profileSnapshot, setProfileSnapshot] = React.useState<Partial<ProfileResponse> | null>(null);
 
   const showSuccess = (value: string) => {
     setMessage(value);
@@ -477,6 +470,20 @@ function Profile(): React.JSX.Element {
     setProfile(prev => ({ ...prev, [key]: value }));
   };
 
+  const startProfileEdit = (section: ProfileSectionKey) => {
+    setProfileSnapshot(profile);
+    setEditingProfileSection(section);
+    setError('');
+    setMessage('');
+  };
+
+  const cancelProfileEdit = () => {
+    if (profileSnapshot) setProfile(profileSnapshot);
+    setProfileSnapshot(null);
+    setEditingProfileSection(null);
+    setError('');
+  };
+
   const updatePassengerField = (key: keyof SavedPassengerPayload, value: string) => {
     setPassengerForm(prev => {
       const next = { ...prev, [key]: value };
@@ -491,8 +498,72 @@ function Profile(): React.JSX.Element {
     });
   };
 
+  const renderProfileSectionActions = (section: ProfileSectionKey) => {
+    const isEditing = editingProfileSection === section;
+    const isAnotherSectionEditing = Boolean(editingProfileSection && !isEditing);
+
+    return (
+      <div className="mb-5 flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          {isEditing ? 'Editing this section' : 'View mode'}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {isEditing ? (
+            <>
+              <button type="button" onClick={cancelProfileEdit} className="he-action inline-flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold uppercase tracking-wide text-slate-700 hover:bg-slate-50">
+                <X size={14} />
+                Cancel
+              </button>
+              <SaveButton disabled={saving}>{saving ? 'Saving...' : 'Save'}</SaveButton>
+            </>
+          ) : (
+            <button type="button" onClick={() => startProfileEdit(section)} disabled={isAnotherSectionEditing} className="he-action inline-flex h-9 items-center gap-2 rounded-lg bg-[#073b70] px-4 text-xs font-semibold uppercase tracking-wide text-white hover:bg-[#052f59] disabled:cursor-not-allowed disabled:bg-slate-400">
+              <PencilLine size={14} />
+              Edit
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderFormToggle = ({
+    open,
+    onToggle,
+    icon: Icon,
+    title,
+    description,
+    editing,
+  }: {
+    open: boolean;
+    onToggle: () => void;
+    icon: React.ElementType;
+    title: string;
+    description: string;
+    editing?: boolean;
+  }) => (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`mb-5 flex w-full items-center justify-between gap-4 rounded-xl border p-4 text-left transition ${open ? 'border-[#073b70] bg-blue-50 shadow-sm' : 'border-slate-200 bg-slate-50 hover:border-[#073b70] hover:bg-white'}`}
+    >
+      <span className="flex min-w-0 items-start gap-3">
+        <span className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${open ? 'bg-[#073b70] text-white' : 'bg-white text-[#073b70]'}`}>
+          <Icon size={18} />
+        </span>
+        <span>
+          <span className="block text-sm font-semibold uppercase tracking-wide text-[#073b70]">{editing ? title.replace('Add', 'Edit') : title}</span>
+          <span className="mt-1 block text-xs font-semibold leading-5 text-slate-500">{description}</span>
+        </span>
+      </span>
+      <ChevronDown className={`h-5 w-5 shrink-0 text-[#073b70] transition ${open ? 'rotate-180' : ''}`} />
+    </button>
+  );
+
   const submitProfile = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!editingProfileSection) return;
+
     if (!profile.title?.trim()) {
       showError('Title is required');
       return;
@@ -514,6 +585,8 @@ function Profile(): React.JSX.Element {
       setSaving(true);
       const response = await profileApi.updateProfile(profile);
       setProfile({ ...emptyProfile, ...response.profile });
+      setProfileSnapshot(null);
+      setEditingProfileSection(null);
       showSuccess('Profile updated successfully');
     } catch (submitError) {
       showError(submitError);
@@ -528,6 +601,10 @@ function Profile(): React.JSX.Element {
       showError('Passenger first name, last name, and date of birth are required');
       return;
     }
+    if (!passengerForm.relationship.trim() || !passengerForm.title.trim() || !passengerForm.gender.trim() || !passengerForm.nationality.trim()) {
+      showError('Relationship, title, gender, and nationality are required');
+      return;
+    }
     const ageValidationMessage = getPassengerAgeValidationMessage(
       passengerForm.passenger_type_code,
       passengerForm.date_of_birth
@@ -540,8 +617,13 @@ function Profile(): React.JSX.Element {
       showError('Please enter a valid saved passenger phone number');
       return;
     }
-    if (!isFutureDate(passengerForm.passport_expiry_date)) {
-      showError('Passport expiry date must be in the future');
+    if (!passengerForm.passport_number?.trim() || !passengerForm.passport_issuing_country?.trim() || !passengerForm.passport_expiry_date) {
+      showError('Passport number, issuing country, and expiry date are required');
+      return;
+    }
+    const passportExpiryValidation = getPassportExpiryValidation(passengerForm.passport_expiry_date);
+    if (passportExpiryValidation.tone === 'error' || passportExpiryValidation.tone === 'warning') {
+      showError(passportExpiryValidation.message);
       return;
     }
     if (!isFutureDate(passengerForm.visa_expiry_date)) {
@@ -563,6 +645,7 @@ function Profile(): React.JSX.Element {
       setPassengerForm(emptyPassenger);
       setEditingPassengerId(null);
       setViewingPassengerId(null);
+      setPassengerFormOpen(false);
     } catch (submitError) {
       showError(submitError);
     } finally {
@@ -572,7 +655,8 @@ function Profile(): React.JSX.Element {
 
   const editPassenger = (passenger: SavedPassenger) => {
     setEditingPassengerId(passenger.saved_passenger_id);
-    setViewingPassengerId(null);
+    setViewingPassengerId(passenger.saved_passenger_id);
+    setPassengerFormOpen(true);
     setPassengerForm({
       relationship: passenger.relationship || 'Self',
       title: passenger.title || 'Mr',
@@ -593,6 +677,9 @@ function Profile(): React.JSX.Element {
       visa_expiry_date: toDateInput(passenger.visa_expiry_date),
       notes: passenger.notes || '',
     });
+    window.setTimeout(() => {
+      document.getElementById('passenger-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
   };
 
   const deletePassenger = async (id: string) => {
@@ -647,6 +734,7 @@ function Profile(): React.JSX.Element {
       }
       setEmergencyForm(emptyEmergencyContact);
       setEditingEmergencyId(null);
+      setEmergencyFormOpen(false);
     } catch (submitError) {
       showError(submitError);
     } finally {
@@ -699,6 +787,7 @@ function Profile(): React.JSX.Element {
       }
       setPaymentForm(emptyPaymentMethod);
       setEditingPaymentId(null);
+      setPaymentFormOpen(false);
     } catch (submitError) {
       showError(submitError);
     } finally {
@@ -725,6 +814,10 @@ function Profile(): React.JSX.Element {
   };
 
   const profileCompletion = getProfileCompletion(profile, passengers, emergencyContacts, paymentMethods);
+  const passengerPassportExpiryValidation = React.useMemo(
+    () => getPassportExpiryValidation(passengerForm.passport_expiry_date),
+    [passengerForm.passport_expiry_date]
+  );
   const defaultPayment = paymentMethods.find(method => method.is_default);
 
   if (isLoading || loading) {
@@ -828,9 +921,10 @@ function Profile(): React.JSX.Element {
           <div className="space-y-8">
             <form onSubmit={submitProfile} className="space-y-8">
               <Section id="sign-up-details" title="Account Details" description="Your login identity and required profile basics. Email is used as your account ID and cannot be changed here.">
+                {renderProfileSectionActions('account')}
                 <div className="grid gap-5 md:grid-cols-3">
                   <Label label="Title *">
-                    <select value={profile.title || ''} onChange={event => updateProfileField('title', event.target.value)} className={inputClass}>
+                    <select value={profile.title || ''} onChange={event => updateProfileField('title', event.target.value)} disabled={editingProfileSection !== 'account'} className={editingProfileSection === 'account' ? inputClass : viewInputClass}>
                       <option value="">Select Title</option>
                       <option value="Mr">Mr.</option>
                       <option value="Mrs">Mrs.</option>
@@ -840,47 +934,46 @@ function Profile(): React.JSX.Element {
                     </select>
                   </Label>
                   <Label label="First Name *">
-                    <input value={profile.first_name || ''} onChange={event => updateProfileField('first_name', event.target.value)} className={inputClass} />
+                    <input value={profile.first_name || ''} onChange={event => updateProfileField('first_name', event.target.value)} readOnly={editingProfileSection !== 'account'} className={editingProfileSection === 'account' ? inputClass : viewInputClass} />
                   </Label>
                   <Label label="Last Name *">
-                    <input value={profile.last_name || ''} onChange={event => updateProfileField('last_name', event.target.value)} className={inputClass} />
+                    <input value={profile.last_name || ''} onChange={event => updateProfileField('last_name', event.target.value)} readOnly={editingProfileSection !== 'account'} className={editingProfileSection === 'account' ? inputClass : viewInputClass} />
                   </Label>
                   <Label label="Email Address *">
                     <input value={getProfileEmail(profile)} className={`${inputClass} bg-slate-100 text-slate-500`} readOnly />
                   </Label>
                   <Label label="Phone Number *" className="md:col-span-2">
-                    <PhoneInput value={profile.phone_number || ''} onChange={value => updateProfileField('phone_number', value)} required />
+                    <PhoneInput value={profile.phone_number || ''} onChange={value => updateProfileField('phone_number', value)} required disabled={editingProfileSection !== 'account'} />
                   </Label>
                   <Label label="Password *">
                     <input value="Managed securely" className={`${inputClass} bg-slate-100 text-slate-500`} readOnly />
                   </Label>
                 </div>
-                <div className="mt-7 flex justify-end">
-                  <SaveButton disabled={saving}>Save Sign Up Details</SaveButton>
-                </div>
               </Section>
 
               <Section id="personal-details" title="Personal Details" description="Keep these details aligned with the passport or ID you use when flying.">
+                {renderProfileSectionActions('personal')}
                 <div className="grid gap-5 md:grid-cols-4">
                   <Label label="Title">
-                    <select value={profile.title || 'Mr'} onChange={event => updateProfileField('title', event.target.value)} className={inputClass}>
+                    <select value={profile.title || 'Mr'} onChange={event => updateProfileField('title', event.target.value)} disabled={editingProfileSection !== 'personal'} className={editingProfileSection === 'personal' ? inputClass : viewInputClass}>
                       <option>Mr</option><option>Mrs</option><option>Ms</option><option>Miss</option><option>Dr</option>
                     </select>
                   </Label>
                   <Label label="First Name">
-                    <input value={profile.first_name || ''} onChange={event => updateProfileField('first_name', event.target.value)} className={inputClass} />
+                    <input value={profile.first_name || ''} onChange={event => updateProfileField('first_name', event.target.value)} readOnly={editingProfileSection !== 'personal'} className={editingProfileSection === 'personal' ? inputClass : viewInputClass} />
                   </Label>
                   <Label label="Middle Name">
-                    <input value={profile.middle_name || ''} onChange={event => updateProfileField('middle_name', event.target.value)} className={inputClass} />
+                    <input value={profile.middle_name || ''} onChange={event => updateProfileField('middle_name', event.target.value)} readOnly={editingProfileSection !== 'personal'} className={editingProfileSection === 'personal' ? inputClass : viewInputClass} />
                   </Label>
                   <Label label="Last Name">
-                    <input value={profile.last_name || ''} onChange={event => updateProfileField('last_name', event.target.value)} className={inputClass} />
+                    <input value={profile.last_name || ''} onChange={event => updateProfileField('last_name', event.target.value)} readOnly={editingProfileSection !== 'personal'} className={editingProfileSection === 'personal' ? inputClass : viewInputClass} />
                   </Label>
                   <Label label="Date of Birth">
                     <DatePicker
                       selected={fromDateString(profile.date_of_birth)}
                       onChange={(date: Date | null) => updateProfileField('date_of_birth', toDateString(date))}
-                      className={inputClass}
+                      className={editingProfileSection === 'personal' ? inputClass : viewInputClass}
+                      disabled={editingProfileSection !== 'personal'}
                       placeholderText="Select date of birth"
                       dateFormat="dd MMM yyyy"
                       minDate={addYears(todayAtStart(), -120)}
@@ -891,41 +984,39 @@ function Profile(): React.JSX.Element {
                     />
                   </Label>
                   <Label label="Gender">
-                    <select value={profile.gender || 'M'} onChange={event => updateProfileField('gender', event.target.value)} className={inputClass}>
+                    <select value={profile.gender || 'M'} onChange={event => updateProfileField('gender', event.target.value)} disabled={editingProfileSection !== 'personal'} className={editingProfileSection === 'personal' ? inputClass : viewInputClass}>
                       <option value="M">Male</option><option value="F">Female</option><option value="X">Other</option>
                     </select>
                   </Label>
                   <Label label="Nationality">
-                    <CountrySelect value={profile.nationality || ''} onChange={country => updateProfileField('nationality', country)} className={inputClass} placeholder="Select nationality" />
+                    <CountrySelect value={profile.nationality || ''} onChange={country => updateProfileField('nationality', country)} className={editingProfileSection === 'personal' ? inputClass : viewInputClass} placeholder="Select nationality" disabled={editingProfileSection !== 'personal'} />
                   </Label>
                   <Label label="Preferred Currency">
-                    <input value={profile.preferred_currency || ''} onChange={event => updateProfileField('preferred_currency', event.target.value.toUpperCase())} maxLength={3} className={inputClass} />
+                    <input value={profile.preferred_currency || ''} onChange={event => updateProfileField('preferred_currency', event.target.value.toUpperCase())} maxLength={3} readOnly={editingProfileSection !== 'personal'} className={editingProfileSection === 'personal' ? inputClass : viewInputClass} />
                   </Label>
                 </div>
               </Section>
 
               <Section id="contact-information" title="Contact Information" description="Used for booking confirmations, flight changes, check-in reminders, and urgent service updates.">
+                {renderProfileSectionActions('contact')}
                 <div className="grid gap-5 md:grid-cols-2">
                   <Label label="Email Address">
-                    <input value={getProfileEmail(profile)} className={inputClass} readOnly />
+                    <input value={getProfileEmail(profile)} className={viewInputClass} readOnly />
                   </Label>
                   <Label label="Phone Number">
-                    <PhoneInput value={profile.phone_number || ''} onChange={value => updateProfileField('phone_number', value)} required />
+                    <PhoneInput value={profile.phone_number || ''} onChange={value => updateProfileField('phone_number', value)} required disabled={editingProfileSection !== 'contact'} />
                   </Label>
                   <Label label="Alternate Phone">
-                    <PhoneInput value={profile.alternate_phone_number || ''} onChange={value => updateProfileField('alternate_phone_number', value)} />
+                    <PhoneInput value={profile.alternate_phone_number || ''} onChange={value => updateProfileField('alternate_phone_number', value)} disabled={editingProfileSection !== 'contact'} />
                   </Label>
                   <Label label="Preferred Language">
-                    <input value={profile.preferred_language || ''} onChange={event => updateProfileField('preferred_language', event.target.value)} className={inputClass} />
+                    <input value={profile.preferred_language || ''} onChange={event => updateProfileField('preferred_language', event.target.value)} readOnly={editingProfileSection !== 'contact'} className={editingProfileSection === 'contact' ? inputClass : viewInputClass} />
                   </Label>
                 </div>
                 <div className="mt-5">
                   <Label label="Residential Address">
-                    <textarea value={profile.address || ''} onChange={event => updateProfileField('address', event.target.value)} className={textAreaClass} />
+                    <textarea value={profile.address || ''} onChange={event => updateProfileField('address', event.target.value)} readOnly={editingProfileSection !== 'contact'} className={editingProfileSection === 'contact' ? textAreaClass : viewTextAreaClass} />
                   </Label>
-                </div>
-                <div className="mt-7 flex justify-end">
-                  <SaveButton disabled={saving}>Save Profile</SaveButton>
                 </div>
               </Section>
             </form>
@@ -940,11 +1031,22 @@ function Profile(): React.JSX.Element {
                       <p className="mt-1 text-sm font-semibold text-slate-500">Add yourself or a frequent travel companion below.</p>
                     </div>
                   )}
-                  {passengers.map(passenger => (
-                    <div key={passenger.saved_passenger_id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                  {passengers.map(passenger => {
+                    const isEditingPassenger = editingPassengerId === passenger.saved_passenger_id;
+
+                    return (
+                    <div key={passenger.saved_passenger_id} className={`rounded-xl border p-4 transition ${isEditingPassenger ? 'border-[#073b70] bg-blue-50 shadow-md shadow-blue-950/10 ring-2 ring-blue-100' : 'border-slate-200 bg-slate-50/60'}`}>
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="font-semibold text-[#073b70]">{passenger.title} {passenger.first_name} {passenger.last_name}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-[#073b70]">{savedPassengerName(passenger)}</p>
+                          {isEditingPassenger && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#073b70] px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+                              <PencilLine size={12} />
+                              Currently Editing
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs font-medium text-slate-500">{passenger.relationship} | {passenger.passenger_type_code} | Passport {maskValue(passenger.passport_number)}</p>
                       </div>
                       <div className="flex flex-wrap gap-3">
@@ -956,7 +1058,14 @@ function Profile(): React.JSX.Element {
                           <Eye size={14} />
                           {viewingPassengerId === passenger.saved_passenger_id ? 'Hide' : 'View'}
                         </button>
-                        <button type="button" onClick={() => editPassenger(passenger)} className="h-9 rounded-lg border border-[#073b70] bg-white px-4 text-xs font-semibold uppercase text-[#073b70]">Edit</button>
+                        <button
+                          type="button"
+                          onClick={() => editPassenger(passenger)}
+                          className={`flex h-9 items-center gap-2 rounded-lg border px-4 text-xs font-semibold uppercase transition ${isEditingPassenger ? 'border-[#073b70] bg-[#073b70] text-white' : 'border-[#073b70] bg-white text-[#073b70] hover:bg-blue-50'}`}
+                        >
+                          <PencilLine size={14} />
+                          {isEditingPassenger ? 'Editing' : 'Edit'}
+                        </button>
                         <button type="button" onClick={() => deletePassenger(passenger.saved_passenger_id)} className="flex h-9 items-center gap-2 rounded-lg border border-red-300 bg-white px-4 text-xs font-semibold uppercase text-red-600"><Trash2 size={14} /> Delete</button>
                       </div>
                       </div>
@@ -977,97 +1086,149 @@ function Profile(): React.JSX.Element {
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
-                <div className="mb-5 flex flex-col gap-4 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-2 text-sm font-semibold uppercase text-[#073b70]">
-                    <Users size={18} />
-                    {editingPassengerId ? 'Edit Saved Passenger' : 'Add Saved Passenger'}
+                {renderFormToggle({
+                  open: passengerFormOpen,
+                  onToggle: () => {
+                    if (passengerFormOpen && editingPassengerId) {
+                      setEditingPassengerId(null);
+                      setPassengerForm(emptyPassenger);
+                    }
+                    setPassengerFormOpen(open => !open);
+                  },
+                  icon: editingPassengerId ? PencilLine : Users,
+                  title: 'Add Saved Passenger',
+                  description: 'Open the form only when you want to add or update a frequent traveler.',
+                  editing: Boolean(editingPassengerId),
+                })}
+
+                {passengerFormOpen && (
+                <div id="passenger-form" className={`mt-5 rounded-xl border ${editingPassengerId ? 'border-blue-300 bg-blue-50/50' : 'border-slate-200 bg-slate-50/70'}`}>
+                  <div className="flex flex-col gap-4 border-b border-slate-200 p-5 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 text-sm font-semibold uppercase text-[#073b70]">
+                        {editingPassengerId ? <PencilLine size={18} /> : <Users size={18} />}
+                        {editingPassengerId ? 'Edit Saved Passenger' : 'Add Saved Passenger'}
+                      </div>
+                      <p className="mt-2 text-xs font-semibold leading-5 text-slate-600">
+                        Fill the required passenger and passport details. Visa details are optional and can be left blank.
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-3">
-                    {editingPassengerId && (
-                      <button
-                        type="button"
-                        onClick={() => { setEditingPassengerId(null); setPassengerForm(emptyPassenger); }}
-                        className="h-11 rounded-lg border border-slate-300 px-6 text-xs font-semibold uppercase text-slate-600"
-                      >
-                        Cancel Edit
-                      </button>
-                    )}
+
+                  {editingPassengerId && (
+                    <div className="mx-5 mt-5 rounded-lg border border-blue-200 bg-white p-4">
+                      <p className="flex items-center gap-2 text-sm font-semibold text-[#073b70]">
+                        <PencilLine size={17} />
+                        Editing {savedPassengerName(passengerForm)}
+                      </p>
+                      <p className="mt-1 text-xs font-semibold text-slate-600">Update the fields below, then click Update Passenger or Cancel Edit.</p>
+                    </div>
+                  )}
+
+                  <div className="space-y-6 p-5">
+                    <div>
+                      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="text-sm font-semibold uppercase tracking-wide text-[#073b70]">Passenger Details</h3>
+                        <span className="rounded-full bg-red-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-red-600">Required</span>
+                      </div>
+                      <div className="grid gap-5 md:grid-cols-3">
+                        <Label label="Relationship*"><input value={passengerForm.relationship} onChange={event => updatePassengerField('relationship', event.target.value)} className={inputClass} /></Label>
+                        <Label label="Title*"><select value={passengerForm.title} onChange={event => updatePassengerField('title', event.target.value)} className={inputClass}><option>Mr</option><option>Mrs</option><option>Ms</option><option>Miss</option><option>Dr</option></select></Label>
+                        <Label label="Passenger Type*"><select value={passengerForm.passenger_type_code} onChange={event => updatePassengerField('passenger_type_code', event.target.value)} className={inputClass}><option value="ADT">Adult</option><option value="CHD">Child</option><option value="INF">Infant</option></select></Label>
+                        <Label label="First Name*"><input value={passengerForm.first_name} onChange={event => updatePassengerField('first_name', event.target.value)} className={inputClass} /></Label>
+                        <Label label="Middle Name (Optional)"><input value={passengerForm.middle_name || ''} onChange={event => updatePassengerField('middle_name', event.target.value)} className={inputClass} /></Label>
+                        <Label label="Last Name*"><input value={passengerForm.last_name} onChange={event => updatePassengerField('last_name', event.target.value)} className={inputClass} /></Label>
+                        <Label label="Gender*"><select value={passengerForm.gender} onChange={event => updatePassengerField('gender', event.target.value)} className={inputClass}><option value="M">Male</option><option value="F">Female</option><option value="X">Other</option></select></Label>
+                        <Label label="Date of Birth*">
+                          <DatePicker
+                            selected={fromDateString(passengerForm.date_of_birth)}
+                            onChange={(date: Date | null) => updatePassengerField('date_of_birth', toDateString(date))}
+                            className={inputClass}
+                            placeholderText="Select date of birth"
+                            dateFormat="dd MMM yyyy"
+                            minDate={getBirthDateRangeForType(passengerForm.passenger_type_code).minDate}
+                            maxDate={getBirthDateRangeForType(passengerForm.passenger_type_code).maxDate}
+                            showMonthDropdown
+                            showYearDropdown
+                            dropdownMode="select"
+                          />
+                        </Label>
+                        <Label label="Nationality*"><CountrySelect value={passengerForm.nationality} onChange={country => updatePassengerField('nationality', country)} className={inputClass} placeholder="Select nationality" /></Label>
+                        <Label label="Contact Email (Optional)"><input type="email" value={passengerForm.contact_email || ''} onChange={event => updatePassengerField('contact_email', event.target.value)} className={inputClass} /></Label>
+                        <Label label="Contact Phone (Optional)"><PhoneInput value={passengerForm.contact_phone || ''} onChange={value => updatePassengerField('contact_phone', value)} /></Label>
+                      </div>
+                    </div>
+
+                    <div id="passport-details" className="border-t border-slate-200 pt-6">
+                      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <h3 className="text-sm font-semibold uppercase tracking-wide text-[#073b70]">Passport Details</h3>
+                          <p className="mt-1 text-xs font-semibold text-slate-500">Needed to reuse this passenger during booking.</p>
+                        </div>
+                        <span className="rounded-full bg-red-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-red-600">Required</span>
+                      </div>
+                      <div className="grid gap-5 md:grid-cols-3">
+                        <Label label="Passport Number*"><input value={passengerForm.passport_number || ''} onChange={event => updatePassengerField('passport_number', event.target.value)} className={inputClass} /></Label>
+                        <Label label="Issuing Country*"><CountrySelect value={passengerForm.passport_issuing_country || ''} onChange={country => updatePassengerField('passport_issuing_country', country)} className={inputClass} placeholder="Select issuing country" /></Label>
+                        <Label label="Expiry Date*">
+                          <DatePicker
+                            selected={fromDateString(passengerForm.passport_expiry_date)}
+                            onChange={(date: Date | null) => updatePassengerField('passport_expiry_date', toDateString(date))}
+                            className={`${inputClass} ${passengerPassportExpiryValidation.tone === 'error' ? 'border-red-500 bg-red-50 focus:border-red-600' : passengerPassportExpiryValidation.tone === 'warning' ? 'border-amber-400 bg-amber-50 focus:border-amber-500' : passengerPassportExpiryValidation.tone === 'success' ? 'border-green-500 bg-green-50 focus:border-green-600' : ''}`}
+                            placeholderText="Select expiry date"
+                            dateFormat="dd MMM yyyy"
+                            minDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
+                            showMonthDropdown
+                            showYearDropdown
+                            dropdownMode="select"
+                          />
+                          {passengerPassportExpiryValidation.message && (
+                            <p className={`mt-1 text-xs font-semibold ${passengerPassportExpiryValidation.tone === 'error' ? 'text-red-500' : passengerPassportExpiryValidation.tone === 'warning' ? 'text-amber-700' : 'text-green-600'}`}>
+                              {passengerPassportExpiryValidation.message}
+                            </p>
+                          )}
+                        </Label>
+                      </div>
+                    </div>
+
+                    <div id="visa-information" className="border-t border-slate-200 pt-6">
+                      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <h3 className="text-sm font-semibold uppercase tracking-wide text-[#073b70]">Visa Details</h3>
+                          <p className="mt-1 text-xs font-semibold text-slate-500">Only fill this if the destination requires visa information.</p>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Optional</span>
+                      </div>
+                      <div className="grid gap-5 md:grid-cols-3">
+                        <Label label="Visa Number"><input value={passengerForm.visa_number || ''} onChange={event => updatePassengerField('visa_number', event.target.value)} className={inputClass} /></Label>
+                        <Label label="Visa Country"><CountrySelect value={passengerForm.visa_country || ''} onChange={country => updatePassengerField('visa_country', country)} className={inputClass} placeholder="Select visa country" /></Label>
+                        <Label label="Visa Expiry Date">
+                          <DatePicker
+                            selected={fromDateString(passengerForm.visa_expiry_date)}
+                            onChange={(date: Date | null) => updatePassengerField('visa_expiry_date', toDateString(date))}
+                            className={inputClass}
+                            placeholderText="Select visa expiry"
+                            dateFormat="dd MMM yyyy"
+                            minDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
+                            showMonthDropdown
+                            showYearDropdown
+                            dropdownMode="select"
+                          />
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 bg-white p-5">
+                    {editingPassengerId && <button type="button" onClick={() => { setEditingPassengerId(null); setPassengerForm(emptyPassenger); }} className="h-11 rounded-lg border border-slate-300 px-6 text-xs font-semibold uppercase text-slate-600">Cancel</button>}
                     <SaveButton disabled={saving}>{editingPassengerId ? 'Update Passenger' : 'Save Passenger'}</SaveButton>
                   </div>
                 </div>
-                <div className="grid gap-5 md:grid-cols-3">
-                  <Label label="Relationship"><input value={passengerForm.relationship} onChange={event => updatePassengerField('relationship', event.target.value)} className={inputClass} /></Label>
-                  <Label label="Title"><select value={passengerForm.title} onChange={event => updatePassengerField('title', event.target.value)} className={inputClass}><option>Mr</option><option>Mrs</option><option>Ms</option><option>Miss</option><option>Dr</option></select></Label>
-                  <Label label="Passenger Type"><select value={passengerForm.passenger_type_code} onChange={event => updatePassengerField('passenger_type_code', event.target.value)} className={inputClass}><option value="ADT">Adult</option><option value="CHD">Child</option><option value="INF">Infant</option></select></Label>
-                  <Label label="First Name"><input value={passengerForm.first_name} onChange={event => updatePassengerField('first_name', event.target.value)} className={inputClass} /></Label>
-                  <Label label="Middle Name"><input value={passengerForm.middle_name || ''} onChange={event => updatePassengerField('middle_name', event.target.value)} className={inputClass} /></Label>
-                  <Label label="Last Name"><input value={passengerForm.last_name} onChange={event => updatePassengerField('last_name', event.target.value)} className={inputClass} /></Label>
-                  <Label label="Gender"><select value={passengerForm.gender} onChange={event => updatePassengerField('gender', event.target.value)} className={inputClass}><option value="M">Male</option><option value="F">Female</option><option value="X">Other</option></select></Label>
-                  <Label label="Date of Birth">
-                    <DatePicker
-                      selected={fromDateString(passengerForm.date_of_birth)}
-                      onChange={(date: Date | null) => updatePassengerField('date_of_birth', toDateString(date))}
-                      className={inputClass}
-                      placeholderText="Select date of birth"
-                      dateFormat="dd MMM yyyy"
-                      minDate={getBirthDateRangeForType(passengerForm.passenger_type_code).minDate}
-                      maxDate={getBirthDateRangeForType(passengerForm.passenger_type_code).maxDate}
-                      showMonthDropdown
-                      showYearDropdown
-                      dropdownMode="select"
-                    />
-                  </Label>
-                  <Label label="Nationality"><CountrySelect value={passengerForm.nationality} onChange={country => updatePassengerField('nationality', country)} className={inputClass} placeholder="Select nationality" /></Label>
-                  <Label label="Contact Email"><input type="email" value={passengerForm.contact_email || ''} onChange={event => updatePassengerField('contact_email', event.target.value)} className={inputClass} /></Label>
-                  <Label label="Contact Phone"><PhoneInput value={passengerForm.contact_phone || ''} onChange={value => updatePassengerField('contact_phone', value)} /></Label>
-                </div>
-              </Section>
-
-              <Section id="passport-details" title="Passport Details" description="Passport details are saved to the selected passenger above. Make sure the number and expiry date match the travel document.">
-                <div className="grid gap-5 md:grid-cols-3">
-                  <Label label="Passport Number"><input value={passengerForm.passport_number || ''} onChange={event => updatePassengerField('passport_number', event.target.value)} className={inputClass} /></Label>
-                  <Label label="Issuing Country"><CountrySelect value={passengerForm.passport_issuing_country || ''} onChange={country => updatePassengerField('passport_issuing_country', country)} className={inputClass} placeholder="Select issuing country" /></Label>
-                  <Label label="Expiry Date">
-                    <DatePicker
-                      selected={fromDateString(passengerForm.passport_expiry_date)}
-                      onChange={(date: Date | null) => updatePassengerField('passport_expiry_date', toDateString(date))}
-                      className={inputClass}
-                      placeholderText="Select expiry date"
-                      dateFormat="dd MMM yyyy"
-                      minDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
-                      showMonthDropdown
-                      showYearDropdown
-                      dropdownMode="select"
-                    />
-                  </Label>
-                </div>
-              </Section>
-
-              <Section id="visa-information" title="Visa Information" description="Optional visa information for destinations that require entry documentation.">
-                <div className="grid gap-5 md:grid-cols-3">
-                  <Label label="Visa Number"><input value={passengerForm.visa_number || ''} onChange={event => updatePassengerField('visa_number', event.target.value)} className={inputClass} /></Label>
-                  <Label label="Visa Country"><CountrySelect value={passengerForm.visa_country || ''} onChange={country => updatePassengerField('visa_country', country)} className={inputClass} placeholder="Select visa country" /></Label>
-                  <Label label="Visa Expiry Date">
-                    <DatePicker
-                      selected={fromDateString(passengerForm.visa_expiry_date)}
-                      onChange={(date: Date | null) => updatePassengerField('visa_expiry_date', toDateString(date))}
-                      className={inputClass}
-                      placeholderText="Select visa expiry"
-                      dateFormat="dd MMM yyyy"
-                      minDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
-                      showMonthDropdown
-                      showYearDropdown
-                      dropdownMode="select"
-                    />
-                  </Label>
-                </div>
-                <div className="mt-7 flex flex-wrap justify-end gap-3">
-                  {editingPassengerId && <button type="button" onClick={() => { setEditingPassengerId(null); setPassengerForm(emptyPassenger); }} className="h-11 rounded-lg border border-slate-300 px-6 text-xs font-semibold uppercase text-slate-600">Cancel</button>}
-                  <SaveButton disabled={saving}>{editingPassengerId ? 'Update Passenger' : 'Save Passenger'}</SaveButton>
-                </div>
+                )}
               </Section>
             </form>
 
@@ -1088,21 +1249,41 @@ function Profile(): React.JSX.Element {
                         <p className="text-xs font-medium text-slate-500">{contact.relationship || 'Contact'} | {contact.phone_number} | Priority {contact.priority}</p>
                       </div>
                       <div className="flex gap-3">
-                        <button type="button" onClick={() => { setEditingEmergencyId(contact.emergency_contact_id); setEmergencyForm({ contact_name: contact.contact_name, relationship: contact.relationship || '', phone_number: contact.phone_number, email_address: contact.email_address || '', priority: contact.priority }); }} className="h-9 rounded-lg border border-[#073b70] bg-white px-4 text-xs font-semibold uppercase text-[#073b70]">Edit</button>
+                        <button type="button" onClick={() => { setEditingEmergencyId(contact.emergency_contact_id); setEmergencyFormOpen(true); setEmergencyForm({ contact_name: contact.contact_name, relationship: contact.relationship || '', phone_number: contact.phone_number, email_address: contact.email_address || '', priority: contact.priority }); }} className="h-9 rounded-lg border border-[#073b70] bg-white px-4 text-xs font-semibold uppercase text-[#073b70]">Edit</button>
                         <button type="button" onClick={() => deleteEmergency(contact.emergency_contact_id)} className="h-9 rounded-lg border border-red-300 bg-white px-4 text-xs font-semibold uppercase text-red-600">Delete</button>
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="grid gap-5 md:grid-cols-2">
-                  <Label label="Contact Name"><input value={emergencyForm.contact_name} onChange={event => setEmergencyForm(prev => ({ ...prev, contact_name: event.target.value }))} className={inputClass} /></Label>
-                  <Label label="Relationship"><input value={emergencyForm.relationship || ''} onChange={event => setEmergencyForm(prev => ({ ...prev, relationship: event.target.value }))} className={inputClass} /></Label>
-                  <Label label="Phone Number"><PhoneInput value={emergencyForm.phone_number} onChange={value => setEmergencyForm(prev => ({ ...prev, phone_number: value }))} required /></Label>
-                  <Label label="Email Address"><input type="email" value={emergencyForm.email_address || ''} onChange={event => setEmergencyForm(prev => ({ ...prev, email_address: event.target.value }))} className={inputClass} /></Label>
-                </div>
-                <div className="mt-7 flex justify-end">
-                  <SaveButton disabled={saving}>{editingEmergencyId ? 'Update Contact' : 'Add Contact'}</SaveButton>
-                </div>
+                {renderFormToggle({
+                  open: emergencyFormOpen,
+                  onToggle: () => {
+                    if (emergencyFormOpen && editingEmergencyId) {
+                      setEditingEmergencyId(null);
+                      setEmergencyForm(emptyEmergencyContact);
+                    }
+                    setEmergencyFormOpen(open => !open);
+                  },
+                  icon: editingEmergencyId ? PencilLine : AlertCircle,
+                  title: 'Add Emergency Contact',
+                  description: 'Open this form when you want to add or update an emergency contact.',
+                  editing: Boolean(editingEmergencyId),
+                })}
+
+                {emergencyFormOpen && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-5">
+                    <div className="grid gap-5 md:grid-cols-2">
+                      <Label label="Contact Name"><input value={emergencyForm.contact_name} onChange={event => setEmergencyForm(prev => ({ ...prev, contact_name: event.target.value }))} className={inputClass} /></Label>
+                      <Label label="Relationship"><input value={emergencyForm.relationship || ''} onChange={event => setEmergencyForm(prev => ({ ...prev, relationship: event.target.value }))} className={inputClass} /></Label>
+                      <Label label="Phone Number"><PhoneInput value={emergencyForm.phone_number} onChange={value => setEmergencyForm(prev => ({ ...prev, phone_number: value }))} required /></Label>
+                      <Label label="Email Address"><input type="email" value={emergencyForm.email_address || ''} onChange={event => setEmergencyForm(prev => ({ ...prev, email_address: event.target.value }))} className={inputClass} /></Label>
+                    </div>
+                    <div className="mt-7 flex flex-wrap justify-end gap-3">
+                      {editingEmergencyId && <button type="button" onClick={() => { setEditingEmergencyId(null); setEmergencyForm(emptyEmergencyContact); setEmergencyFormOpen(false); }} className="h-11 rounded-lg border border-slate-300 bg-white px-6 text-xs font-semibold uppercase text-slate-600">Cancel</button>}
+                      <SaveButton disabled={saving}>{editingEmergencyId ? 'Update Contact' : 'Add Contact'}</SaveButton>
+                    </div>
+                  </div>
+                )}
               </Section>
             </form>
 
@@ -1126,28 +1307,44 @@ function Profile(): React.JSX.Element {
                         <p className="text-xs font-medium text-slate-500">{method.cardholder_name} | Expires {String(method.expiry_month).padStart(2, '0')}/{method.expiry_year}</p>
                       </div>
                       <div className="flex gap-3">
-                        <button type="button" onClick={() => { setEditingPaymentId(method.payment_method_id); setPaymentForm({ payment_type: method.payment_type, card_brand: method.card_brand || '', cardholder_name: method.cardholder_name, last_four: method.last_four, expiry_month: method.expiry_month, expiry_year: method.expiry_year, gateway_payment_method_id: method.gateway_payment_method_id || '', billing_address: method.billing_address || '', is_default: method.is_default }); }} className="h-9 rounded-lg border border-[#073b70] bg-white px-4 text-xs font-semibold uppercase text-[#073b70]">Edit</button>
+                        <button type="button" onClick={() => { setEditingPaymentId(method.payment_method_id); setPaymentFormOpen(true); setPaymentForm({ payment_type: method.payment_type, card_brand: method.card_brand || '', cardholder_name: method.cardholder_name, last_four: method.last_four, expiry_month: method.expiry_month, expiry_year: method.expiry_year, gateway_payment_method_id: method.gateway_payment_method_id || '', billing_address: method.billing_address || '', is_default: method.is_default }); }} className="h-9 rounded-lg border border-[#073b70] bg-white px-4 text-xs font-semibold uppercase text-[#073b70]">Edit</button>
                         <button type="button" onClick={() => deletePayment(method.payment_method_id)} className="h-9 rounded-lg border border-red-300 bg-white px-4 text-xs font-semibold uppercase text-red-600">Delete</button>
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="mb-5 flex items-center gap-2 text-sm font-semibold uppercase text-[#073b70]">
-                  {editingPaymentId ? <CreditCard size={18} /> : <Plus size={18} />}
-                  {editingPaymentId ? 'Edit Payment Method' : 'Add Payment Method'}
-                </div>
-                <div className="grid gap-5 md:grid-cols-4">
-                  <Label label="Card Brand"><input value={paymentForm.card_brand || ''} onChange={event => setPaymentForm(prev => ({ ...prev, card_brand: event.target.value }))} className={inputClass} /></Label>
-                  <Label label="Cardholder Name"><input value={paymentForm.cardholder_name} onChange={event => setPaymentForm(prev => ({ ...prev, cardholder_name: event.target.value }))} className={inputClass} /></Label>
-                  <Label label="Last 4 Digits"><input value={paymentForm.last_four} onChange={event => setPaymentForm(prev => ({ ...prev, last_four: event.target.value.replace(/\D/g, '').slice(0, 4) }))} className={inputClass} inputMode="numeric" /></Label>
-                  <Label label="Expiry Month"><input type="number" min="1" max="12" value={paymentForm.expiry_month} onChange={event => setPaymentForm(prev => ({ ...prev, expiry_month: Number(event.target.value) }))} className={inputClass} /></Label>
-                  <Label label="Expiry Year"><input type="number" min={new Date().getFullYear()} value={paymentForm.expiry_year} onChange={event => setPaymentForm(prev => ({ ...prev, expiry_year: Number(event.target.value) }))} className={inputClass} /></Label>
-                  <Label label="Gateway Token ID"><input value={paymentForm.gateway_payment_method_id || ''} onChange={event => setPaymentForm(prev => ({ ...prev, gateway_payment_method_id: event.target.value }))} className={inputClass} placeholder="Optional token/reference" /></Label>
-                  <label className="flex h-11 items-center gap-3 text-sm font-medium text-slate-600 md:col-span-2"><input type="checkbox" checked={paymentForm.is_default} onChange={event => setPaymentForm(prev => ({ ...prev, is_default: event.target.checked }))} className="accent-[#073b70]" /> Set as default payment method</label>
-                </div>
-                <div className="mt-7 flex justify-end">
-                  <SaveButton disabled={saving}>{editingPaymentId ? 'Update Payment' : 'Save Payment'}</SaveButton>
-                </div>
+                {renderFormToggle({
+                  open: paymentFormOpen,
+                  onToggle: () => {
+                    if (paymentFormOpen && editingPaymentId) {
+                      setEditingPaymentId(null);
+                      setPaymentForm(emptyPaymentMethod);
+                    }
+                    setPaymentFormOpen(open => !open);
+                  },
+                  icon: editingPaymentId ? CreditCard : Plus,
+                  title: 'Add Payment Method',
+                  description: 'Open this form when you want to save or update a card reference.',
+                  editing: Boolean(editingPaymentId),
+                })}
+
+                {paymentFormOpen && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-5">
+                    <div className="grid gap-5 md:grid-cols-4">
+                      <Label label="Card Brand"><input value={paymentForm.card_brand || ''} onChange={event => setPaymentForm(prev => ({ ...prev, card_brand: event.target.value }))} className={inputClass} /></Label>
+                      <Label label="Cardholder Name"><input value={paymentForm.cardholder_name} onChange={event => setPaymentForm(prev => ({ ...prev, cardholder_name: event.target.value }))} className={inputClass} /></Label>
+                      <Label label="Last 4 Digits"><input value={paymentForm.last_four} onChange={event => setPaymentForm(prev => ({ ...prev, last_four: event.target.value.replace(/\D/g, '').slice(0, 4) }))} className={inputClass} inputMode="numeric" /></Label>
+                      <Label label="Expiry Month"><input type="number" min="1" max="12" value={paymentForm.expiry_month} onChange={event => setPaymentForm(prev => ({ ...prev, expiry_month: Number(event.target.value) }))} className={inputClass} /></Label>
+                      <Label label="Expiry Year"><input type="number" min={new Date().getFullYear()} value={paymentForm.expiry_year} onChange={event => setPaymentForm(prev => ({ ...prev, expiry_year: Number(event.target.value) }))} className={inputClass} /></Label>
+                      <Label label="Gateway Token ID"><input value={paymentForm.gateway_payment_method_id || ''} onChange={event => setPaymentForm(prev => ({ ...prev, gateway_payment_method_id: event.target.value }))} className={inputClass} placeholder="Optional token/reference" /></Label>
+                      <label className="flex h-11 items-center gap-3 text-sm font-medium text-slate-600 md:col-span-2"><input type="checkbox" checked={paymentForm.is_default} onChange={event => setPaymentForm(prev => ({ ...prev, is_default: event.target.checked }))} className="accent-[#073b70]" /> Set as default payment method</label>
+                    </div>
+                    <div className="mt-7 flex flex-wrap justify-end gap-3">
+                      {editingPaymentId && <button type="button" onClick={() => { setEditingPaymentId(null); setPaymentForm(emptyPaymentMethod); setPaymentFormOpen(false); }} className="h-11 rounded-lg border border-slate-300 bg-white px-6 text-xs font-semibold uppercase text-slate-600">Cancel</button>}
+                      <SaveButton disabled={saving}>{editingPaymentId ? 'Update Payment' : 'Save Payment'}</SaveButton>
+                    </div>
+                  </div>
+                )}
               </Section>
             </form>
           </div>

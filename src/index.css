@@ -80,6 +80,32 @@
   .he-fade-up {
     animation: he-fade-up var(--he-medium) var(--he-ease) both;
   }
+
+  .he-pop {
+    animation: fadeIn var(--he-fast) var(--he-ease) both;
+  }
+
+  .he-soft-card {
+    animation: he-fade-up var(--he-medium) var(--he-ease) both;
+    transition-duration: var(--he-medium);
+    transition-property: border-color, box-shadow, transform;
+    transition-timing-function: var(--he-ease);
+  }
+
+  .he-soft-card:hover {
+    box-shadow: 0 14px 34px rgb(15 23 42 / 9%);
+    transform: translateY(-2px);
+  }
+
+  .he-action {
+    transition-duration: var(--he-fast);
+    transition-property: background-color, border-color, box-shadow, color, opacity, transform;
+    transition-timing-function: var(--he-ease);
+  }
+
+  .he-action:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
 }
 
 @keyframes he-page-enter {
@@ -101,5 +127,16 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
